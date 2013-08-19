@@ -1,0 +1,15 @@
+install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/0.4.1-SNAPSHOT/affinity-0.4.1-SNAPSHOT.jar
+install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/implementation/0.4.1-SNAPSHOT/implementation-0.4.1-SNAPSHOT.jar
+install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/northbound/0.4.1-SNAPSHOT/northbound-0.4.1-SNAPSHOT.jar
+
+ss | grep affinity
+start <id_affinity>
+start <id_affinityapi>
+start <id_affinityimpl>
+
+# install file:/Users/sraman/.m2/repository/org/opendaylight/controller/tutorial_L2_forwarding/0.4.1-SNAPSHOT/tutorial_L2_forwarding-0.4.1-SNAPSHOT.jar
+#ls -l /Users/sraman/.m2/repository/org/opendaylight/controller/affinity/0.4.1-SNAPSHOT/affinity-0.4.1-SNAPSHOT.jar
+#ls -l /Users/sraman/.m2/repository/org/opendaylight/controller/affinity/implementation/0.4.1-SNAPSHOT/implementation-0.4.1-SNAPSHOT.jar
+#ls -l /Users/sraman/.m2/repository/org/opendaylight/controller/affinity/northbound/0.4.1-SNAPSHOT/northbound-0.4.1-SNAPSHOT.jar
+
+
