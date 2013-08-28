@@ -21,7 +21,8 @@ public interface IAffinityManagerAware {
      *            the affinity config that was added or removed
      * @param add true if add; false otherwise
      */
-    public void affinityNotify(AffinityConfig aff, boolean add);
+    public void affinityLinkNotify(AffinityLink aff, boolean add);
+    public void affinityGroupNotify(AffinityGroup aff, boolean add);
 
     /**
      * Inform listeners that the network node has notified us about a failure in

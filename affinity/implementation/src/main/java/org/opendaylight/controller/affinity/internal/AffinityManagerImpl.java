@@ -56,7 +56,6 @@ import org.opendaylight.controller.sal.core.NodeTable;
 import org.opendaylight.controller.sal.core.Property;
 import org.opendaylight.controller.sal.core.UpdateType;
 import org.opendaylight.controller.sal.flowprogrammer.Flow;
-import org.opendaylight.controller.sal.inventory.IListenInventoryUpdates;
 import org.opendaylight.controller.sal.reader.FlowOnNode;
 import org.opendaylight.controller.sal.reader.IReadService;
 import org.opendaylight.controller.sal.reader.IReadServiceListener;
@@ -65,14 +64,12 @@ import org.opendaylight.controller.sal.utils.IObjectReader;
 import org.opendaylight.controller.sal.utils.ObjectReader;
 import org.opendaylight.controller.sal.utils.ObjectWriter;
 
-import org.opendaylight.controller.sal.reader.NodeConnectorStatistics;
-import org.opendaylight.controller.sal.reader.NodeDescription;
-import org.opendaylight.controller.sal.reader.NodeTableStatistics;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.sal.utils.StatusCode;
 
 import org.opendaylight.controller.sal.utils.ServiceHelper;
-import org.opendaylight.controller.affinity.AffinityConfig;
+import org.opendaylight.controller.affinity.AffinityGroup;
+import org.opendaylight.controller.affinity.AffinityLink;
 import org.opendaylight.controller.affinity.IAffinityManager;
 import org.opendaylight.controller.affinity.IAffinityManagerAware;
 import org.slf4j.Logger;
@@ -85,13 +82,15 @@ import org.slf4j.LoggerFactory;
 public class AffinityManagerImpl implements IAffinityManager, IConfigurationContainerAware, IObjectReader, ICacheUpdateAware<Long, String> {
     private static final Logger log = LoggerFactory.getLogger(AffinityManagerImpl.class);
 
-
     private static String ROOT = GlobalConstants.STARTUPHOME.toString();
     private static final String SAVE = "Save";
-    private String affinityConfigFileName = null;
-    private ConcurrentMap<String, AffinityConfig> affinityConfigList;
+    private String affinityLinkFileName = null;
+    private String affinityGroupFileName = null;
 
+    private ConcurrentMap<String, AffinityGroup> affinityGroupList;
+    private ConcurrentMap<String, AffinityLink> affinityLinkList;
     private ConcurrentMap<Long, String> configSaveEvent;
+
     private final Set<IAffinityManagerAware> affinityManagerAware = Collections
             .synchronizedSet(new HashSet<IAffinityManagerAware>());
 
@@ -127,7 +126,9 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 
     public void startUp() {
         // Initialize configuration file names
-        affinityConfigFileName = ROOT + "affinityConfig_" + this.getContainerName()
+        affinityLinkFileName = ROOT + "affinityConfig_link" + this.getContainerName()
+            + ".conf";
+        affinityGroupFileName = ROOT + "affinityConfig_group" + this.getContainerName()
             + ".conf";
 
         // Instantiate cluster synced variables
@@ -138,7 +139,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
          * Read startup and build database if we have not already gotten the
          * configurations synced from another node
          */
-        if (affinityConfigList.isEmpty()) {
+        if (affinityGroupList.isEmpty() || affinityLinkList.isEmpty()) {
             loadAffinityConfiguration();
         }
     }
@@ -153,10 +154,12 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             log.warn("un-initialized clusterContainerService, can't create cache");
             return;
         }
-
         try {
             clusterContainerService.createCache(
-                    "affinity.affinityConfigList",
+                    "affinity.affinityGroupList",
+                    EnumSet.of(IClusterServices.cacheMode.NON_TRANSACTIONAL));
+            clusterContainerService.createCache(
+                    "affinity.affinityLinkList",
                     EnumSet.of(IClusterServices.cacheMode.NON_TRANSACTIONAL));
             clusterContainerService.createCache(
                     "affinity.configSaveEvent",
@@ -171,14 +174,20 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     @SuppressWarnings({ "unchecked", "deprecation" })
     private void retrieveCaches() {
         if (this.clusterContainerService == null) {
-            log.info("un-initialized clusterContainerService, can't create cache");
+            log.info("un-initialized clusterContainerService, can't retrieve cache");
             return;
         }
-        affinityConfigList = (ConcurrentMap<String, AffinityConfig>) clusterContainerService
-            .getCache("affinity.affinityConfigList");
-        if (affinityConfigList == null) {
-            log.error("\nFailed to get cache for affinityConfigList");
+        affinityGroupList = (ConcurrentMap<String, AffinityGroup>) clusterContainerService
+            .getCache("affinity.affinityGroupList");
+        if (affinityGroupList == null) {
+            log.error("\nFailed to get cache for affinityGroupList");
         }
+        affinityLinkList = (ConcurrentMap<String, AffinityLink>) clusterContainerService
+            .getCache("affinity.affinityLinkList");
+        if (affinityLinkList == null) {
+            log.error("\nFailed to get cache for affinityLinkList");
+        }
+
         configSaveEvent = (ConcurrentMap<Long, String>) clusterContainerService
             .getCache("affinity.configSaveEvent");
         if (configSaveEvent == null) {
@@ -187,21 +196,107 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     }
 
     private void nonClusterObjectCreate() {
-        affinityConfigList = new ConcurrentHashMap<String, AffinityConfig>();
+        affinityLinkList = new ConcurrentHashMap<String, AffinityLink>();
+        affinityGroupList = new ConcurrentHashMap<String, AffinityGroup>();
         configSaveEvent = new ConcurrentHashMap<Long, String>();
     }
 
+
+    public Status addAffinityLink(AffinityLink al) {
+	boolean putNewLink = false;
+
+	if (affinityLinkList.containsKey(al.getName())) {
+	    return new Status(StatusCode.CONFLICT,
+			      "AffinityLink with the specified name already configured.");
+	}
+
+	
+	AffinityLink alCurr = affinityLinkList.get(al.getName());
+	if (alCurr == null) {
+	    if (affinityLinkList.putIfAbsent(al.getName(), al) == null) {
+		putNewLink = true;
+	    } 
+	} else {
+	    putNewLink = affinityLinkList.replace(al.getName(), alCurr, al);
+	}
+
+	if (!putNewLink) {
+	    String msg = "Cluster conflict: Conflict while adding the subnet " + al.getName();
+	    return new Status(StatusCode.CONFLICT, msg);
+	}
+	
+        return new Status(StatusCode.SUCCESS);
+    }
+
+    public Status removeAffinityLink(String name) {
+	affinityLinkList.remove(name);
+	return new Status(StatusCode.SUCCESS);
+    }
+
+    public Status removeAffinityLink(AffinityLink al) {
+	AffinityLink alCurr = affinityLinkList.get(al.getName());
+	if (alCurr != null) {
+	    affinityLinkList.remove(alCurr);
+	    return new Status(StatusCode.SUCCESS);
+	} else {
+	    String msg = "Affinity Link with specified name does not exist." + al.getName();
+	    return new Status(StatusCode.INTERNALERROR, msg);
+	}
+    }
+    
     @Override
-    public List<AffinityConfig> getAffinityConfigList() {
-        return new ArrayList<AffinityConfig>(affinityConfigList.values());
+    public AffinityLink getAffinityLink(String linkName) {
+        return affinityLinkList.get(linkName);
     }
 
     @Override
-    public AffinityConfig getAffinityConfig(String affinity) {
-        return affinityConfigList.get(affinity);
+    public List<AffinityLink> getAllAffinityLinks() {
+	return new ArrayList<AffinityLink>(affinityLinkList.values());
     }
 
+    @Override
+    public Status addAffinityGroup(AffinityGroup ag) {
+	boolean putNewGroup = false;
+	String name = ag.getName();
+	if (affinityGroupList.containsKey(name)) {
+	    return new Status(StatusCode.CONFLICT,
+			      "AffinityGroup with the specified name already configured.");
+	} 
+	AffinityGroup agCurr = affinityGroupList.get(name);
+	if (agCurr == null) {
+	    if (affinityGroupList.putIfAbsent(name, ag) == null) {
+		putNewGroup = true;
+	    } 
+	} else {
+	    putNewGroup = affinityGroupList.replace(name, agCurr, ag);
+	}
 
+	if (!putNewGroup) {
+	    String msg = "Cluster conflict: Conflict while adding the subnet " + name;
+	    return new Status(StatusCode.CONFLICT, msg);
+	}
+	
+        return new Status(StatusCode.SUCCESS);
+    }
+
+    /* Check for errors. */
+    @Override
+    public Status removeAffinityGroup(String name) {
+	affinityGroupList.remove(name);
+	return new Status(StatusCode.SUCCESS);
+    }
+
+    @Override
+    public AffinityGroup getAffinityGroup(String groupName) {
+        return affinityGroupList.get(groupName);
+    }
+
+    @Override
+    public List<AffinityGroup> getAllAffinityGroups() {
+        return new ArrayList<AffinityGroup>(affinityGroupList.values());
+    }
+
+    /* Find where this is used. */
     @Override
     public Object readObject(ObjectInputStream ois)
             throws FileNotFoundException, IOException, ClassNotFoundException {
@@ -213,71 +308,22 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     @SuppressWarnings("unchecked")
     private void loadAffinityConfiguration() {
         ObjectReader objReader = new ObjectReader();
-        ConcurrentMap<String, AffinityConfig> confList = (ConcurrentMap<String, AffinityConfig>) objReader
-                .read(this, affinityConfigFileName);
+        ConcurrentMap<String, AffinityGroup> groupList = (ConcurrentMap<String, AffinityGroup>) objReader.read(this, affinityGroupFileName);
+        ConcurrentMap<String, AffinityLink> linkList = (ConcurrentMap<String, AffinityLink>) objReader.read(this, affinityLinkFileName);
+	
+	/* group list */
+        if (groupList != null) {
+	    for (AffinityGroup ag : groupList.values()) {
+		addAffinityGroup(ag);
+	    }
+	}
 
-        if (confList == null) {
-            return;
+	/* link list */
+	if (linkList != null) {
+	    for (AffinityLink al : linkList.values()) {
+		addAffinityLink(al);
+	    }
         }
-
-        for (AffinityConfig conf : confList.values()) {
-            updateAffinityConfig(conf);
-        }
-    }
-
-    /* Add if absent. */
-    @Override
-    public Status updateAffinityConfig(AffinityConfig cfgObject) {
-        // update default container only
-        if (!isDefaultContainer) {
-            return new Status(StatusCode.INTERNALERROR, "Not default container");
-        }
-
-        AffinityConfig ac = affinityConfigList.get(cfgObject.getName());
-        if (ac == null) {
-            if (affinityConfigList.putIfAbsent(cfgObject.getName(), cfgObject) != null) {
-                return new Status(StatusCode.CONFLICT, "affinity configuration already exists" + cfgObject.getName());
-            }
-        } else {
-            if (!affinityConfigList.replace(cfgObject.getName(), ac, cfgObject)) {
-                return new Status(StatusCode.INTERNALERROR, "Failed to add affinity configuration.");
-            }
-        }
-        return new Status(StatusCode.SUCCESS, "Updated affinity configuration " + cfgObject.getName());
-    }
-
-
-    /* Remove affinity config */
-    @Override
-    public Status removeAffinityConfig(String cfgName) {
-        // update default container only
-        if (!isDefaultContainer) {
-            return new Status(StatusCode.INTERNALERROR, "Not default container");
-        }
-        AffinityConfig ac = affinityConfigList.get(cfgName);
-        if (ac != null) {
-            return removeAffinityConfigObject(ac);
-        }
-        return new Status(StatusCode.INTERNALERROR, "Missing affinity config" + cfgName);
-    }
-    /* Remove affinity config */
-    @Override
-    public Status removeAffinityConfigObject(AffinityConfig cfgObject) {
-        // update default container only
-        if (!isDefaultContainer) {
-            return new Status(StatusCode.INTERNALERROR, "Not default container");
-        }
-
-        AffinityConfig ac = affinityConfigList.get(cfgObject.getName());
-        if (ac != null) {
-            if (affinityConfigList.remove(cfgObject.getName(), ac)) {
-                return new Status(StatusCode.SUCCESS, "Configuration removed: " + cfgObject.getName());
-            } else {
-                String msg = "Remove failed " + cfgObject.getName();
-                return new Status(StatusCode.INTERNALERROR, msg);
-            }
-        }
-        return new Status(StatusCode.INTERNALERROR, "Remove failed: " + cfgObject.getName());
     }
     @Override
     public Status saveConfiguration() {
@@ -295,18 +341,17 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
         Status retS = null, retP = null;
         ObjectWriter objWriter = new ObjectWriter();
 
-        retS = objWriter.write(new ConcurrentHashMap<String, AffinityConfig>(
-                affinityConfigList), affinityConfigFileName);
+        retS = objWriter.write(new ConcurrentHashMap<String, AffinityLink>(
+                affinityLinkList), affinityLinkFileName);
 
-        if (retS.equals(retP)) {
-            if (retS.isSuccess()) {
-                return retS;
-            } else {
-                return new Status(StatusCode.INTERNALERROR, "Save failed");
-            }
-        } else {
-            return new Status(StatusCode.INTERNALERROR, "Partial save failure");
-        }
+        retP = objWriter.write(new ConcurrentHashMap<String, AffinityGroup>(
+                affinityGroupList), affinityGroupFileName);
+
+        if (retS.isSuccess() && retP.isSuccess()) {
+	    return new Status(StatusCode.SUCCESS, "Configuration saved.");
+	} else {
+	    return new Status(StatusCode.INTERNALERROR, "Save failed");
+	}
     }
 
     @Override
@@ -377,13 +422,13 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     }
 
     void setClusterContainerService(IClusterContainerServices s) {
-        log.debug("Cluster Service set for Statistics Mgr");
+        log.debug("Cluster Service set for affinity mgr");
         this.clusterContainerService = s;
     }
 
     void unsetClusterContainerService(IClusterContainerServices s) {
         if (this.clusterContainerService == s) {
-            log.debug("Cluster Service removed for Statistics Mgr!");
+            log.debug("Cluster Service removed for affinity mgr!");
             this.clusterContainerService = null;
         }
     }

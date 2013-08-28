@@ -1,0 +1,32 @@
+Create an affinity group: 
+ /affinity/nb/v2/{container}/create/group/{name}
+
+Fetch an affinity group given its name: 
+/affinity/nb/v2/{container}/group/{name}
+
+Add affinity element to affinity group: 
+/affinity/nb/v2/{container}/add/{groupname}/mac/{address}
+ /affinity/nb/v2/{container}/add/{groupname}/ip/{address}
+/affinity/nb/v2/{container}/add/{groupname}/host/{address}
+
+Delete element from an affinity group.
+/affinity/nb/v2/{container}/delete/{groupname}/mac/{address}
+ /affinity/nb/v2/{container}/delete/{groupname}/ip/{address}
+/affinity/nb/v2/{container}/delete/{groupname}/host/{address}
+
+Add affinity link from one group to another: 
+/affinity/nb/v2/{container}/create/link/{name}
+/affinity/nb/v2/{container}/from/{linkname}/{affinitygroup}
+/affinity/nb/v2/{container}/to/{linkname}/{affinitygroup}
+
+Create an affinity element: 
+# For now, these are simple unary objects. Future implementations to include multiple attributes. 
+/affinity/nb/v2/{container}/create/identifier/{name}/mac/{address}
+/affinity/nb/v2/{container}/create/identifier/{name}/ip/{address}
+/affinity/nb/v2/{container}/create/identifier/{hostname}/host/{address} 
+
+List all affinities: 
+/affinity/nb/v2/{container}/affinities
+
+List stats for affinities: 
+...
