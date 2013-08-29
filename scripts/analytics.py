@@ -16,12 +16,14 @@ import sys
 class HostStats:
 
     def __init__(self, src, dst):
+        self.src = src
+        self.dst = dst
         self.http = httplib2.Http(".cache")
         self.http.add_credentials('admin', 'admin')
         self.refresh()
 
     def refresh(self):
-        resp, content = self.http.request("http://localhost:8080/controller/nb/v2/analytics/default/hoststats/" + src + "/" + dst, "GET")
+        resp, content = self.http.request("http://localhost:8080/controller/nb/v2/analytics/default/hoststats/" + self.src + "/" + self.dst, "GET")
         if (resp.status == 404):
             print "404 Error; exiting"
             sys.exit()
@@ -47,9 +49,13 @@ class HostStats:
             bitrate = None
         return bitrate
 
-src = "10.0.0.1"
-dst = "10.0.0.2"
+def main():
+    src = "10.0.0.1"
+    dst = "10.0.0.2"
 
-h = HostStats(src, dst)
-print("%d bytes between %s and %s" % (h.get_bytes(), src, dst))
-print("%f mbit/s between %s and %s" % (h.get_bit_rate(), src, dst))
+    h = HostStats(src, dst)
+    print("%d bytes between %s and %s" % (h.get_bytes(), src, dst))
+    print("%f mbit/s between %s and %s" % (h.get_bit_rate(), src, dst))
+
+if __name__ == "__main__":
+    main()
