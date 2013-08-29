@@ -98,139 +98,17 @@ public class AffinityNorthbound {
         return affinityManager;
     }
 
-/*
- * getAllAffinities()
- * getAffinity(String name)
- * addAffinity(name, ip1, ip2, type)
- * removeAffinity(String name)
- */
-    /**
-     * Retrieve a list of all affinities in this container.
-     */
-    @Path("/{containerName}/affinities")
-    @GET
-    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(Affinities.class)
-    @StatusCodes({
-            @ResponseCode(code = 200, condition = "Operation successful"),
-            @ResponseCode(code = 404, condition = "The containerName is not found"),
-            @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public Affinities getAllAffinities(@PathParam("containerName") String containerName) {
-
-        if (!NorthboundUtils.isAuthorized(
-                getUserName(), containerName, Privilege.READ, this)) {
-            throw new UnauthorizedException(
-                    "User is not authorized to perform this operation on container "
-                            + containerName);
-        }
-
-        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
-        if (affinityManager == null) {
-            throw new ServiceUnavailableException("Affinity Manager "
-                    + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
-        return new Affinities(affinityManager.getAffinityConfigList());
-    }
-    /**
-     * Returns details of affinityName affinity.
-     *
-     * @param containerName
-     *            Name of the Container. The Container name for the base
-     *            controller is "default".
-     * @param affinityName
-     *            Name of the affinity being retrieved.
-     * @return affinity configuration that matches the affinity name.
-     */
-    @Path("/{containerName}/{affinityName}")
-    @GET
-    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(AffinityConfig.class)
-    @StatusCodes({
-            @ResponseCode(code = 200, condition = "Operation successful"),
-            @ResponseCode(code = 404, condition = "The containerName is not found"),
-            @ResponseCode(code = 415, condition = "Affinity name is not found"),
-            @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public AffinityConfig getAffinityDetails(
-            @PathParam("containerName") String containerName,
-            @PathParam("affinityName") String affinityName) {
-        if (!NorthboundUtils.isAuthorized(
-                getUserName(), containerName, Privilege.READ, this)) {
-            throw new UnauthorizedException(
-                    "User is not authorized to perform this operation on container "
-                            + containerName);
-        }
-        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
-        if (affinityManager == null) {
-            throw new ServiceUnavailableException("Affinity "
-                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
-
-        AffinityConfig ac = affinityManager.getAffinityConfig(affinityName);
-        if (ac == null) {
-            throw new ResourceNotFoundException(RestMessages.SERVICEUNAVAILABLE.toString());
-        } else {
-            return ac;
-        }
-    }
-    /**
-     * Delete an affinity
-     *
-     * @param containerName
-     *            Name of the Container
-     * @param affinityName
-     *            affinity name 'String'
-     * @return Response as dictated by the HTTP Response Status code
-     */
-
-    @Path("/{containerName}/{affinityName}")
-    @DELETE
-    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(Response.class)
-    @StatusCodes({
-            @ResponseCode(code = 200, condition = "Operation successful"),
-            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
-            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
-    public Response deleteAffinity(
-            @PathParam("containerName") String containerName,
-            @PathParam("affinityName") String affinityName) {
-
-        if (!NorthboundUtils.isAuthorized(
-                getUserName(), containerName, Privilege.WRITE, this)) {
-            throw new UnauthorizedException(
-                    "User is not authorized to perform this operation on container "
-                            + containerName);
-        }
-
-        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
-        if (affinityManager == null) {
-            throw new ServiceUnavailableException("Affinity Manager "
-                    + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
-
-        Status ret = affinityManager.removeAffinityConfig(affinityName);
-        if (ret.isSuccess()) {
-            return Response.ok().build();
-        }
-        throw new ResourceNotFoundException(ret.getDescription());
-    }
-
     /**
      * Add an affinity to the configuration database
      *
      * @param containerName
      *            Name of the Container
-     * @param affinityName
-     *            Name of the new affinity being added
-     * @param networkAddress1
-     *            IP address of the flow source
-     * @param networkAddress2
-     *            IP address of the flow destination
-     * @param affinityAttribute
-     *            Type of affinity being added
+     * @param affinityGroupName
+     *            Name of the new affinity group being added
      * @return Response as dictated by the HTTP Response Status code
      */
 
-    @Path("/{containerName}/{affinityName}/{networkAddress1}/{networkAddress2}/{affinityAttribute}")
+    @Path("/{containerName}/create/group/{affinityGroupName}")
     @PUT
     @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
     @TypeHint(Response.class)
@@ -238,12 +116,9 @@ public class AffinityNorthbound {
             @ResponseCode(code = 200, condition = "Operation successful"),
             @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
             @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
-    public Response addAffinity(
+    public Response createAffinityGroup(
             @PathParam("containerName") String containerName,
-            @PathParam("affinityName") String affinityName,
-            @PathParam("networkAddress1") String networkAddress1,
-            @PathParam("networkAddress2") String networkAddress2,
-            @PathParam("affinityAttribute") String affinityAttribute) {
+            @PathParam("affinityGroupName") String affinityGroupName) {
 
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
             throw new UnauthorizedException("User is not authorized to perform this operation on container "
@@ -256,11 +131,53 @@ public class AffinityNorthbound {
                                                   + RestMessages.SERVICEUNAVAILABLE.toString());
         }
 
-        AffinityConfig ac = new AffinityConfig(affinityName, networkAddress1, networkAddress2, affinityAttribute);
-        Status ret = affinityManager.updateAffinityConfig(ac);
+        AffinityGroup ag1 = new AffinityGroup(affinityGroupName);
+        Status ret = affinityManager.addAffinityGroup(ag1);
         if (ret.isSuccess()) {
             return Response.status(Response.Status.CREATED).build();
         }
         throw new InternalServerErrorException(ret.getDescription());
+    }
+
+    /**
+     * Returns details of an affinity group.
+     *
+     * @param containerName
+     *            Name of the Container. The Container name for the base
+     *            controller is "default".
+     * @param affinityGroupName
+     *            Name of the affinity group being retrieved.
+     * @return affinity configuration that matches the affinity name.
+     */
+    @Path("/{containerName}/group/{affinityGroupName}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AffinityGroup.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The containerName is not found"),
+            @ResponseCode(code = 415, condition = "Affinity name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AffinityGroup getAffinityGroupDetails(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityGroupName") String affinityGroupName) {
+        if (!NorthboundUtils.isAuthorized(
+                getUserName(), containerName, Privilege.READ, this)) {
+            throw new UnauthorizedException(
+                    "User is not authorized to perform this operation on container "
+                            + containerName);
+        }
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+
+        AffinityGroup ag = affinityManager.getAffinityGroup(affinityGroupName);
+        if (ag == null) {
+            throw new ResourceNotFoundException(RestMessages.SERVICEUNAVAILABLE.toString());
+        } else {
+            return ag;
+        }
     }
 }

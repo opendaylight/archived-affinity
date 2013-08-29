@@ -4,6 +4,8 @@ Create an affinity group:
 Fetch an affinity group given its name: 
 /affinity/nb/v2/{container}/group/{name}
 
+======
+
 Add affinity element to affinity group: 
 /affinity/nb/v2/{container}/add/{groupname}/mac/{address}
  /affinity/nb/v2/{container}/add/{groupname}/ip/{address}

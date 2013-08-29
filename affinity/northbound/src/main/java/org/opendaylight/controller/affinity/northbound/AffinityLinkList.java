@@ -15,23 +15,23 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.opendaylight.controller.affinity.AffinityConfig;
+import org.opendaylight.controller.affinity.AffinityLink;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class Affinities {
+public class AffinityLinkList {
         @XmlElement (name="affinity")
-        List<AffinityConfig> affinityList;
+        List<AffinityLink> affinityLinkList;
 
-        public Affinities() {
+        public AffinityLinkList() {
         }
-        public Affinities (List<AffinityConfig> aff) {
-            this.affinityList = aff;
+        public AffinityLinkList (List<AffinityLink> aff) {
+            this.affinityLinkList = aff;
         }
-        public List<AffinityConfig> getAffinityList() {
-                return affinityList;
+        public List<AffinityLink> getAffinityList() {
+                return affinityLinkList;
         }
-        public void setAffinityList(List<AffinityConfig> aff) {
-                this.affinityList = aff;
+        public void setAffinityList(List<AffinityLink> aff) {
+                this.affinityLinkList = aff;
         }
 }
