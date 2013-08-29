@@ -40,7 +40,9 @@
     	<module>affinity/api</module>
     	<module>affinity/implementation</module>
     	<module>affinity/northbound</module>
-    	<module>analytics</module>
+    	<module>analytics/api</module>
+        <module>analytics/implementation</module>
+        <module>analytics/northbound</module>
     </modules>
 
     <repositories>
