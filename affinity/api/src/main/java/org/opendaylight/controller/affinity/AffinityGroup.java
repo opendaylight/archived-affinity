@@ -45,6 +45,10 @@ public class AffinityGroup implements Cloneable, Serializable {
     @XmlElement
     private final Map<String, AffinityIdentifier> elements;
 
+    public AffinityGroup() {
+        this("");
+    }
+
     public AffinityGroup(String name) {
 	this.name = name;
 	elements = new HashMap<String, AffinityIdentifier>();
