@@ -45,22 +45,20 @@
               org.opendaylight.controller.affinity
             </Export-Package>
             <Import-Package>
+              javax.ws.rs,
+              javax.ws.rs.core,
+              javax.xml.bind.annotation,
+              javax.xml.bind,
+              org.apache.commons.lang3.builder,
+              org.apache.felix.dm,
+              org.eclipse.osgi.framework.console,
               org.opendaylight.controller.clustering.services,
               org.opendaylight.controller.configuration,
               org.opendaylight.controller.sal.core,
               org.opendaylight.controller.sal.utils,
               org.opendaylight.controller.sal.packet,
               org.opendaylight.controller.sal.inventory,
-              org.slf4j,
-              org.apache.felix.dm,
-              org.eclipse.osgi.framework.console,
               org.osgi.framework,
-              javax.xml.bind.annotation,
-              org.apache.commons.lang3.builder,
-              javax.ws.rs,
-              javax.ws.rs.core,
-              javax.xml.bind.annotation,
-              javax.xml.bind,
               org.slf4j,
               !org.codehaus.enunciate.jaxrs
             </Import-Package>
