@@ -13,6 +13,7 @@ import org.apache.felix.dm.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.opendaylight.controller.affinity.IAffinityManager;
 import org.opendaylight.controller.analytics.IAnalyticsManager;
 import org.opendaylight.controller.clustering.services.IClusterContainerServices;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
@@ -21,7 +22,6 @@ import org.opendaylight.controller.sal.core.IContainer;
 import org.opendaylight.controller.sal.reader.IReadService;
 import org.opendaylight.controller.sal.reader.IReadServiceListener;
 import org.opendaylight.controller.statisticsmanager.IStatisticsManager;
-import org.opendaylight.controller.switchmanager.ISwitchManager;
 
 public class Activator extends ComponentActivatorAbstractBase {
     protected static final Logger logger = LoggerFactory
@@ -79,8 +79,8 @@ public class Activator extends ComponentActivatorAbstractBase {
                   .setCallbacks("setHostTracker", "unsetHostTracker").setRequired(true));
             c.add(createServiceDependency().setService(IStatisticsManager.class)
                   .setCallbacks("setStatisticsManager", "unsetStatisticsManager").setRequired(false));
-            c.add(createContainerServiceDependency(containerName).setService(ISwitchManager.class)
-                  .setCallbacks("setSwitchManager", "unsetSwitchManager").setRequired(true));
+            c.add(createContainerServiceDependency(containerName).setService(IAffinityManager.class)
+                  .setCallbacks("setAffinityManager", "unsetAffinityManager").setRequired(true));
 
             c.add(createContainerServiceDependency(containerName).setService(IReadService.class)
                     .setCallbacks("setReaderService", "unsetReaderService").setRequired(true));

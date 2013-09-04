@@ -8,6 +8,8 @@
 
 package org.opendaylight.controller.analytics.internal;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,6 +20,8 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.opendaylight.controller.affinity.AffinityGroup;
+import org.opendaylight.controller.affinity.IAffinityManager;
 import org.opendaylight.controller.analytics.IAnalyticsManager;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
@@ -34,16 +38,15 @@ import org.opendaylight.controller.sal.reader.IReadServiceListener;
 import org.opendaylight.controller.sal.reader.NodeConnectorStatistics;
 import org.opendaylight.controller.sal.reader.NodeDescription;
 import org.opendaylight.controller.sal.reader.NodeTableStatistics;
+import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.statisticsmanager.IStatisticsManager;
-import org.opendaylight.controller.switchmanager.ISwitchManager;
-import org.opendaylight.controller.switchmanager.SubnetConfig;
 
 public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsManager.class);
 
+    private IAffinityManager affinityManager;
     private IStatisticsManager statisticsManager;
-    private ISwitchManager switchManager;
     private IfIptoHost hostTracker;
 
     private Map<MatchField, Host> destinationHostCache;
@@ -72,6 +75,26 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         log.debug("STOP called!");
     }
 
+    void setAffinityManager(IAffinityManager a) {
+        this.affinityManager = a;
+
+        // TODO: This is just for testing
+        AffinityGroup ag1 = new AffinityGroup("testAG1");
+        ag1.add("10.0.0.1");
+        ag1.add("10.0.0.2");
+        AffinityGroup ag2 = new AffinityGroup("testAG2");
+        ag2.add("10.0.0.3");
+        ag2.add("10.0.0.4");
+        this.affinityManager.addAffinityGroup(ag1);
+        this.affinityManager.addAffinityGroup(ag2);
+    }
+
+    void unsetAffinityManager(IAffinityManager a) {
+        if (this.affinityManager.equals(a)) {
+            this.affinityManager = null;
+        }
+    }
+
     void setStatisticsManager(IStatisticsManager s) {
         this.statisticsManager = s;
     }
@@ -89,21 +112,6 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     void unsetHostTracker(IfIptoHost h) {
         if (this.hostTracker.equals(h)) {
             this.hostTracker = null;
-        }
-    }
-
-    void setSwitchManager(ISwitchManager s) {
-        this.switchManager = s;
-
-        // Add a default subnet to allow the hostTracker to populate
-        // the host lists.
-        SubnetConfig defaultSubnet = new SubnetConfig("default", "10.0.0.254/8", new HashSet<String>());
-        this.switchManager.addSubnet(defaultSubnet);
-    }
-
-    void unsetSwitchManager(ISwitchManager s) {
-        if (this.switchManager.equals(s)) {
-            this.switchManager = null;
         }
     }
 
@@ -195,8 +203,46 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         return bitRate;
     }
 
+    // TODO: This functionality should be more general, and a part of
+    // the affinity group class.
+    private boolean hostIsInAffinity(Host h, AffinityGroup a) {
+        Set<String> ips = a.getIPs();
+        InetAddress hostAddress = h.getNetworkAddress();
+        for (String ip : ips) {
+            try {
+                InetAddress thisAddress = InetAddress.getByName(ip);
+                if (hostAddress.equals(thisAddress)) {
+                    return true;
+                }
+            } catch (UnknownHostException e) {
+            }
+        }
+        return false;
+    }
+
+    public long getByteCountBetweenAffinities(AffinityGroup a1, AffinityGroup a2) {
+        // TODO: Cache for host-to-AG mapping
+        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
+        long b = 0;
+        for (Host h1 : allHosts) {
+            for (Host h2 : allHosts) {
+                if (hostIsInAffinity(h1, a1) && hostIsInAffinity(h2, a2)) {
+                    b += getByteCountBetweenHosts(h1, h2);
+                }
+            }
+        }
+        return b;
+    }
+
     @Override
     public void nodeFlowStatisticsUpdated(Node node, List<FlowOnNode> flowStatsList) {
+
+        // TODO: Start testing
+        /*AffinityGroup ag1 = this.affinityManager.getAffinityGroup("testAG1");
+        AffinityGroup ag2 = this.affinityManager.getAffinityGroup("testAG2");
+        long b = getByteCountBetweenAffinities(ag1, ag2);
+        System.out.println("!!! " + b + " bytes");*/
+        // TODO: End testing
 
         Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
         for (FlowOnNode f : flowStatsList) {

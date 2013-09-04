@@ -42,8 +42,6 @@ public class HostStats {
     }
 
     public double getBitRate() {
-        System.out.println("!!! byte count: " + this.byteCount);
-        System.out.println("!!! duration: " + this.duration);
         return (this.byteCount * 8)/(this.duration);
     }
 }
