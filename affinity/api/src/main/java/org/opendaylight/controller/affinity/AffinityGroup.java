@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,6 +89,12 @@ public class AffinityGroup implements Cloneable, Serializable {
     }
     public String getName() {
 	return name;
+    }
+
+    // TODO: This should not exist.  It's a replacement for a more
+    // robust "is host h a member of this affinity group".
+    public Set<String> getIPs() {
+        return elements.keySet();
     }
 }
 
