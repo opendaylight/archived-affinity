@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
-Bnd-LastModified: 1377774582874
-Build-Jdk: 1.6.0_37
+Bnd-LastModified: 1378325274924
+Build-Jdk: 1.7.0_25
 Built-By: sraman
 Bundle-ManifestVersion: 2
 Bundle-Name: affinity
@@ -8,8 +8,8 @@ Bundle-SymbolicName: org.opendaylight.controller.affinity
 Bundle-Version: 0.4.0.SNAPSHOT
 Created-By: Apache Maven Bundle Plugin
 Export-Package: org.opendaylight.controller.affinity;uses:="javax.xml.bi
- nd.annotation,org.opendaylight.controller.sal.utils";version="0.4.0.SNA
- PSHOT"
+ nd.annotation,org.opendaylight.controller.sal.utils,org.opendaylight.co
+ ntroller.sal.core";version="0.4.0.SNAPSHOT"
 Import-Package: javax.ws.rs;version="[1.1,2)",javax.ws.rs.core;version="
  [1.1,2)",javax.xml.bind,javax.xml.bind.annotation,javax.xml.bind.annota
  tion,org.apache.commons.lang3.builder;version="[3.1,4)",org.apache.feli

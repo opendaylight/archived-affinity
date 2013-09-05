@@ -51,6 +51,7 @@ import org.opendaylight.controller.configuration.IConfigurationContainerAware;
 import org.opendaylight.controller.forwardingrulesmanager.FlowEntry;
 import org.opendaylight.controller.sal.core.IContainer;
 import org.opendaylight.controller.sal.core.Node;
+import org.opendaylight.controller.sal.core.Host;
 import org.opendaylight.controller.sal.core.NodeConnector;
 import org.opendaylight.controller.sal.core.NodeTable;
 import org.opendaylight.controller.sal.core.Property;
@@ -63,13 +64,16 @@ import org.opendaylight.controller.sal.utils.GlobalConstants;
 import org.opendaylight.controller.sal.utils.IObjectReader;
 import org.opendaylight.controller.sal.utils.ObjectReader;
 import org.opendaylight.controller.sal.utils.ObjectWriter;
+import org.opendaylight.controller.sal.utils.NetUtils;
 
+import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.sal.utils.StatusCode;
 
 import org.opendaylight.controller.sal.utils.ServiceHelper;
 import org.opendaylight.controller.affinity.AffinityGroup;
 import org.opendaylight.controller.affinity.AffinityLink;
+import org.opendaylight.controller.affinity.AffinityIdentifier;
 import org.opendaylight.controller.affinity.IAffinityManager;
 import org.opendaylight.controller.affinity.IAffinityManagerAware;
 import org.slf4j.Logger;
@@ -90,6 +94,8 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     private ConcurrentMap<String, AffinityGroup> affinityGroupList;
     private ConcurrentMap<String, AffinityLink> affinityLinkList;
     private ConcurrentMap<Long, String> configSaveEvent;
+
+    private IfIptoHost hostTracker;
 
     private final Set<IAffinityManagerAware> affinityManagerAware = Collections
             .synchronizedSet(new HashSet<IAffinityManagerAware>());
@@ -201,6 +207,16 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
         configSaveEvent = new ConcurrentHashMap<Long, String>();
     }
 
+
+    void setHostTracker(IfIptoHost h) {
+        this.hostTracker = h;
+    }
+
+    void unsetHostTracker(IfIptoHost h) {
+        if (this.hostTracker.equals(h)) {
+            this.hostTracker = null;
+        }
+    }
 
     public Status addAffinityLink(AffinityLink al) {
 	boolean putNewLink = false;
@@ -325,6 +341,44 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 	    }
         }
     }
+
+    @Override 
+    public List<AffinityIdentifier> getAllElementsByAffinityIdentifier(AffinityGroup ag) {
+	List<AffinityIdentifier> elements = (List<AffinityIdentifier>) ag.getAllElements();
+	return elements;
+    }
+ 
+    @Override 
+    public List<Host> getAllElementsByHost(AffinityGroup ag) {
+	List<Host> hostList= new ArrayList<Host>();
+
+	for (AffinityIdentifier h : ag.getAllElements()) {
+	    /* TBD: Do not assume this to be an InetAddress. */ 
+	    h.print();
+	    if (hostTracker != null) {
+		Host host1 = hostTracker.hostFind((InetAddress) h.get());
+		hostList.add(host1);
+	    }
+	}
+	return hostList;
+    }
+    /*
+    @Override 
+    public List<Entry<Host, Host>> getAllFlows(AffinityGroup ag) {
+	List<Entry<Host,Host>> hostPairList= new java.util.ArrayList<>();
+	java.util.Map.Entry<Host, Host> hp1=new java.util.AbstractMap.SimpleEntry<>(host1, host2);
+	hostPairList.add(hp1);
+	return hostPairList;
+    }
+
+    @Override 
+    public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlows(AffinityGroup ag) {
+	List<Entry<Host,Host>> hostPairList= new java.util.ArrayList<>();
+	java.util.Map.Entry<Host, Host> hp1=new java.util.AbstractMap.SimpleEntry<>(host1, host2);
+	hostPairList.add(hp1);
+    }
+    */
+
     @Override
     public Status saveConfiguration() {
         return saveAffinityConfig();

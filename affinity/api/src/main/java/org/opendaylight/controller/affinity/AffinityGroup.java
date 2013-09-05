@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Collection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,6 +84,7 @@ public class AffinityGroup implements Cloneable, Serializable {
 	return (elements.size());
     }
     public void print() {
+	System.out.println("Printing affinity group " + this.name);
 	for (AffinityIdentifier value : elements.values()) {
 	    value.print();
 	}
@@ -95,6 +97,9 @@ public class AffinityGroup implements Cloneable, Serializable {
     // robust "is host h a member of this affinity group".
     public Set<String> getIPs() {
         return elements.keySet();
+    }
+    public Collection<AffinityIdentifier> getAllElements() {
+	return elements.values();
     }
 }
 

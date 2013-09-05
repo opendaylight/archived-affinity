@@ -11,6 +11,7 @@ package org.opendaylight.controller.affinity.internal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -22,6 +23,7 @@ import org.opendaylight.controller.sal.core.UpdateType;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.affinity.AffinityGroup;
 import org.opendaylight.controller.affinity.AffinityLink;
+import org.opendaylight.controller.sal.core.Host;
 
 public class AffinityManagerImplTest {
 
@@ -38,6 +40,8 @@ public class AffinityManagerImplTest {
 
 	Status ret2 = ag1.add("10.0.0.20");
 	Assert.assertTrue(ret2.isSuccess());
+
+	ag1.print();
 
 	// Add an invalid element. 
 	Status ret3 = ag1.add("10");
@@ -80,10 +84,16 @@ public class AffinityManagerImplTest {
         result = affinitymgr.addAffinityLink(al2);
         Assert.assertTrue(result.isSuccess());
 	
-	/* Constraint checking? */
-        result = (affinitymgr.removeAffinityGroup(ag1.getName()));
-        Assert.assertTrue(result.isSuccess());
-
+	/* Test the get methods. */
+	System.out.println("Affinity group = " + ag1.getName());
+	List<Host> hostlist = affinitymgr.getAllElementsByHost(ag1);
+	
+	for (Host h : hostlist) {
+	    System.out.println("host = " + h.getNetworkAddressAsString());
+	}
 	affinitymgr.saveConfiguration();
+	/* Constraint checking? */
+	result = (affinitymgr.removeAffinityGroup(ag1.getName()));
+        Assert.assertTrue(result.isSuccess());
     }
 }

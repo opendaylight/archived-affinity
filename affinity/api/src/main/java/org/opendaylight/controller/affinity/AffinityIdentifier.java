@@ -17,8 +17,11 @@ public class AffinityIdentifier<T> {
     public void setName(String name) {
 	this.name = name;
     }
+    public String getName(String name) {
+	return (this.name);
+    }
     public void print() {
-	System.out.println(value);
+	System.out.println(name);
     }
 }
 

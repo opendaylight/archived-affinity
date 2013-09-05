@@ -14,7 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.Set;
+import java.util.Collection;
 
+import org.opendaylight.controller.sal.core.Host;
 import org.opendaylight.controller.sal.core.Node;
 import org.opendaylight.controller.sal.core.NodeConnector;
 import org.opendaylight.controller.sal.core.Property;
@@ -43,4 +45,7 @@ public interface IAffinityManager {
 
     /* Save all configs to their respective files. */
     public Status saveAffinityConfig();
+
+    public List<AffinityIdentifier> getAllElementsByAffinityIdentifier(AffinityGroup ag);
+    public List<Host> getAllElementsByHost(AffinityGroup ag);
 }
