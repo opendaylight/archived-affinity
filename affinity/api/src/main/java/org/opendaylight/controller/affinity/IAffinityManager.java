@@ -10,11 +10,13 @@
 package org.opendaylight.controller.affinity;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.Set;
 import java.util.Collection;
+import java.util.Map.Entry;
 
 import org.opendaylight.controller.sal.core.Host;
 import org.opendaylight.controller.sal.core.Node;
@@ -46,6 +48,8 @@ public interface IAffinityManager {
     /* Save all configs to their respective files. */
     public Status saveAffinityConfig();
 
-    public List<AffinityIdentifier> getAllElementsByAffinityIdentifier(AffinityGroup ag);
+    public ArrayList<AffinityIdentifier> getAllElementsByAffinityIdentifier(AffinityGroup ag);
     public List<Host> getAllElementsByHost(AffinityGroup ag);
+    public List<Entry<Host, Host>> getAllFlowsByHost(AffinityLink al);
+    public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlowsByAffinityIdentifier(AffinityLink al);
 }

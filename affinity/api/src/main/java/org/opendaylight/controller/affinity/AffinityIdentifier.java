@@ -23,5 +23,8 @@ public class AffinityIdentifier<T> {
     public void print() {
 	System.out.println(name);
     }
+    public String toString() {
+	return "AffinityIdentifier [name= " + this.name + " value= " + value.toString() + "]";
+    }
 }
 

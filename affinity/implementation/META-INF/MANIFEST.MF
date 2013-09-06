@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
-Bnd-LastModified: 1378325277283
+Bnd-LastModified: 1378480463970
 Build-Jdk: 1.7.0_25
 Built-By: sraman
 Bundle-Activator: org.opendaylight.controller.affinity.internal.Activato

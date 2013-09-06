@@ -98,8 +98,9 @@ public class AffinityGroup implements Cloneable, Serializable {
     public Set<String> getIPs() {
         return elements.keySet();
     }
-    public Collection<AffinityIdentifier> getAllElements() {
-	return elements.values();
+    public ArrayList<AffinityIdentifier> getAllElements() {
+        ArrayList<AffinityIdentifier> retvalues = new ArrayList<AffinityIdentifier>(elements.values());
+	return retvalues;
     }
 }
 

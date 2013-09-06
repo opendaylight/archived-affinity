@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,6 +22,7 @@ import org.opendaylight.controller.sal.core.Property;
 import org.opendaylight.controller.sal.core.State;
 import org.opendaylight.controller.sal.core.UpdateType;
 import org.opendaylight.controller.sal.utils.Status;
+import org.opendaylight.controller.affinity.AffinityIdentifier;
 import org.opendaylight.controller.affinity.AffinityGroup;
 import org.opendaylight.controller.affinity.AffinityLink;
 import org.opendaylight.controller.sal.core.Host;
@@ -85,12 +87,31 @@ public class AffinityManagerImplTest {
         Assert.assertTrue(result.isSuccess());
 	
 	/* Test the get methods. */
-	System.out.println("Affinity group = " + ag1.getName());
+
+	/* Get all members as hosts */
+	System.out.println("Affinity group (as Hosts) = " + ag1.getName());
 	List<Host> hostlist = affinitymgr.getAllElementsByHost(ag1);
 	
 	for (Host h : hostlist) {
 	    System.out.println("host = " + h.getNetworkAddressAsString());
 	}
+	
+	/* Get all members as affinity identifiers */
+	System.out.println("Affinity group (as Affinity Identifiers) = " + ag1.getName());
+	ArrayList<AffinityIdentifier> affylist = affinitymgr.getAllElementsByAffinityIdentifier(ag1);
+	
+	for (AffinityIdentifier i : affylist) {
+	    i.print();
+	}
+
+	/* Get all id pairs for an affinity link */
+	System.out.println("Affinity link = " + al1.getName());
+	List<Entry<AffinityIdentifier, AffinityIdentifier>> flowlist = affinitymgr.getAllFlowsByAffinityIdentifier(al1);
+	
+	for (Entry<AffinityIdentifier, AffinityIdentifier> flow : flowlist) {
+	    System.out.println("flow " + "from: " + flow.getKey().toString() + "to: " + flow.getValue().toString());
+	}
+
 	affinitymgr.saveConfiguration();
 	/* Constraint checking? */
 	result = (affinitymgr.removeAffinityGroup(ag1.getName()));

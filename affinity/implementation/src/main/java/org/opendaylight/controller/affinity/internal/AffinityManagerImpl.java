@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.AbstractMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -343,9 +344,8 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     }
 
     @Override 
-    public List<AffinityIdentifier> getAllElementsByAffinityIdentifier(AffinityGroup ag) {
-	List<AffinityIdentifier> elements = (List<AffinityIdentifier>) ag.getAllElements();
-	return elements;
+    public ArrayList<AffinityIdentifier> getAllElementsByAffinityIdentifier(AffinityGroup ag) {
+	return ag.getAllElements();
     }
  
     @Override 
@@ -362,22 +362,42 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 	}
 	return hostList;
     }
-    /*
-    @Override 
-    public List<Entry<Host, Host>> getAllFlows(AffinityGroup ag) {
-	List<Entry<Host,Host>> hostPairList= new java.util.ArrayList<>();
-	java.util.Map.Entry<Host, Host> hp1=new java.util.AbstractMap.SimpleEntry<>(host1, host2);
-	hostPairList.add(hp1);
+
+    @Override
+    public List<Entry<Host, Host>> getAllFlowsByHost(AffinityLink al) {
+	List<Entry<Host,Host>> hostPairList= new ArrayList<Entry<Host, Host>>();
+
+	AffinityGroup fromGroup = al.getFromGroup();
+	AffinityGroup toGroup = al.getToGroup();
+	
+	for (AffinityIdentifier h1 : fromGroup.getAllElements()) {
+	    for (AffinityIdentifier h2 : toGroup.getAllElements()) {
+		if (hostTracker != null) {
+		    Host host1 = hostTracker.hostFind((InetAddress) h1.get());
+		    Host host2 = hostTracker.hostFind((InetAddress) h2.get());
+		    Entry<Host, Host> hp1=new AbstractMap.SimpleEntry<Host, Host>(host1, host2);
+		    hostPairList.add(hp1);
+		}
+	    }
+	}
 	return hostPairList;
     }
 
     @Override 
-    public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlows(AffinityGroup ag) {
-	List<Entry<Host,Host>> hostPairList= new java.util.ArrayList<>();
-	java.util.Map.Entry<Host, Host> hp1=new java.util.AbstractMap.SimpleEntry<>(host1, host2);
-	hostPairList.add(hp1);
+    public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlowsByAffinityIdentifier(AffinityLink al) {
+	List<Entry<AffinityIdentifier, AffinityIdentifier>> hostPairList= new ArrayList<Entry<AffinityIdentifier, AffinityIdentifier>>();
+
+	AffinityGroup fromGroup = al.getFromGroup();
+	AffinityGroup toGroup = al.getToGroup();
+	
+	for (AffinityIdentifier h1 : fromGroup.getAllElements()) {
+	    for (AffinityIdentifier h2 : toGroup.getAllElements()) {
+		Entry<AffinityIdentifier, AffinityIdentifier> hp1=new AbstractMap.SimpleEntry<AffinityIdentifier, AffinityIdentifier>(h1, h2);
+		hostPairList.add(hp1);
+	    }
+	}
+	return hostPairList;
     }
-    */
 
     @Override
     public Status saveConfiguration() {
