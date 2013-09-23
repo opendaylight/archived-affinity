@@ -2,26 +2,19 @@
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
-<!--  <parent>
-    <groupId>org.opendaylight.controller</groupId>
-    <artifactId>affinity</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
-  </parent> -->
 
-  <groupId>org.opendaylight.controller.affinity</groupId>
-  <artifactId>implementation</artifactId>
+  <parent>
+    <groupId>org.opendaylight.affinity</groupId>
+    <artifactId>affinityParent</artifactId>
+    <version>0.4.1-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
+  </parent>
+
+  <groupId>org.opendaylight.affinity</groupId>
+  <artifactId>affinity.implementation</artifactId>
   <version>0.4.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
-  <properties>
-    <!-- Sonar properties using jacoco to retrieve integration test results -->
-    <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
-    <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
-    <sonar.jacoco.Reportpath>target/jacoco.exec</sonar.jacoco.Reportpath>
-    <sonar.jacoco.itReportPath>target/jacoco-it.exec</sonar.jacoco.itReportPath>
-    <sonar.language>java</sonar.language>
-    <junit.version>4.10</junit.version>
-  </properties>
   <build>
     <pluginManagement>
       <plugins>
@@ -40,10 +33,8 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Export-Package>
-            </Export-Package>
             <Import-Package>
-              org.opendaylight.controller.affinity,
+              org.opendaylight.affinity.affinity,
               org.opendaylight.controller.clustering.services,
               org.opendaylight.controller.configuration,
               org.opendaylight.controller.hosttracker,
@@ -60,7 +51,7 @@
               org.apache.commons.lang3.builder
             </Import-Package>
             <Bundle-Activator>
-              org.opendaylight.controller.affinity.internal.Activator
+              org.opendaylight.affinity.affinity.internal.Activator
             </Bundle-Activator>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>
@@ -123,7 +114,7 @@
       <version>0.4.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>org.opendaylight.controller</groupId>
+      <groupId>org.opendaylight.affinity</groupId>
       <artifactId>affinity</artifactId>
       <version>0.4.0-SNAPSHOT</version>
     </dependency>
