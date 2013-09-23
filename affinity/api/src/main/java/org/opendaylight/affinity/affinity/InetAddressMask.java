@@ -1,4 +1,4 @@
-package org.opendaylight.controller.affinity;
+package org.opendaylight.affinity.affinity;
 
 import java.io.Serializable;
 import java.net.Inet4Address;
