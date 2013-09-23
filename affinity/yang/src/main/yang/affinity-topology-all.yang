@@ -8,7 +8,7 @@ module affinity-topology-all {
     import inventory {prefix inv;}
 
     revision "2013-09-16" {
-        description "Initial revision of affinity model";
+        description "Initial revision of affinity model to be reviewed";
     }
 
     typedef affinity-group-ref {
