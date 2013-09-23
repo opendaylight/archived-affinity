@@ -51,9 +51,11 @@
       <module>affinity/api</module>
       <module>affinity/yang</module>
       <module>affinity/implementation</module>
+      <module>affinity/integrationtest</module>
       <module>affinity/northbound</module>
       <module>analytics/api</module>
       <module>analytics/implementation</module>
+      <module>analytics/integrationtest</module>
       <module>analytics/northbound</module>
     </modules>
 
