@@ -62,16 +62,27 @@ public class AffinityGroup implements Cloneable, Serializable {
 
     // Basic affinity element, IP address
     public Status add(String ipaddress) {
-	AffinityIdentifier<InetAddress> elem = new AffinityIdentifier();
+        AffinityIdentifier<InetAddress> elem = new AffinityIdentifier();
+        
+        elem.setName(ipaddress);
+        if (NetUtils.isIPAddressValid(ipaddress)) {
+            elem.set(NetUtils.parseInetAddress(ipaddress));
+            elements.put(ipaddress, elem);
+            return new Status(StatusCode.SUCCESS);
+        } else {
+            return new Status(StatusCode.BADREQUEST);
+        }
+    }
 
-	elem.setName(ipaddress);
-	if (NetUtils.isIPAddressValid(ipaddress)) {
-	    elem.set(NetUtils.parseInetAddress(ipaddress));
-	    elements.put(ipaddress, elem);
-	    return new Status(StatusCode.SUCCESS);
-	} else {
-	    return new Status(StatusCode.BADREQUEST);
-	}
+    // Basic affinity element, IP prefix/mask
+    public Status addInetMask(String addrmask) {
+        InetAddressMask inetaddrmask = new InetAddressMask(addrmask);
+	AffinityIdentifier<InetAddressMask> elem = new AffinityIdentifier();
+
+        elem.setName(addrmask);
+        elem.set(inetaddrmask);
+        elements.put(addrmask, elem);
+        return new Status(StatusCode.SUCCESS);
     }
 
     // Remove an affinity element given its IP address.

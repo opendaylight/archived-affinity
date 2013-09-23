@@ -11,11 +11,11 @@ module affinity-topology {
     }
 
     typedef affinity-group-ref {
-    type instance-identifier;
+        type instance-identifier;
     }
-
+    
     typedef affinity-link-ref {
-    type instance-identifier;
+        type instance-identifier;
     }
 
     grouping affinity-group {
@@ -53,10 +53,10 @@ module affinity-topology {
     }
 
     identity affinity-group-context {
-    description "Identity used to mark affinity-group context";
+        description "Identity used to mark affinity-group context";
     }
     identity affinity-link-context {
-    description "Identity used to mark affinity-link context";
+        description "Identity used to mark affinity-link context";
     }
 
     container affinity-topology {
@@ -75,8 +75,8 @@ module affinity-topology {
     rpc get-affinity-groups {
         output {
             list affinity-group {
-            key id;
-            uses affinity-group;
+                key id;
+                uses affinity-group;
             }
         }
     }

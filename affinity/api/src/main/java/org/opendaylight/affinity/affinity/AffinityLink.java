@@ -48,6 +48,8 @@ public class AffinityLink implements Cloneable, Serializable {
     AffinityGroup toGroup;
     @XmlElement 
     String affinityAttribute;
+    @XmlElement 
+    String affinityWaypoint;
 
     public AffinityLink() {
     }
@@ -70,6 +72,11 @@ public class AffinityLink implements Cloneable, Serializable {
     }
     public void setAttribute(String attribute) {
 	this.affinityAttribute = attribute;
+    }
+
+    /* Set the waypoint address, if the attribute is "redirect" */
+    public void setWaypoint(String wpaddr) {
+	this.affinityWaypoint = wpaddr;
     }
 
     public String getAttribute() {

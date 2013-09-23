@@ -86,6 +86,35 @@ public class AffinityManagerImplTest {
         result = affinitymgr.addAffinityLink(al2);
         Assert.assertTrue(result.isSuccess());
 	
+        AffinityGroup ag3 = new AffinityGroup("any");
+        ag3.addInetMask("0.0.0.0/0");
+        
+        AffinityGroup ag4 = new AffinityGroup("servers");
+        ag4.addInetMask("20.0.0.0/8");
+
+	// Add an affinity link from ag1 to ag2. 
+	AffinityLink al3 = new AffinityLink();
+	al3.setFromGroup(ag3);
+	al3.setToGroup(ag4);
+	al3.setName("link3");
+	al3.setAttribute("redirect");
+        al3.setWaypoint("20.0.0.11");
+        
+	result = affinitymgr.addAffinityGroup(ag3);
+        Assert.assertTrue(result.isSuccess());
+	result = affinitymgr.addAffinityGroup(ag4);
+        Assert.assertTrue(result.isSuccess());
+	result = affinitymgr.addAffinityLink(al3);
+        Assert.assertTrue(result.isSuccess());
+
+        // Print all pairs/flows from the affinity link al3. 
+        System.out.println("affinity link " + al3.getName());
+        List<Entry<AffinityIdentifier, AffinityIdentifier>> flowlist1;
+        flowlist1 = affinitymgr.getAllFlowsByAffinityIdentifier(al3);
+        for (Entry<AffinityIdentifier, AffinityIdentifier> flow : flowlist1) {
+            System.out.println("flow with from=" + flow.getKey() + " to=" + flow.getValue());
+        }
+
 	/* Test the get methods. */
 
 	/* Get all members as hosts */

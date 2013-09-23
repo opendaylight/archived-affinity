@@ -45,7 +45,8 @@ public class AffinityGroupTest extends TestCase {
 	al1.setFromGroup(ag1);
 	al1.setToGroup(ag2);
 	al1.setName("link1");
-	al1.setAttribute("isolate");
+	al1.setAttribute("redirect");
+        al1.setWaypoint("20.0.0.11");
 
 	// Add a self loop for ag2.
 	AffinityLink al2 = new AffinityLink("link2", ag2, ag2);
@@ -54,7 +55,7 @@ public class AffinityGroupTest extends TestCase {
 	al2.setName("link2");
 	al2.setAttribute("hopcount");
 
-	System.out.println("Affinity group size is " + ag1.size());
+    	System.out.println("Affinity group size is " + ag1.size());
         Assert.assertTrue(ag1.size() == 2);
 	ag1.print();
     }

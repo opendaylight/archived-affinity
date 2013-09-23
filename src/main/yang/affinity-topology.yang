@@ -52,6 +52,10 @@ module affinity-topology {
 	}
     }
 
+    grouping affinity-flows {
+        uses opendaylight-five-tuple;
+    }
+    
     identity affinity-group-context {
 	description "Identity used to mark affinity-group context";
     }
