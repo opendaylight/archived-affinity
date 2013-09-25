@@ -95,9 +95,10 @@ def main():
     subnet_control = SubnetControl()
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
 
-    test_mode = True
+    demo_mode = True
 
-    if (test_mode):
+    # Test mode
+    if (not demo_mode):
 
         src = "10.0.0.1"
         dst = "10.0.0.2"
@@ -108,7 +109,50 @@ def main():
         print("%f mbit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
         sys.exit()
 
+    print "Usage: [host | link] [bytes | rate] [src dst | link-name]"
+
     # Demo mode
+    while True:
+        request = raw_input("> ")
+        try:
+            request = request.split()
+            request_type = request[0]
+
+            if (request_type == "quit"):
+                sys.exit()
+
+            action = request[1]
+
+            if (request_type == "host"):
+                src, dst = request[2:4]
+                if (action == "bytes"):
+                    host_stat = HostStats(src, dst)
+                    print("%d bytes between %s and %s" % (host_stat.get_bytes(), src, dst))
+                elif (action == "rate"):
+                    host_stat = HostStats(src, dst)
+                    print("%f bit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
+                else:
+                    raise Exception
+
+            elif (request_type == "link"):
+                link = request[2]
+                h = httplib2.Http(".cache")
+                h.add_credentials("admin", "admin")
+                resp, content = h.request("http://localhost:8080/controller/nb/v2/analytics/default/affinitylinkstats/" + link, "GET")
+                al_stats = json.loads(content)
+
+                if (action == "bytes"):
+                    print("%d bytes on %s" % (long(al_stats["byteCount"]), link))
+                elif (action == "rate"):
+                    print("%f bit/s on %s" % (float(al_stats["bitRate"]), link))
+                else:
+                    raise Exception
+
+            else:
+                raise Exception
+        except Exception as e:
+            print "Error"
+
 
 if __name__ == "__main__":
     main()
