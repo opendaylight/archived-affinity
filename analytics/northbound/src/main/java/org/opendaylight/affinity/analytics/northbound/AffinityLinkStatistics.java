@@ -12,15 +12,14 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.opendaylight.controller.sal.core.Host;
+
+import org.opendaylight.affinity.affinity.AffinityLink;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class HostStatistics {
-    @XmlElement
-    private Host srcHost;
-    @XmlElement
-    private Host dstHost;
+public class AffinityLinkStatistics {
+
+    private AffinityLink link;
     @XmlElement
     private long byteCount;
     @XmlElement
@@ -28,31 +27,22 @@ public class HostStatistics {
 
     // To satisfy JAXB
     @SuppressWarnings("unused")
-    private HostStatistics() {
+    private AffinityLinkStatistics() {
     }
 
-    public HostStatistics(Host srcHost, Host dstHost, long byteCount, double bitRate) {
+    public AffinityLinkStatistics(AffinityLink link, long byteCount, double bitRate) {
         super();
-        this.srcHost = srcHost;
-        this.dstHost = dstHost;
+        this.link = link;
         this.byteCount = byteCount;
         this.bitRate = bitRate;
     }
 
-    public Host getSrcHost() {
-        return this.srcHost;
+    public AffinityLink getLink() {
+        return this.link;
     }
 
-    public void setSrcHost(Host host) {
-        this.srcHost = host;
-    }
-
-    public Host getDstHost() {
-        return this.dstHost;
-    }
-
-    public void setDstHost(Host host) {
-        this.dstHost = host;
+    public void setLink(AffinityLink link) {
+        this.link = link;
     }
 
     public long getByteCount() {

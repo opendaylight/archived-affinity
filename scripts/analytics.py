@@ -69,9 +69,7 @@ class SubnetControl:
             sys.exit(-1)
         data = json.loads(content)
 
-        # TODO:
         for key in data["subnetConfig"]:
-            print key["subnet"]
             if (key["subnet"] == subnet):
                 return True
         return False
@@ -97,14 +95,20 @@ def main():
     subnet_control = SubnetControl()
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
 
-    src = "10.0.0.1"
-    dst = "10.0.0.2"
-    host_stat = HostStats(src, dst)
+    test_mode = True
 
-    # These counts should be nonzero
-    print("%d bytes between %s and %s" % (host_stat.get_bytes(), src, dst))
-    print("%f mbit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
+    if (test_mode):
 
+        src = "10.0.0.1"
+        dst = "10.0.0.2"
+        host_stat = HostStats(src, dst)
+
+        # These counts should be nonzero
+        print("%d bytes between %s and %s" % (host_stat.get_bytes(), src, dst))
+        print("%f mbit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
+        sys.exit()
+
+    # Demo mode
 
 if __name__ == "__main__":
     main()

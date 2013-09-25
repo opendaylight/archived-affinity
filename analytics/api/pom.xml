@@ -32,6 +32,7 @@
         <configuration>
           <instructions>
             <Import-Package>
+              org.opendaylight.affinity.affinity,
               org.opendaylight.controller.sal.core,
             </Import-Package>
             <Export-Package>
@@ -45,11 +46,15 @@
   </build>
   <dependencies>
     <dependency>
+      <groupId>org.opendaylight.affinity</groupId>
+      <artifactId>affinity</artifactId>
+      <version>0.4.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>sal</artifactId>
       <version>0.5.0-SNAPSHOT</version>
     </dependency>
-
     <dependency>
       <groupId>org.opendaylight.yangtools.model</groupId>
       <artifactId>ietf-topology</artifactId>
