@@ -15,12 +15,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.opendaylight.affinity.affinity.AffinityGroup;
+import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.analytics.IAnalyticsManager;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
@@ -78,7 +80,7 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     void setAffinityManager(IAffinityManager a) {
         this.affinityManager = a;
 
-        // TODO: This is just for testing
+        // TODO: Testing
         AffinityGroup ag1 = new AffinityGroup("testAG1");
         ag1.add("10.0.0.1");
         ag1.add("10.0.0.2");
@@ -87,6 +89,9 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         ag2.add("10.0.0.4");
         this.affinityManager.addAffinityGroup(ag1);
         this.affinityManager.addAffinityGroup(ag2);
+        AffinityLink al = new AffinityLink("testAL", ag1, ag2);
+        this.affinityManager.addAffinityLink(al);
+        // TODO: End testing
     }
 
     void unsetAffinityManager(IAffinityManager a) {
@@ -203,47 +208,43 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         return bitRate;
     }
 
-    // TODO: This functionality should be more general, and a part of
-    // the affinity group class.
-    private boolean hostIsInAffinity(Host h, AffinityGroup a) {
-        Set<String> ips = a.getIPs();
-        InetAddress hostAddress = h.getNetworkAddress();
-        for (String ip : ips) {
-            try {
-                InetAddress thisAddress = InetAddress.getByName(ip);
-                if (hostAddress.equals(thisAddress)) {
-                    return true;
+    public double getBitRateOnAffinityLink(AffinityLink al) {
+        double maxDuration = 0;
+        int totalBytes = 0;
+        List<Entry<Host, Host>> flows = this.affinityManager.getAllFlowsByHost(al);
+        for (Entry<Host, Host> flow : flows) {
+            Host h1 = flow.getKey();
+            Host h2 = flow.getValue();
+            if (this.hostsToStats.get(h1) != null &&
+                this.hostsToStats.get(h1).get(h2) != null) {
+                totalBytes += getByteCountBetweenHosts(h1, h2);
+                double duration = this.hostsToStats.get(h1).get(h2).getDuration();
+                if (duration > maxDuration) {
+                    maxDuration = duration;
                 }
-            } catch (UnknownHostException e) {
             }
         }
-        return false;
+        if (maxDuration == 0.0) {
+            return 0.0;
+        } else {
+            return (totalBytes * 8.0) / maxDuration;
+        }
     }
 
-    public long getByteCountBetweenAffinities(AffinityGroup a1, AffinityGroup a2) {
-        // TODO: Cache for host-to-AG mapping
-        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
+    public long getByteCountOnAffinityLink(AffinityLink al) {
         long b = 0;
-        for (Host h1 : allHosts) {
-            for (Host h2 : allHosts) {
-                if (hostIsInAffinity(h1, a1) && hostIsInAffinity(h2, a2)) {
-                    b += getByteCountBetweenHosts(h1, h2);
-                }
-            }
+        List<Entry<Host, Host>> flows = this.affinityManager.getAllFlowsByHost(al);
+        for (Entry<Host, Host> flow : flows) {
+            Host h1 = flow.getKey();
+            Host h2 = flow.getValue();
+            b += getByteCountBetweenHosts(h1, h2);
         }
+
         return b;
     }
 
     @Override
     public void nodeFlowStatisticsUpdated(Node node, List<FlowOnNode> flowStatsList) {
-
-        // TODO: Start testing
-        /*AffinityGroup ag1 = this.affinityManager.getAffinityGroup("testAG1");
-        AffinityGroup ag2 = this.affinityManager.getAffinityGroup("testAG2");
-        long b = getByteCountBetweenAffinities(ag1, ag2);
-        System.out.println("!!! " + b + " bytes");*/
-        // TODO: End testing
-
         Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
         for (FlowOnNode f : flowStatsList) {
             Host srcHost = getSourceHostFromFlow(f.getFlow(), allHosts);
