@@ -28,8 +28,10 @@ class HostStats:
     def refresh(self):
         resp, content = self.http.request("http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/" + self.src + "/" + self.dst, "GET")
         if (resp.status == 404):
+            print "404 error"
             return
         if (resp.status == 503):
+            print "503 error"
             return
         self.host_stats = json.loads(content)
 
@@ -37,6 +39,7 @@ class HostStats:
         try:
             bytes = long(self.host_stats["byteCount"])
         except Exception as e:
+            print "exception:", e
             bytes = 0
         return bytes
 

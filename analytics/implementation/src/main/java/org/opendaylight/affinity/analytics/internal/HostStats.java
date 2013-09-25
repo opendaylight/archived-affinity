@@ -37,7 +37,11 @@ public class HostStats {
     }
 
     public void setStatsFromFlow(FlowOnNode flow) {
-        this.byteCount = flow.getByteCount();
+        // Prevent stats from getting overwritten by zero-byte flows.
+        // TODO: Figure out why this happens
+        if (flow.getByteCount() > this.byteCount) {
+            this.byteCount = flow.getByteCount();
+        }
         this.duration = flow.getDurationSeconds() + .000000001 * flow.getDurationNanoseconds();
     }
 

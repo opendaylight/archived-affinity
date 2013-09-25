@@ -124,28 +124,45 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
      * exists.  Returns null otherwise.
      */
     protected Host getDestinationHostFromFlow(Flow flow, Set<HostNodeConnector> hosts) {
-        Host dstHost = null;
         Match match = flow.getMatch();
+        MatchField dst = null;
 
-        // Flow has to have DL_DST field
+        // Flow has to have DL_DST field or NW_DST field to proceed
         if (match.isPresent(MatchType.DL_DST)) {
-            MatchField dlDst = match.getField(MatchType.DL_DST);
+            dst = match.getField(MatchType.DL_DST);
+        } else if (match.isPresent(MatchType.NW_DST)) {
+            dst = match.getField(MatchType.NW_DST);
+        } else { 
+            return null;
+        }
 
-            // Check cache
-            Host cacheHit = this.destinationHostCache.get(dlDst);
-            if (cacheHit != null) {
-                return cacheHit;
-            }
+        // Check cache
+        Host cacheHit = this.destinationHostCache.get(dst);
+        if (cacheHit != null) {
+            return cacheHit;
+        }
 
-            // Find the destination host by comparing the MAC address
-            // strings (comparing MAC address bytes, surprisingly, did
-            // not work).
-            String dstMac = MatchType.DL_DST.stringify(dlDst.getValue());
-            for (HostNodeConnector h : hosts) {
+        // Find the destination host
+        Host dstHost = null;
+        for (HostNodeConnector h : hosts) {
+            
+            // DL_DST => compare on MAC address strings
+            if (match.isPresent(MatchType.DL_DST)) {
+                String dstMac = MatchType.DL_DST.stringify(dst.getValue());
                 String hostMac = ((EthernetAddress) h.getDataLayerAddress()).getMacAddress();
                 if (dstMac.equals(hostMac)) {
                     dstHost = h;
-                    this.destinationHostCache.put(dlDst, dstHost); // Add to cache
+                    this.destinationHostCache.put(dst, dstHost); // Add to cache
+                    break;
+                }
+            }
+          
+            // NW_DST => compare on IP address (of type InetAddress)
+            else if (match.isPresent(MatchType.NW_DST)) {
+                InetAddress hostIP = h.getNetworkAddress();
+                if (dst.getValue().equals(hostIP)) {
+                    dstHost = h;
+                    this.destinationHostCache.put(dst, dstHost); // Add to cache
                     break;
                 }
             }
@@ -158,6 +175,7 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
      * exists.  Returns null otherwise.
      */
     protected Host getSourceHostFromFlow(Flow flow, Set<HostNodeConnector> hosts) {
+
         Host srcHost = null;
         Match match = flow.getMatch();
 
@@ -245,10 +263,16 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
     @Override
     public void nodeFlowStatisticsUpdated(Node node, List<FlowOnNode> flowStatsList) {
+
         Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
         for (FlowOnNode f : flowStatsList) {
             Host srcHost = getSourceHostFromFlow(f.getFlow(), allHosts);
             Host dstHost = getDestinationHostFromFlow(f.getFlow(), allHosts);
+
+            if (srcHost == null || dstHost == null) {
+                log.debug("Error: source or destination is null in nodeFlowStatisticsUpdated");
+                continue;
+            }
 
             if (this.hostsToStats.get(srcHost) == null) {
                 this.hostsToStats.put(srcHost, new HashMap<Host, HostStats>());

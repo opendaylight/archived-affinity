@@ -108,14 +108,12 @@ public class AnalyticsManagerIT {
 
     @Before
     public void areWeReady() {
-        System.out.println(">>> Running");
         assertNotNull(bc);
         boolean debugit = false;
         Bundle b[] = bc.getBundles();
         for (int i = 0; i < b.length; i++) {
             int state = b[i].getState();
             if (state != Bundle.ACTIVE && state != Bundle.RESOLVED) {
-                System.out.println(">>> " + b[i].getSymbolicName() + " " + stateToString(state));
                 log.debug("Bundle:" + b[i].getSymbolicName() + " state:" + stateToString(state));
                 debugit = true;
             }
