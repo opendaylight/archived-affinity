@@ -43,6 +43,11 @@
               org.opendaylight.controller.sal.utils,
               org.opendaylight.controller.sal.packet,
               org.opendaylight.controller.sal.inventory,
+              org.opendaylight.controller.tutorial_L2_forwarding,
+              org.opendaylight.controller.sal.flowprogrammer, 
+              org.opendaylight.controller.sal.match,
+              org.opendaylight.controller.sal.action,
+              org.opendaylight.controller.switchmanager,
               org.slf4j,
               org.apache.felix.dm,
               org.eclipse.osgi.framework.console,
@@ -116,6 +121,11 @@
     <dependency>
       <groupId>org.opendaylight.affinity</groupId>
       <artifactId>affinity</artifactId>
+      <version>0.4.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>tutorial_L2_forwarding</artifactId>
       <version>0.4.0-SNAPSHOT</version>
     </dependency>
   </dependencies>

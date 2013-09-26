@@ -5,9 +5,9 @@ module affinity-topology-all {
     import ietf-inet-types { prefix inet; }
     import ietf-yang-types { prefix yang; }
     import yang-ext { prefix ext; }
-//    import inventory {prefix inv;}
+    import opendaylight-inventory {prefix inv;}
 
-    revision "2013-09-16" {
+    revision "2013-09-25" {
         description "Initial revision of affinity model to be reviewed";
     }
 

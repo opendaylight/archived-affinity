@@ -22,6 +22,9 @@ import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
+import org.opendaylight.controller.tutorial_L2_forwarding.TutorialL2Forwarding;
+import org.opendaylight.controller.switchmanager.ISwitchManager;
 
 /**
  * AffinityManager Bundle Activator
@@ -100,6 +103,18 @@ public class Activator extends ComponentActivatorAbstractBase {
                     IClusterContainerServices.class).setCallbacks(
                     "setClusterContainerService",
                     "unsetClusterContainerService").setRequired(true));
+            c.add(createContainerServiceDependency(containerName).setService(
+                    IFlowProgrammerService.class).setCallbacks(
+                    "setFlowProgrammerService", "unsetFlowProgrammerService")
+                    .setRequired(true));
+            c.add(createContainerServiceDependency(containerName).setService(
+                    TutorialL2Forwarding.class).setCallbacks(
+                    "setL2AgentService", "unsetL2AgentService")
+                    .setRequired(true));
+            c.add(createContainerServiceDependency(containerName).setService(
+                    ISwitchManager.class).setCallbacks(
+                    "setSwitchManager", "unsetSwitchManager")
+                    .setRequired(true));
         }
     }
 }

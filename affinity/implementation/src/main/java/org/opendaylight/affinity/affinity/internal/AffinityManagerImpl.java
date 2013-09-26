@@ -11,6 +11,7 @@ package org.opendaylight.affinity.affinity.internal;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.net.UnknownHostException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -57,7 +58,14 @@ import org.opendaylight.controller.sal.core.NodeConnector;
 import org.opendaylight.controller.sal.core.NodeTable;
 import org.opendaylight.controller.sal.core.Property;
 import org.opendaylight.controller.sal.core.UpdateType;
+import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 import org.opendaylight.controller.sal.flowprogrammer.Flow;
+import org.opendaylight.controller.sal.match.Match;
+import org.opendaylight.controller.sal.match.MatchType;
+import org.opendaylight.controller.sal.match.MatchField;
+import org.opendaylight.controller.sal.action.Action;
+import org.opendaylight.controller.sal.action.Output;
+
 import org.opendaylight.controller.sal.reader.FlowOnNode;
 import org.opendaylight.controller.sal.reader.IReadService;
 import org.opendaylight.controller.sal.reader.IReadServiceListener;
@@ -77,6 +85,12 @@ import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.affinity.affinity.AffinityIdentifier;
 import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.IAffinityManagerAware;
+
+import org.opendaylight.controller.hosttracker.IfIptoHost;
+import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
+import org.opendaylight.controller.switchmanager.ISwitchManager;
+import org.opendaylight.controller.tutorial_L2_forwarding.TutorialL2Forwarding;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +105,9 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     private static final String SAVE = "Save";
     private String affinityLinkFileName = null;
     private String affinityGroupFileName = null;
+    private IFlowProgrammerService fps = null;
+    private ISwitchManager switchManager = null;
+    private TutorialL2Forwarding l2agent = null;
 
     private ConcurrentMap<String, AffinityGroup> affinityGroupList;
     private ConcurrentMap<String, AffinityLink> affinityLinkList;
@@ -218,7 +235,41 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             this.hostTracker = null;
         }
     }
+    public void setFlowProgrammerService(IFlowProgrammerService s)
+    {
+        this.fps = s;
+    }
 
+    public void unsetFlowProgrammerService(IFlowProgrammerService s) {
+        if (this.fps == s) {
+            this.fps = null;
+        }
+    }
+    public void setL2Agent(TutorialL2Forwarding s)
+    {
+        this.l2agent = s;
+    }
+
+    public void unsetL2Agent(TutorialL2Forwarding s) {
+        if (this.l2agent == s) {
+            this.l2agent = null;
+        }
+    }
+
+    /*
+    public void setForwardingRulesManager(
+            IForwardingRulesManager forwardingRulesManager) {
+        this.ruleManager = forwardingRulesManager;
+    }
+
+    public void unsetForwardingRulesManager(
+            IForwardingRulesManager forwardingRulesManager) {
+        if (this.ruleManager == forwardingRulesManager) {
+            this.ruleManager = null;
+        }
+    }
+    */
+    
     public Status addAffinityLink(AffinityLink al) {
 	boolean putNewLink = false;
 
@@ -243,6 +294,71 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 	}
 	
         return new Status(StatusCode.SUCCESS);
+    }
+
+
+    /** 
+     * Fetch all node connectors. Each switch port will receive a flow rule. Do not stop on error.
+     */
+    public Status pushFlowRule(Flow flow) {
+        /* Get all node connectors. */
+        Set<Node> nodes = switchManager.getNodes();
+        Status success = new Status(StatusCode.SUCCESS);
+        Status notfound = new Status(StatusCode.NOTFOUND);
+
+        if (nodes == null) {
+            log.debug("No nodes in network.");
+            return success;
+        } 
+        for (Node node: nodes) {
+            Set<NodeConnector> ncs = switchManager.getNodeConnectors(node);
+            if (ncs == null) {
+                continue;
+            }
+            Status status = fps.addFlow(node, flow);
+            if (!status.isSuccess()) {
+                log.debug("Error during addFlow: {} on {}. The failure is: {}",
+                          flow, node, status.getDescription());
+            }
+        }
+        return success;
+    }
+
+    /** 
+     * add flow rules for each node connector.
+     */
+    public Status addFlowRulesForRedirect(AffinityLink al) throws Exception {
+        Match match = new Match();
+        List<Action> actions = new ArrayList<Action>();
+
+        InetAddress address1, address2;
+        InetAddress mask;
+        mask = InetAddress.getByName("255.255.255.255");
+
+        Flow f = new Flow(match, actions);
+
+        List<Entry<Host,Host>> hostPairList= getAllFlowsByHost(al);
+        for (Entry<Host,Host> hostPair : hostPairList) {
+            /* Create a match for each host pair in the affinity link. */
+
+            Host host1 = hostPair.getKey();
+            Host host2 = hostPair.getValue();
+            address1 = host1.getNetworkAddress();
+            address2 = host2.getNetworkAddress();
+            
+            match.setField(MatchType.NW_SRC, address1, mask);
+            match.setField(MatchType.NW_DST, address2, mask);
+            
+
+            /* For each end point, discover the mac address of the
+             * host. Then lookup the L2 table to find the port to send
+             * this flow along. Program the flow. */
+
+            byte [] mac = ((HostNodeConnector) host1).getDataLayerAddressBytes();
+            NodeConnector dst_connector = l2agent.lookupMacAddress(mac);
+            actions.add(new Output(dst_connector));
+        }
+	return new Status(StatusCode.SUCCESS);
     }
 
     public Status removeAffinityLink(String name) {

@@ -22,6 +22,7 @@ import org.opendaylight.controller.sal.core.Node;
 import org.opendaylight.controller.sal.core.NodeConnector;
 import org.opendaylight.controller.sal.core.Property;
 import org.opendaylight.controller.sal.utils.Status;
+import org.opendaylight.controller.sal.flowprogrammer.Flow;
 
 import org.opendaylight.affinity.affinity.AffinityLink;
 
@@ -51,4 +52,7 @@ public interface IAffinityManager {
     public List<Host> getAllElementsByHost(AffinityGroup ag);
     public List<Entry<Host, Host>> getAllFlowsByHost(AffinityLink al);
     public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlowsByAffinityIdentifier(AffinityLink al);
+
+    public Status addFlowRulesForRedirect(AffinityLink al) throws Exception;
+    public Status pushFlowRule(Flow flow);
 }
