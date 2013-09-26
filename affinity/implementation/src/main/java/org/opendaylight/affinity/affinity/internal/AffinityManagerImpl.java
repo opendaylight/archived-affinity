@@ -90,6 +90,7 @@ import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.affinity.l2agent.L2Agent;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -244,20 +245,12 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             this.fps = null;
         }
     }
-<<<<<<< HEAD
     public void setL2Agent(L2Agent s)
-=======
-    public void setL2Agent(TutorialL2Forwarding s)
->>>>>>> Add flow pushing rules.
     {
         this.l2agent = s;
     }
 
-<<<<<<< HEAD
     public void unsetL2Agent(L2Agent s) {
-=======
-    public void unsetL2Agent(TutorialL2Forwarding s) {
->>>>>>> Add flow pushing rules.
         if (this.l2agent == s) {
             this.l2agent = null;
         }

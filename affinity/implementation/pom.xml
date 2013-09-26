@@ -124,13 +124,8 @@
       <version>0.4.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-<<<<<<< HEAD
       <groupId>org.opendaylight.affinity</groupId>
       <artifactId>l2agent</artifactId>
-=======
-      <groupId>org.opendaylight.controller</groupId>
-      <artifactId>tutorial_L2_forwarding</artifactId>
->>>>>>> Add flow pushing rules.
       <version>0.4.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
