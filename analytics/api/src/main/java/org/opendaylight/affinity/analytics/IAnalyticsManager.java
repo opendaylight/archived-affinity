@@ -8,6 +8,7 @@
 
 package org.opendaylight.affinity.analytics;
 
+import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.controller.sal.core.Host;
 
 public interface IAnalyticsManager {
@@ -15,4 +16,8 @@ public interface IAnalyticsManager {
     long getByteCountBetweenHosts(Host src, Host dst);
 
     double getBitRateBetweenHosts(Host src, Host dst);
+
+    long getByteCountOnAffinityLink(AffinityLink al);
+
+    double getBitRateOnAffinityLink(AffinityLink al);
 }

@@ -25,6 +25,8 @@ import org.codehaus.enunciate.jaxrs.ResponseCode;
 import org.codehaus.enunciate.jaxrs.StatusCodes;
 import org.codehaus.enunciate.jaxrs.TypeHint;
 
+import org.opendaylight.affinity.affinity.AffinityLink;
+import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.analytics.IAnalyticsManager;
 import org.opendaylight.controller.containermanager.IContainerManager;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
@@ -95,7 +97,7 @@ public class AnalyticsNorthbound {
     }
 
     /**
-     * Returns a list of Host Statistics for a given Node.
+     * Returns Host Statistics for a (src, dst) pair
      *
      * @param containerName
      *            Name of the Container. The Container name for the base
@@ -104,7 +106,7 @@ public class AnalyticsNorthbound {
      *            DataLayerAddress for the host
      * @param networkAddr
      *            NetworkAddress for the host
-     * @return List of Flow Statistics for a given Node. // TODO:
+     * @return Host Statistics for a given Node.
      */
     @Path("/{containerName}/hoststats/{srcNetworkAddr}/{dstNetworkAddr}")
     @GET
@@ -114,7 +116,6 @@ public class AnalyticsNorthbound {
         @ResponseCode(code = 200, condition = "Operation successful"),
         @ResponseCode(code = 404, condition = "The containerName is not found"),
         @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    // TODO: This will need other parameters
     public HostStatistics getHostStatistics(
         @PathParam("containerName") String containerName,
         @PathParam("srcNetworkAddr") String srcNetworkAddr,
@@ -129,18 +130,50 @@ public class AnalyticsNorthbound {
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
         }
 
-        ISwitchManager switchManager = (ISwitchManager) ServiceHelper.getInstance(ISwitchManager.class, containerName, this);
-        if (switchManager == null) {
-            throw new ServiceUnavailableException("Switch manager " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
-
         Host srcHost = handleHostAvailability(containerName, srcNetworkAddr);
         Host dstHost = handleHostAvailability(containerName, dstNetworkAddr);
         long byteCount = analyticsManager.getByteCountBetweenHosts(srcHost, dstHost);
         double bitRate = analyticsManager.getBitRateBetweenHosts(srcHost, dstHost);
 
         return new HostStatistics(srcHost, dstHost, byteCount, bitRate);
+    }
 
+    /**
+     * Returns the affinity link statistics for a given link.
+     *
+     * @param containerName
+     *            Name of the Container. The Container name for the base
+     *            controller is "default".
+     * @param linkName
+     *            AffinityLink name.
+     * @return List of Affinity Link Statistics for a given link.
+     */
+    @Path("/{containerName}/affinitylinkstats/{linkName}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(HostStatistics.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AffinityLinkStatistics getAffinityLinkStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("linkName") String affinityLinkName) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        }
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null) {
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+
+        AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
+        long byteCount = analyticsManager.getByteCountOnAffinityLink(al);
+        double bitRate = analyticsManager.getBitRateOnAffinityLink(al);
+
+        return new AffinityLinkStatistics(al, byteCount, bitRate);
     }
 
     private void handleDefaultDisabled(String containerName) {
@@ -153,6 +186,22 @@ public class AnalyticsNorthbound {
             throw new ResourceConflictException(RestMessages.DEFAULTDISABLED.toString());
         }
     }
+
+    private AffinityLink handleAffinityLinkAvailability(String containerName, String linkName) {
+
+        IAffinityManager affinityManager = (IAffinityManager) ServiceHelper.getInstance(IAffinityManager.class, containerName, this);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity manager " + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+
+        AffinityLink al = affinityManager.getAffinityLink(linkName);
+        if (al == null) {
+            throw new ResourceNotFoundException(linkName + " : AffinityLink does not exist");
+        }
+
+        return al;
+    }
+
 
     private Host handleHostAvailability(String containerName, String networkAddr) {
 
