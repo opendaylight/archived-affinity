@@ -5,13 +5,15 @@ import json
 import sys
 
 # 1. Start the controller
-# 2. On the mininet VM, run:
-#    > sudo mn --controller=remote,ip=192.168.56.1 --topo tree,2
-#    > h1 ping h2
-# 3. On the local machine (e.g., your laptop), run this script.
+# 2. On the local machine (e.g., your laptop), start this script.
 #    > python analytics.py
-# Should see output like: "xxx bytes between 10.0.0.1 and 10.0.0.2",
-# where xxx is a positive integer.
+# 3. On the mininet VM, run:
+#    > sudo mn --controller=remote,ip=192.168.56.1 --topo tree,2
+#    > h1 ping h3
+# 4. Give commands to analytics.py.  For instance:
+#    > host bytes 10.0.0.1 10.0.0.3
+#   (There is a usage prompt that prints at the beginning of analytics.py)
+# 5. Type 'quit' to exit analytics.py
 
 '''
 Class to keep track of host statistics (byte count, bit rate)
