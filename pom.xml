@@ -57,6 +57,7 @@
       <module>analytics/implementation</module>
       <module>analytics/integrationtest</module>
       <module>analytics/northbound</module>
+      <module>l2agent</module>
     </modules>
 
     <repositories>

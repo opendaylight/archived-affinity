@@ -1,36 +1,26 @@
+
 /*
- * Copyright (c) 2013 Plexxi, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.affinity.affinity.internal;
+package org.opendaylight.affinity.l2agent;
 
-import java.util.Dictionary;
-import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Set;
-
+import java.util.Dictionary;
 import org.apache.felix.dm.Component;
-import org.opendaylight.controller.clustering.services.ICacheUpdateAware;
-import org.opendaylight.controller.clustering.services.IClusterContainerServices;
-import org.opendaylight.controller.configuration.IConfigurationContainerAware;
-import org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase;
-import org.opendaylight.affinity.affinity.IAffinityManager;
-import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase;
+import org.opendaylight.controller.sal.packet.IListenDataPacket;
+import org.opendaylight.controller.sal.packet.IDataPacketService;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
-import org.opendaylight.affinity.l2agent.L2Agent;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 
-/**
- * AffinityManager Bundle Activator
- *
- *
- */
 public class Activator extends ComponentActivatorAbstractBase {
     protected static final Logger logger = LoggerFactory
             .getLogger(Activator.class);
@@ -64,7 +54,7 @@ public class Activator extends ComponentActivatorAbstractBase {
      * Object
      */
     public Object[] getImplementations() {
-        Object[] res = { AffinityManagerImpl.class };
+        Object[] res = { L2Agent.class };
         return res;
     }
 
@@ -82,38 +72,25 @@ public class Activator extends ComponentActivatorAbstractBase {
      * should not be the case though.
      */
     public void configureInstance(Component c, Object imp, String containerName) {
-        if (imp.equals(AffinityManagerImpl.class)) {
-            Dictionary<String, Set<String>> props = new Hashtable<String, Set<String>>();
-            Set<String> propSet = new HashSet<String>();
-            propSet.add("affinitymanager.configSaveEvent");
-            props.put("cachenames", propSet);
-            // export the service
-            c.setInterface(new String[] {
-                    IAffinityManager.class.getName(),
-                    ICacheUpdateAware.class.getName(),
-                    IConfigurationContainerAware.class.getName() }, props);
+        if (imp.equals(L2Agent.class)) {
+            // export the services
+            Dictionary<String, String> props = new Hashtable<String, String>();
+            props.put("salListenerName", "L2Agent");
+            c.setInterface(new String[] { IListenDataPacket.class.getName() }, props);
 
-            // Now lets add a service dependency to make sure the
-            // provider of service exists
+            // register dependent modules
             c.add(createContainerServiceDependency(containerName).setService(
-                    IAffinityManagerAware.class).setCallbacks(
-                    "setAffinityManagerAware", "unsetAffinityManagerAware")
-                    .setRequired(false));
+                    ISwitchManager.class).setCallbacks("setSwitchManager",
+                    "unsetSwitchManager").setRequired(true));
+
             c.add(createContainerServiceDependency(containerName).setService(
-                    IClusterContainerServices.class).setCallbacks(
-                    "setClusterContainerService",
-                    "unsetClusterContainerService").setRequired(true));
+                    IDataPacketService.class).setCallbacks(
+                    "setDataPacketService", "unsetDataPacketService")
+                    .setRequired(true));
+
             c.add(createContainerServiceDependency(containerName).setService(
                     IFlowProgrammerService.class).setCallbacks(
                     "setFlowProgrammerService", "unsetFlowProgrammerService")
-                    .setRequired(true));
-            c.add(createContainerServiceDependency(containerName).setService(
-                    L2Agent.class).setCallbacks(
-                    "setL2AgentService", "unsetL2AgentService")
-                    .setRequired(true));
-            c.add(createContainerServiceDependency(containerName).setService(
-                    ISwitchManager.class).setCallbacks(
-                    "setSwitchManager", "unsetSwitchManager")
                     .setRequired(true));
         }
     }

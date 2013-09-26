@@ -89,7 +89,7 @@ import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
-import org.opendaylight.controller.tutorial_L2_forwarding.TutorialL2Forwarding;
+import org.opendaylight.affinity.l2agent.L2Agent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,7 +107,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     private String affinityGroupFileName = null;
     private IFlowProgrammerService fps = null;
     private ISwitchManager switchManager = null;
-    private TutorialL2Forwarding l2agent = null;
+    private L2Agent l2agent = null;
 
     private ConcurrentMap<String, AffinityGroup> affinityGroupList;
     private ConcurrentMap<String, AffinityLink> affinityLinkList;
@@ -245,12 +245,12 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             this.fps = null;
         }
     }
-    public void setL2Agent(TutorialL2Forwarding s)
+    public void setL2Agent(L2Agent s)
     {
         this.l2agent = s;
     }
 
-    public void unsetL2Agent(TutorialL2Forwarding s) {
+    public void unsetL2Agent(L2Agent s) {
         if (this.l2agent == s) {
             this.l2agent = null;
         }
