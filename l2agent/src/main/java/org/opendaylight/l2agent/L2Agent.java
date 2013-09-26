@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2013 Plexxi, Inc. and others.  All rights reserved.
+ */
 
 /*
  * Copyright (c) 2013 Cisco Systems, Inc. and others.  All rights reserved.
@@ -8,7 +11,7 @@
  */
 
 /*
- *
+ * Adapted from tutorial L2 forwarding demo (http://archive.openflow.org/).
  */
 package org.opendaylight.affinity.l2agent;
 
