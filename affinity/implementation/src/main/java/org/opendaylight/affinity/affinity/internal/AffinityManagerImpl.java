@@ -122,7 +122,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     private static boolean hostRefresh = true;
     private int hostRetryCount = 5;
     private IClusterContainerServices clusterContainerService = null;
-    private String containerName = null;
+    private String containerName = GlobalConstants.DEFAULT.toString();
     private boolean isDefaultContainer = true;
     private static final int REPLACE_RETRY = 1;
 
@@ -154,7 +154,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             + ".conf";
         affinityGroupFileName = ROOT + "affinityConfig_group" + this.getContainerName()
             + ".conf";
-
+        log.debug("configuration file names " + affinityLinkFileName + "and " + affinityGroupFileName);
         // Instantiate cluster synced variables
         allocateCaches();
         retrieveCaches();
@@ -422,6 +422,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 
     @Override
     public AffinityGroup getAffinityGroup(String groupName) {
+        log.debug("getAffinityGroup" + groupName);
         return affinityGroupList.get(groupName);
     }
 

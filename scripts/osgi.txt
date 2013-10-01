@@ -1,6 +1,42 @@
-install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/0.4.1-SNAPSHOT/affinity-0.4.1-SNAPSHOT.jar
-install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/implementation/0.4.1-SNAPSHOT/implementation-0.4.1-SNAPSHOT.jar
-install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/northbound/0.4.1-SNAPSHOT/northbound-0.4.1-SNAPSHOT.jar
+# Start the controller. 
+~/controller/opendaylight/distribution/opendaylight/target/distribution.opendaylight-0.1.1-SNAPSHOT-osgipackage/opendaylight/run.sh
+
+# Add jar files.
+install file:/Users/sraman/affinity/l2agent/target/l2agent-0.4.0-SNAPSHOT.jar
+install file:/Users/sraman/affinity/affinity/api/target/affinity-0.4.0-SNAPSHOT.jar
+install file:/Users/sraman/affinity/affinity/implementation/target/affinity.implementation-0.4.0-SNAPSHOT.jar
+install file:/Users/sraman/affinity/affinity/northbound/target/affinity.northbound-0.4.0-SNAPSHOT.jar
+
+install file:/Users/sraman/affinity/analytics/api/target/analytics-0.4.0-SNAPSHOT.jar
+install file:/Users/sraman/affinity/analytics/implementation/target/analytics.implementation-0.4.0-SNAPSHOT.jar
+install file:/Users/sraman/affinity/analytics/northbound/target/analytics.northbound-0.4.0-SNAPSHOT.jar
+
+setloglevel org.opendaylight.affinity debug
+setloglevel org.opendaylight.affinity.affinity debug
+setloglevel org.opendaylight.affinity.affinity.internal debug
+setloglevel org.opendaylight.affinity.affinity.internal.Activator debug
+setloglevel org.opendaylight.affinity.analytics debug
+setloglevel org.opendaylight.affinity.analytics.internal debug
+setloglevel org.opendaylight.affinity.analytics.internal.Activator debug
+setloglevel org.opendaylight.affinity.l2agent debug
+setloglevel org.opendaylight.affinity.l2agent.Activator debug
+setloglevel org.opendaylight.affinity.l2agent.L2Agent debug
+setloglevel org.opendaylight.controller.sal.implementation.internal.FlowProgrammerService trace
+setloglevel org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase trace
+
+start 153
+start 154
+start 155
+start 156
+start 157
+start 158
+start 159
+
+ss| grep affinity
+########################################
+#install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/0.4.1-SNAPSHOT/affinity-0.4.1-SNAPSHOT.jar
+#install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/implementation/0.4.1-SNAPSHOT/implementation-0.4.1-SNAPSHOT.jar
+#install file:/Users/sraman/.m2/repository/org/opendaylight/controller/affinity/northbound/0.4.1-SNAPSHOT/northbound-0.4.1-SNAPSHOT.jar
 
 ss | grep affinity
 start <id_affinity>
