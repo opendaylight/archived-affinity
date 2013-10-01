@@ -241,12 +241,4 @@ public class L2Agent implements IListenDataPacket {
         }
         return PacketResult.IGNORED;
     }
-
-    /*
-     * Return MAC adderss to port
-     */
-    public NodeConnector lookupMacAddress(byte[] macAddress) {
-        NodeConnector dst_connector;
-        return this.mac_to_port.get(macAddress);
-    }
 }

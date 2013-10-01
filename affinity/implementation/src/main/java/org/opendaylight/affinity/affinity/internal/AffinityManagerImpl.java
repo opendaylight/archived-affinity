@@ -355,8 +355,9 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
              * this flow along. Program the flow. */
 
             byte [] mac = ((HostNodeConnector) host1).getDataLayerAddressBytes();
-            NodeConnector dst_connector = l2agent.lookupMacAddress(mac);
-            actions.add(new Output(dst_connector));
+            /* Tbd: use hosttracker for this. */
+            //            NodeConnector dst_connector = l2agent.lookupMacAddress(mac);
+            //            actions.add(new Output(dst_connector));
         }
 	return new Status(StatusCode.SUCCESS);
     }
