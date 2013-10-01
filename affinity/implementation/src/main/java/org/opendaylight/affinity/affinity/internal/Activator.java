@@ -17,13 +17,13 @@ import org.apache.felix.dm.Component;
 import org.opendaylight.controller.clustering.services.ICacheUpdateAware;
 import org.opendaylight.controller.clustering.services.IClusterContainerServices;
 import org.opendaylight.controller.configuration.IConfigurationContainerAware;
+import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase;
 import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
-import org.opendaylight.affinity.l2agent.L2Agent;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 
 /**
@@ -108,13 +108,11 @@ public class Activator extends ComponentActivatorAbstractBase {
                     "setFlowProgrammerService", "unsetFlowProgrammerService")
                     .setRequired(true));
             c.add(createContainerServiceDependency(containerName).setService(
-                    L2Agent.class).setCallbacks(
-                    "setL2AgentService", "unsetL2AgentService")
-                    .setRequired(true));
-            c.add(createContainerServiceDependency(containerName).setService(
                     ISwitchManager.class).setCallbacks(
                     "setSwitchManager", "unsetSwitchManager")
                     .setRequired(true));
+            c.add(createContainerServiceDependency(containerName).setService(IfIptoHost.class)
+                  .setCallbacks("setHostTracker", "unsetHostTracker").setRequired(true));
         }
     }
 }
