@@ -32,11 +32,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.opendaylight.controller.sal.action.Action;
+import org.opendaylight.controller.sal.action.Output;
+import org.opendaylight.controller.sal.action.Flood;
 import org.opendaylight.controller.sal.core.ConstructionException;
 import org.opendaylight.controller.sal.core.Node;
 import org.opendaylight.controller.sal.core.NodeConnector;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 import org.opendaylight.controller.sal.flowprogrammer.Flow;
+import org.opendaylight.controller.sal.match.Match;
+import org.opendaylight.controller.sal.match.MatchType;
+import org.opendaylight.controller.sal.match.MatchField;
 import org.opendaylight.controller.sal.packet.ARP;
 import org.opendaylight.controller.sal.packet.BitBufferHelper;
 import org.opendaylight.controller.sal.packet.Ethernet;
@@ -45,12 +51,6 @@ import org.opendaylight.controller.sal.packet.IListenDataPacket;
 import org.opendaylight.controller.sal.packet.Packet;
 import org.opendaylight.controller.sal.packet.PacketResult;
 import org.opendaylight.controller.sal.packet.RawPacket;
-import org.opendaylight.controller.sal.action.Action;
-import org.opendaylight.controller.sal.action.Output;
-import org.opendaylight.controller.sal.action.Flood;
-import org.opendaylight.controller.sal.match.Match;
-import org.opendaylight.controller.sal.match.MatchType;
-import org.opendaylight.controller.sal.match.MatchField;
 import org.opendaylight.controller.sal.utils.EtherTypes;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.sal.utils.NetUtils;
@@ -63,7 +63,7 @@ public class L2Agent implements IListenDataPacket {
     private ISwitchManager switchManager = null;
     private IFlowProgrammerService programmer = null;
     private IDataPacketService dataPacketService = null;
-    private Map<Long, NodeConnector> mac_to_port = new HashMap<Long, NodeConnector>();
+    private Map<Node, Map<Long, NodeConnector>> mac_to_ports = new HashMap<Node, Map<Long, NodeConnector>>();
     private String function = "switch";
 
     void setDataPacketService(IDataPacketService s) {
@@ -141,6 +141,15 @@ public class L2Agent implements IListenDataPacket {
         NodeConnector incoming_connector = inPkt.getIncomingNodeConnector();
         Node incoming_node = incoming_connector.getNode();
 
+        Packet formattedPak = this.dataPacketService.decodeDataPacket(inPkt);
+        if (formattedPak instanceof Ethernet) {
+            byte[] srcMAC = ((Ethernet)formattedPak).getSourceMACAddress();
+            byte[] dstMAC = ((Ethernet)formattedPak).getDestinationMACAddress();
+
+            long srcMAC_val = BitBufferHelper.toNumber(srcMAC);
+            long dstMAC_val = BitBufferHelper.toNumber(dstMAC);
+        }
+
         Set<NodeConnector> nodeConnectors =
                 this.switchManager.getUpNodeConnectors(incoming_node);
 
@@ -184,16 +193,29 @@ public class L2Agent implements IListenDataPacket {
                 long srcMAC_val = BitBufferHelper.toNumber(srcMAC);
                 long dstMAC_val = BitBufferHelper.toNumber(dstMAC);
 
-                this.mac_to_port.put(srcMAC_val, incoming_connector);
-
                 Match match = new Match();
                 match.setField( new MatchField(MatchType.IN_PORT, incoming_connector) );
                 match.setField( new MatchField(MatchType.DL_DST, dstMAC.clone()) );
 
-                NodeConnector dst_connector;
+                // Set up the mapping: switch -> src MAC address -> incoming port
+                if (this.mac_to_ports.get(incoming_node) == null) {
+                    this.mac_to_ports.put(incoming_node, new HashMap<Long, NodeConnector>());
+                }
+
+                // Only replace if we don't know the mapping.  This
+                // saves us from over-writing correct mappings with
+                // incorrect ones we get during flooding.
+                //
+                // TODO: this should never happen..
+                if (this.mac_to_ports.get(incoming_node).get(srcMAC_val) == null) {
+                    this.mac_to_ports.get(incoming_node).put(srcMAC_val, incoming_connector);
+                }
+
+                NodeConnector dst_connector = this.mac_to_ports.get(incoming_node).get(dstMAC_val);
 
                 // Do I know the destination MAC?
-                if ((dst_connector = this.mac_to_port.get(dstMAC_val)) != null) {
+                if (dst_connector != null) {
+
                     List<Action> actions = new ArrayList<Action>();
                     actions.add(new Output(dst_connector));
 
@@ -207,11 +229,14 @@ public class L2Agent implements IListenDataPacket {
                                 f, status.getDescription());
                         return PacketResult.IGNORED;
                     }
-                    logger.info("Installed flow {} in node {}",
-                            f, incoming_node);
+                    logger.info("Installed flow {} in node {}", f, incoming_node);
+
+                    // TODO: Testing.  What do the flows on this node look like now?
+                    //                    new FlowStatisticsConverter(flows).getFlowOnNodeList(node)
                 }
-                else
+                else {
                     floodPacket(inPkt);
+                }
             }
         }
         return PacketResult.IGNORED;
