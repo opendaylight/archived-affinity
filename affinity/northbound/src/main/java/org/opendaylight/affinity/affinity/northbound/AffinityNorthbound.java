@@ -46,6 +46,9 @@ import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.affinity.affinity.AffinityGroup;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * The class provides Northbound REST APIs to access affinity configuration.
  *
@@ -55,6 +58,7 @@ import org.opendaylight.affinity.affinity.AffinityGroup;
 public class AffinityNorthbound {
 
     private String username;
+    private static final Logger log = LoggerFactory.getLogger(AffinityNorthbound.class);
 
     @Context
     public void setSecurityContext(SecurityContext context) {
@@ -66,6 +70,8 @@ public class AffinityNorthbound {
     }
 
     private IAffinityManager getIfAffinityManagerService(String containerName) {
+        log.debug("In getIfAffinityManager");
+
         IContainerManager containerManager = (IContainerManager) ServiceHelper
                 .getGlobalInstance(IContainerManager.class, this);
         if (containerManager == null) {
@@ -124,7 +130,7 @@ public class AffinityNorthbound {
             throw new UnauthorizedException("User is not authorized to perform this operation on container "
                                             + containerName);
         }
-
+        log.info("add a new affinitygroup = {}, containerName = {}",  affinityGroupName, containerName);
         IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
         if (affinityManager == null) {
             throw new ServiceUnavailableException("Affinity Manager "
@@ -133,10 +139,8 @@ public class AffinityNorthbound {
 
         AffinityGroup ag1 = new AffinityGroup(affinityGroupName);
         Status ret = affinityManager.addAffinityGroup(ag1);
-        if (ret.isSuccess()) {
-            return Response.status(Response.Status.CREATED).build();
-        }
-        throw new InternalServerErrorException(ret.getDescription());
+        
+        return Response.status(Response.Status.CREATED).build();
     }
 
     /**
@@ -173,6 +177,7 @@ public class AffinityNorthbound {
                                                   + RestMessages.SERVICEUNAVAILABLE.toString());
         }
 
+        log.info("Get affinity group details" + affinityGroupName);
         AffinityGroup ag = affinityManager.getAffinityGroup(affinityGroupName);
         if (ag == null) {
             throw new ResourceNotFoundException(RestMessages.SERVICEUNAVAILABLE.toString());
@@ -180,4 +185,210 @@ public class AffinityNorthbound {
             return ag;
         }
     }
+
+    /**
+     * Add an affinity link with one "from" and one "to" affinity group. 
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being added
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/create/link/{affinityLinkName}/from/{fromAffinityGroup}/to/{toAffinityGroup}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response createAffinityLink(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName,
+            @PathParam("fromAffinityGroup") String fromAffinityGroup,
+            @PathParam("toAffinityGroup") String toAffinityGroup) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+
+        
+        log.info("Create affinity link" + affinityLinkName + "fromGroup" + fromAffinityGroup + "toGroup" + toAffinityGroup);
+        AffinityGroup from = affinityManager.getAffinityGroup(fromAffinityGroup);
+        AffinityGroup to = affinityManager.getAffinityGroup(toAffinityGroup);
+        AffinityLink al1 = new AffinityLink(affinityLinkName, from, to);
+
+        Status ret = affinityManager.addAffinityLink(al1);
+        if (!ret.isSuccess()) {
+            throw new InternalServerErrorException(ret.getDescription());
+        }
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+
+    /**
+     * Add path redirect details to an affinity link. 
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being added
+     * @param wayPoint
+     *            IP address string of a waypoint server or VM
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/link/{affinityLinkName}/setwaypoint/{waypointIP}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response setLinkWaypoint(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName,
+            @PathParam("waypointIP") String waypointIP) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Set waypoint address (link)" + affinityLinkName + " (waypoint ip) " + waypointIP);
+
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        al1.setWaypoint(waypointIP);
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+
+    /**
+     * Add IP addresses to a group. 
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityGroupName
+     *            Name of the affinity group to add to. 
+     * @param ipaddress
+     *            IP address of the new affinity member. 
+     * @return Response as dictated by the HTTP Response Status code
+     */
+    @Path("/{containerName}/group/{affinityGroupName}/add/ip/{ipaddress}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response addInetAddress(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityGroupName") String affinityGroupName,
+            @PathParam("ipaddress") String ipaddress) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+        
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        
+        log.info("add Inet address " + affinityGroupName + " (ipaddress) " + ipaddress);
+        AffinityGroup ag1 = affinityManager.getAffinityGroup(affinityGroupName);
+        ag1.add(ipaddress);
+        
+        return Response.status(Response.Status.CREATED).build();
+    }
+    
+    /**
+     * Add prefix/mask subnet as a member of the affinity group.
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityGroupName
+     *            Name of the affinity group to add to. 
+     * @param ipmask
+     *            a.b.c.d/mm format of a set of IP addresses to add.
+     * @return Response as dictated by the HTTP Response Status code
+     */
+    @Path("/{containerName}/group/{affinityGroupName}/addsubnet/ipprefix/{ipprefix}/mask/{mask}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response addSubnet(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityGroupName") String affinityGroupName,
+            @PathParam("ipprefix") String ipprefix,
+            @PathParam("mask") String mask) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+        
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        
+        log.info("addSubnet to affinitygroup" + affinityGroupName);
+        AffinityGroup ag1 = affinityManager.getAffinityGroup(affinityGroupName);
+        String ipmask = ipprefix + "/" + mask;
+        ag1.addInetMask(ipmask);
+        
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+
+    @Path("/{containerName}/affinity-groups")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AffinityGroupList.class)
+    @StatusCodes({ @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 401, condition = "User not authorized to perform this operation"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AffinityGroupList getAllAffinityGroups(@PathParam("containerName") String containerName) {
+
+        //        if (!isValidContainer(containerName)) {
+        //            throw new ResourceNotFoundException("Container " + containerName + " does not exist.");
+        //}
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                    + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("getallgroups");
+        return new AffinityGroupList(affinityManager.getAllAffinityGroups());
+    }
+
 }

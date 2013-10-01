@@ -21,11 +21,8 @@ import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase;
 import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.IAffinityManagerAware;
-import org.opendaylight.controller.sal.utils.IObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
-import org.opendaylight.controller.switchmanager.ISwitchManager;
 
 /**
  * AffinityManager Bundle Activator
@@ -64,7 +61,6 @@ public class Activator extends ComponentActivatorAbstractBase {
      * instantiated in order to get an fully working implementation
      * Object
      */
-    @Override
     public Object[] getImplementations() {
         Object[] res = { AffinityManagerImpl.class };
         return res;
@@ -83,7 +79,6 @@ public class Activator extends ComponentActivatorAbstractBase {
      * also optional per-container different behavior if needed, usually
      * should not be the case though.
      */
-    @Override
     public void configureInstance(Component c, Object imp, String containerName) {
         if (imp.equals(AffinityManagerImpl.class)) {
             Dictionary<String, Set<String>> props = new Hashtable<String, Set<String>>();
@@ -93,28 +88,19 @@ public class Activator extends ComponentActivatorAbstractBase {
             // export the service
             c.setInterface(new String[] {
                     IAffinityManager.class.getName(),
-                    IConfigurationContainerAware.class.getName(),
-                    IObjectReader.class.getName(),
-                    ICacheUpdateAware.class.getName() }, props);
+                    ICacheUpdateAware.class.getName(),
+                    IConfigurationContainerAware.class.getName() }, props);
 
             // Now lets add a service dependency to make sure the
             // provider of service exists
             c.add(createContainerServiceDependency(containerName).setService(
                     IAffinityManagerAware.class).setCallbacks(
                     "setAffinityManagerAware", "unsetAffinityManagerAware")
-                    .setRequired(true));
+                    .setRequired(false));
             c.add(createContainerServiceDependency(containerName).setService(
                     IClusterContainerServices.class).setCallbacks(
                     "setClusterContainerService",
                     "unsetClusterContainerService").setRequired(true));
-              c.add(createContainerServiceDependency(containerName).setService(
-                    IFlowProgrammerService.class).setCallbacks(
-                    "setFlowProgrammerService", "unsetFlowProgrammerService")
-                    .setRequired(true));
-            c.add(createContainerServiceDependency(containerName).setService(
-                    ISwitchManager.class).setCallbacks(
-                    "setSwitchManager", "unsetSwitchManager")
-                    .setRequired(true));
             c.add(createContainerServiceDependency(containerName).setService(IfIptoHost.class)
                   .setCallbacks("setHostTracker", "unsetHostTracker").setRequired(true));
         }
