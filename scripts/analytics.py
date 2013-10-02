@@ -3,6 +3,7 @@
 import httplib2
 import json
 import sys
+import time
 
 # 1. Start the controller
 # 2. On the local machine (e.g., your laptop), start this script.
@@ -15,43 +16,77 @@ import sys
 #   (There is a usage prompt that prints at the beginning of analytics.py)
 # 5. Type 'quit' to exit analytics.py
 
-'''
-Class to keep track of host statistics (byte count, bit rate)
-'''
-class HostStats:
 
-    def __init__(self, src, dst):
-        self.src = src
-        self.dst = dst
+'''
+Class for keeping track of host stats or affinity link stats, depending.
+'''
+class Stats:
+
+    # TODO: Each stat should probably be a thread, and handle its
+    # own output and refreshing for the EWMA
+
+    def __init__(self, stat_type, **kwargs):
+        self.stat_type = stat_type
+        if stat_type == "host":
+            self.src = kwargs['src']
+            self.dst = kwargs['dst']
+            self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/" 
+        elif stat_type == "affinityLink":
+            self.al = kwargs['al']
+            self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/"
+        else:
+            print "incorrect stat type", stat_type
+
+        self.stats = {}
+        self.rate_ewma = None
+
         self.http = httplib2.Http(".cache")
         self.http.add_credentials('admin', 'admin')
         self.refresh()
 
+    # Refresh statistics
     def refresh(self):
-        resp, content = self.http.request("http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/" + self.src + "/" + self.dst, "GET")
-        if (resp.status == 404):
-            print "404 error"
-            return
-        if (resp.status == 503):
-            print "503 error"
-            return
-        self.host_stats = json.loads(content)
+        if (self.stat_type == "host"):
+            resp, content = self.http.request(self.url_prefix + self.src + "/" + self.dst, "GET")
+        elif (self.stat_type == "affinityLink"):
+            resp, content = self.http.request(self.url_prefix + self.al, "GET")
+        self.stats = json.loads(content)
+        self.handle_rate_ewma()
 
+    # EWMA calculation for bit rate
+    def handle_rate_ewma(self):
+        alpha = .25
+        anomaly_threshold = 2.0
+        new_bitrate = self.get_bit_rate()
+
+        if self.rate_ewma == None:
+            self.rate_ewma = new_bitrate
+        else:
+            new_rate_ewma = alpha * new_bitrate + (1 - alpha) * self.rate_ewma
+            if (self.rate_ewma > 0 and new_rate_ewma > anomaly_threshold * self.rate_ewma):
+                if (self.stat_type == "host"):
+                    print "Anomaly detected between %s and %s" % (self.src, self.dst)
+                elif (self.stat_type == "affinityLink"):
+                    print "Anomaly detected on AffinityLink %s" % (self.al)
+                print "Rate rose from %1.1f mbit/s to %1.1f mbit/s" % ((self.rate_ewma/10**6), (new_rate_ewma/10**6))
+            self.rate_ewma = new_rate_ewma
+
+    # Bytes
     def get_bytes(self):
         try:
-            bytes = long(self.host_stats["byteCount"])
+            bytes = long(self.stats["byteCount"])
         except Exception as e:
-            print "exception:", e
             bytes = 0
         return bytes
 
+    # Bit Rate
     def get_bit_rate(self):
-
         try:
-            bitrate = float(self.host_stats["bitRate"])
+            bitrate = float(self.stats["bitRate"])
         except Exception as e:
             bitrate = 0.0
         return bitrate
+
 
 '''
 Class for controlling subnets.  Right now, just adds subnets and
@@ -93,26 +128,7 @@ class SubnetControl:
             print "subnet", subnet, "could not be added"
 
 
-def main():
-
-    # Default subnet is required for the host tracker to work.  Run
-    # this script once *before* you start mininet.
-    subnet_control = SubnetControl()
-    subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
-
-    demo_mode = True
-
-    # Test mode
-    if (not demo_mode):
-
-        src = "10.0.0.1"
-        dst = "10.0.0.2"
-        host_stat = HostStats(src, dst)
-
-        # These counts should be nonzero
-        print("%d bytes between %s and %s" % (host_stat.get_bytes(), src, dst))
-        print("%f mbit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
-        sys.exit()
+def run_interactive_mode():
 
     print "Usage: [host | link] [bytes | rate] [src dst | link-name]"
 
@@ -131,19 +147,20 @@ def main():
             if (request_type == "host"):
                 src, dst = request[2:4]
                 if (action == "bytes"):
-                    host_stat = HostStats(src, dst)
+                    host_stat = Stats("host", src=src, dst=dst)
                     print("%d bytes between %s and %s" % (host_stat.get_bytes(), src, dst))
                 elif (action == "rate"):
-                    host_stat = HostStats(src, dst)
+                    host_stat = Stats("host", src=src, dst=dst)
                     print("%f bit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
                 else:
                     raise Exception
 
+            # TODO: Change this to use AffinityLinkStats
             elif (request_type == "link"):
                 link = request[2]
                 h = httplib2.Http(".cache")
                 h.add_credentials("admin", "admin")
-                resp, content = h.request("http://localhost:8080/controller/nb/v2/analytics/default/affinitylinkstats/" + link, "GET")
+                resp, content = h.request("http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/" + link, "GET")
                 al_stats = json.loads(content)
 
                 if (action == "bytes"):
@@ -158,6 +175,52 @@ def main():
         except Exception as e:
             print "Error"
 
+
+def get_all_hosts():
+
+    h = httplib2.Http(".cache")
+    h.add_credentials("admin", "admin")
+
+    resp, content = h.request("http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active", "GET")
+    host_content = json.loads(content)
+
+    # Even if there are no active hosts, host_content['hostConfig']
+    # still exists (and is empty)
+    active_hosts = []
+    for host_data in host_content['hostConfig']:
+        active_hosts.append(host_data['networkAddress'])
+    return active_hosts
+
+
+def run_passive_mode():
+
+    affinity_link_stats = {}
+    affinity_links = set(["testAL"]) # TODO: Get these automatically
+
+    while True:
+        # Go through all affinity link stats
+        for al in affinity_links:
+            if al not in affinity_link_stats:
+                affinity_link_stats[al] = Stats("affinityLink", al=al)
+            stat = affinity_link_stats[al]
+            stat.refresh()
+            print "%d bytes (%1.1f mbit/s) on %s" % (stat.get_bytes(), (stat.get_bit_rate() / (10**6)), al)
+
+        time.sleep(2)
+
+def main():
+
+    # Default subnet is required for the host tracker to work.  Run
+    # this script once *before* you start mininet.
+    subnet_control = SubnetControl()
+    subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
+
+    interactive_mode = False
+
+    if interactive_mode:
+        run_interactive_mode()
+    else:
+        run_passive_mode()
 
 if __name__ == "__main__":
     main()
