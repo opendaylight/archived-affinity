@@ -117,7 +117,6 @@ public class Activator extends ComponentActivatorAbstractBase {
                     .setRequired(true));
             c.add(createContainerServiceDependency(containerName).setService(IfIptoHost.class)
                   .setCallbacks("setHostTracker", "unsetHostTracker").setRequired(true));
-            logger.debug("Done configuring instance of AffinityImpl class.");
         }
     }
 }
