@@ -227,6 +227,7 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     }
 
     public double getBitRateOnAffinityLink(AffinityLink al) {
+        // Returns bit rate in *bits-per-second*
         double maxDuration = 0;
         int totalBytes = 0;
         List<Entry<Host, Host>> flows = this.affinityManager.getAllFlowsByHost(al);
@@ -263,8 +264,8 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
     @Override
     public void nodeFlowStatisticsUpdated(Node node, List<FlowOnNode> flowStatsList) {
-
         Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
+
         for (FlowOnNode f : flowStatsList) {
             Host srcHost = getSourceHostFromFlow(f.getFlow(), allHosts);
             Host dstHost = getDestinationHostFromFlow(f.getFlow(), allHosts);
