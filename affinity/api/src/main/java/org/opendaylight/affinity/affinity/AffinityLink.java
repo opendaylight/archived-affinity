@@ -78,7 +78,9 @@ public class AffinityLink implements Cloneable, Serializable {
     public void setWaypoint(String wpaddr) {
 	this.affinityWaypoint = wpaddr;
     }
-
+    public String getWaypoint() {
+	return this.affinityWaypoint;
+    }
     public String getAttribute() {
 	return this.affinityAttribute;
     }

@@ -54,5 +54,5 @@ public interface IAffinityManager {
     public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlowsByAffinityIdentifier(AffinityLink al);
 
     public Status addFlowRulesForRedirect(AffinityLink al) throws Exception;
-    public Status pushFlowRule(Flow flow);
+    public Status pushFlowRule(Flow flow, byte [] mac);
 }
