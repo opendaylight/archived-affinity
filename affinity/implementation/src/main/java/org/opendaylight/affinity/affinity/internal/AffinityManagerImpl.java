@@ -298,9 +298,11 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 
 
     /** 
-     * Fetch all node connectors. Each switch port will receive a flow rule. Do not stop on error.
+     * Fetch all node connectors. Each switch port will receive a flow
+     * rule. Do not stop on error. Pass in the waypointMAC address so
+     * that the correct output port can be determined.
      */
-    public Status pushFlowRule(Flow flow) {
+    public Status pushFlowRule(Flow flow, byte [] waypointMAC) {
         /* Get all node connectors. */
         Set<Node> nodes = switchManager.getNodes();
         Status success = new Status(StatusCode.SUCCESS);
@@ -311,10 +313,11 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             return success;
         } 
         for (Node node: nodes) {
-            Set<NodeConnector> ncs = switchManager.getNodeConnectors(node);
-            if (ncs == null) {
-                continue;
-            }
+            /* Look up the output port leading to the waypoint. */
+            NodeConnector dst_connector = l2agent.lookup(node, waypointMAC);
+            Action action = new Output(dst_connector);
+            flow.addAction(action);
+
             Status status = fps.addFlow(node, flow);
             if (!status.isSuccess()) {
                 log.debug("Error during addFlow: {} on {}. The failure is: {}",
@@ -336,6 +339,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
         mask = InetAddress.getByName("255.255.255.255");
 
         Flow f = new Flow(match, actions);
+        String waypoint = al.getWaypoint();
 
         List<Entry<Host,Host>> hostPairList= getAllFlowsByHost(al);
         for (Entry<Host,Host> hostPair : hostPairList) {
@@ -349,17 +353,18 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             match.setField(MatchType.NW_SRC, address1, mask);
             match.setField(MatchType.NW_DST, address2, mask);
             
-
-            /* For each end point, discover the mac address of the
-             * host. Then lookup the L2 table to find the port to send
-             * this flow along. Program the flow. */
-
-            byte [] mac = ((HostNodeConnector) host1).getDataLayerAddressBytes();
-            /* Tbd: use hosttracker for this. */
-            //            NodeConnector dst_connector = l2agent.lookupMacAddress(mac);
-            //            actions.add(new Output(dst_connector));
+            /* Send this flow rule to all nodes in the network. */
+            byte [] dstMAC = InetAddressToMAC(waypoint);
+            pushFlowRule(f, dstMAC);
         }
 	return new Status(StatusCode.SUCCESS);
+    }
+
+    public byte [] InetAddressToMAC(String ipaddress) {
+        InetAddress inetAddr = NetUtils.parseInetAddress(ipaddress);
+        HostNodeConnector host = hostTracker.hostFind(inetAddr);
+        byte [] dst_mac = host.getDataLayerAddressBytes();
+        return dst_mac;
     }
 
     public Status removeAffinityLink(String name) {

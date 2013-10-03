@@ -241,4 +241,8 @@ public class L2Agent implements IListenDataPacket {
         }
         return PacketResult.IGNORED;
     }
+    
+    public NodeConnector lookup(Node node, byte [] dstMAC) {
+        return this.mac_to_ports.get(node).get(dstMAC);
+    }
 }
