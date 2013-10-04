@@ -57,7 +57,7 @@ import org.opendaylight.controller.sal.utils.NetUtils;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.controller.switchmanager.Subnet;
 
-public class L2Agent implements IListenDataPacket {
+public class L2Agent implements IListenDataPacket, IfL2Agent {
     private static final Logger logger = LoggerFactory
             .getLogger(L2Agent.class);
     private ISwitchManager switchManager = null;
@@ -200,6 +200,7 @@ public class L2Agent implements IListenDataPacket {
                 // Set up the mapping: switch -> src MAC address -> incoming port
                 if (this.mac_to_ports.get(incoming_node) == null) {
                     this.mac_to_ports.put(incoming_node, new HashMap<Long, NodeConnector>());
+                    logger.info("Added new node = {} to mac_to_ports", incoming_node);
                 }
 
                 // Only replace if we don't know the mapping.  This
@@ -209,6 +210,7 @@ public class L2Agent implements IListenDataPacket {
                 // TODO: this should never happen..
                 if (this.mac_to_ports.get(incoming_node).get(srcMAC_val) == null) {
                     this.mac_to_ports.get(incoming_node).put(srcMAC_val, incoming_connector);
+                    logger.info("Added new learned MAC = {} on incoming connector = {} to mac_to_ports", srcMAC_val, incoming_connector);
                 }
 
                 NodeConnector dst_connector = this.mac_to_ports.get(incoming_node).get(dstMAC_val);
@@ -241,8 +243,12 @@ public class L2Agent implements IListenDataPacket {
         }
         return PacketResult.IGNORED;
     }
-    
-    public NodeConnector lookup(Node node, byte [] dstMAC) {
-        return this.mac_to_ports.get(node).get(dstMAC);
+
+    @Override
+    public NodeConnector lookup_output_port(Node node, byte [] dstMAC) {
+        long dstMAC_val = BitBufferHelper.toNumber(dstMAC);
+        NodeConnector nc = this.mac_to_ports.get(node).get(dstMAC_val);
+        logger.debug("lookup_output_port: Node = {}, dst mac = {}, Nodeconnector = {}", node, dstMAC_val, nc);
+        return nc;
     }
 }

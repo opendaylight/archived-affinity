@@ -89,7 +89,7 @@ import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
-import org.opendaylight.affinity.l2agent.L2Agent;
+import org.opendaylight.affinity.l2agent.IfL2Agent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,13 +107,13 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     private String affinityGroupFileName = null;
     private IFlowProgrammerService fps = null;
     private ISwitchManager switchManager = null;
-    private L2Agent l2agent = null;
+    private IfL2Agent l2agent = null;
+    private IfIptoHost hostTracker = null;
 
     private ConcurrentMap<String, AffinityGroup> affinityGroupList;
     private ConcurrentMap<String, AffinityLink> affinityLinkList;
     private ConcurrentMap<Long, String> configSaveEvent;
 
-    private IfIptoHost hostTracker;
 
     private final Set<IAffinityManagerAware> affinityManagerAware = Collections
             .synchronizedSet(new HashSet<IAffinityManagerAware>());
@@ -227,6 +227,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 
 
     void setHostTracker(IfIptoHost h) {
+        log.info("Setting hosttracker {}", h);
         this.hostTracker = h;
     }
 
@@ -235,24 +236,36 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             this.hostTracker = null;
         }
     }
-    public void setFlowProgrammerService(IFlowProgrammerService s)
+    void setFlowProgrammerService(IFlowProgrammerService s)
     {
         this.fps = s;
     }
 
-    public void unsetFlowProgrammerService(IFlowProgrammerService s) {
+    void unsetFlowProgrammerService(IFlowProgrammerService s) {
         if (this.fps == s) {
             this.fps = null;
         }
     }
-    public void setL2Agent(L2Agent s)
+    void setL2Agent(IfL2Agent s)
     {
+        log.info("Setting l2agent {}", s);
         this.l2agent = s;
     }
 
-    public void unsetL2Agent(L2Agent s) {
+    void unsetL2Agent(IfL2Agent s) {
         if (this.l2agent == s) {
             this.l2agent = null;
+        }
+    }
+
+    void setSwitchManager(ISwitchManager s)
+    {
+        this.switchManager = s;
+    }
+
+    void unsetSwitchManager(ISwitchManager s) {
+        if (this.switchManager == s) {
+            this.switchManager = null;
         }
     }
 
@@ -292,7 +305,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 	    String msg = "Cluster conflict: Conflict while adding the subnet " + al.getName();
 	    return new Status(StatusCode.CONFLICT, msg);
 	}
-	
+
         return new Status(StatusCode.SUCCESS);
     }
 
@@ -314,14 +327,17 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
         } 
         for (Node node: nodes) {
             /* Look up the output port leading to the waypoint. */
-            NodeConnector dst_connector = l2agent.lookup(node, waypointMAC);
-            Action action = new Output(dst_connector);
-            flow.addAction(action);
+            NodeConnector dst_connector = l2agent.lookup_output_port(node, waypointMAC);
 
-            Status status = fps.addFlow(node, flow);
-            if (!status.isSuccess()) {
-                log.debug("Error during addFlow: {} on {}. The failure is: {}",
-                          flow, node, status.getDescription());
+            log.debug("Waypoint direction: node {} and connector {}", node, dst_connector);
+            if (dst_connector != null) {
+                flow.addAction(new Output(dst_connector));
+                log.debug("flow push flow = {} to node = {} using fps = {} ", flow, node, fps);
+                Status status = fps.addFlow(node, flow);
+                if (!status.isSuccess()) {
+                    log.debug("Error during addFlow: {} on {}. The failure is: {}",
+                              flow, node, status.getDescription());
+                }
             }
         }
         return success;
@@ -341,15 +357,17 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
         Flow f = new Flow(match, actions);
         String waypoint = al.getWaypoint();
 
+        log.debug("addFlowRulesForRedirect link = {} waypoint = {}", al.getName(), al.getWaypoint());
         List<Entry<Host,Host>> hostPairList= getAllFlowsByHost(al);
         for (Entry<Host,Host> hostPair : hostPairList) {
             /* Create a match for each host pair in the affinity link. */
-
+            log.debug("Processing next hostPair {}", hostPair);
             Host host1 = hostPair.getKey();
             Host host2 = hostPair.getValue();
+            log.debug("Adding a flow for host pair {} -> {}", host1, host2);
             address1 = host1.getNetworkAddress();
             address2 = host2.getNetworkAddress();
-            
+            log.debug("Adding a flow for {} -> {}", address1, address2);
             match.setField(MatchType.NW_SRC, address1, mask);
             match.setField(MatchType.NW_DST, address2, mask);
             
@@ -362,7 +380,8 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 
     public byte [] InetAddressToMAC(String ipaddress) {
         InetAddress inetAddr = NetUtils.parseInetAddress(ipaddress);
-        HostNodeConnector host = hostTracker.hostFind(inetAddr);
+        HostNodeConnector host = (HostNodeConnector) hostTracker.hostFind(inetAddr);
+        log.debug("Find {} -> {} using hostTracker {}", inetAddr, host, hostTracker);
         byte [] dst_mac = host.getDataLayerAddressBytes();
         return dst_mac;
     }
@@ -498,6 +517,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 		if (hostTracker != null) {
 		    Host host1 = hostTracker.hostFind((InetAddress) h1.get());
 		    Host host2 = hostTracker.hostFind((InetAddress) h2.get());
+                    log.debug("Flow between {}, {}", host1, host2);
 		    Entry<Host, Host> hp1=new AbstractMap.SimpleEntry<Host, Host>(host1, host2);
 		    hostPairList.add(hp1);
 		}
@@ -516,6 +536,7 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 	for (AffinityIdentifier h1 : fromGroup.getAllElements()) {
 	    for (AffinityIdentifier h2 : toGroup.getAllElements()) {
 		Entry<AffinityIdentifier, AffinityIdentifier> hp1=new AbstractMap.SimpleEntry<AffinityIdentifier, AffinityIdentifier>(h1, h2);
+                log.debug("Adding hostPair {} -> {}", h1, h2);
 		hostPairList.add(hp1);
 	    }
 	}

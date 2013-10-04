@@ -27,6 +27,11 @@ class CustomTopo(Topo):
         h2 = self.addHost('h2')
         h3 = self.addHost('h3')
         h4 = self.addHost('h4')
+        h1.setIP('10.0.0.10')
+        h1.setIP('10.0.0.20')
+        h1.setIP('10.0.0.30')
+        h1.setIP('10.0.0.40')
+
 
         # Connect hosts to switches
         self.addLink(h1, s2, bw=10) # These two links get limited

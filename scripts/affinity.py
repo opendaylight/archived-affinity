@@ -19,6 +19,13 @@ def rest_method(url, verb):
     print "done"
     
 
+def list_all_hosts(): 
+
+    print "list all hosts"
+    put_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active'
+    rest_method(put_url, "GET")
+    
+
 def waypoint_init():
     # Create two affinity groups
 
@@ -66,6 +73,11 @@ def set_waypoint_address():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/inflows/setwaypoint/' + wp
     rest_method(put_url, "PUT")
 
+def demo_set_waypoint_address():
+    wp = "10.0.0.4"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/testAL/setwaypoint/' + wp
+    rest_method(put_url, "PUT")
+
 # Add waypoint IP to an affinity link.
 def main():
     global h
@@ -73,13 +85,15 @@ def main():
     h.add_credentials('admin', 'admin')
 
 #    waypoint_init()
-    set_waypoint_address()
+    demo_set_waypoint_address()
 #    unset_waypoint_address()
 
-    get_affinity_group('webservers')
-    get_affinity_group('clients')
+#    get_affinity_group('webservers')
+#    get_affinity_group('clients')
 
-    get_all_affinity_groups()
+#    get_all_affinity_groups()
+
+    list_all_hosts()
 #    get_all_affinity_links()
 
 if __name__ == "__main__":

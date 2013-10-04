@@ -76,7 +76,8 @@ public class Activator extends ComponentActivatorAbstractBase {
             // export the services
             Dictionary<String, String> props = new Hashtable<String, String>();
             props.put("salListenerName", "L2Agent");
-            c.setInterface(new String[] { IListenDataPacket.class.getName() }, props);
+            c.setInterface(new String[] { IListenDataPacket.class.getName(),                    
+                                          IfL2Agent.class.getName() }, props);
 
             // register dependent modules
             c.add(createContainerServiceDependency(containerName).setService(
