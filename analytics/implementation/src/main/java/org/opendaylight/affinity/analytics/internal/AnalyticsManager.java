@@ -257,8 +257,18 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
             Host srcHost = getSourceHostFromFlow(f.getFlow(), allHosts);
             Host dstHost = getDestinationHostFromFlow(f.getFlow(), allHosts);
 
-            if (srcHost == null || dstHost == null) {
-                log.debug("Error: source or destination is null in nodeFlowStatisticsUpdated");
+            // Source host being null is okay; it indicates that the
+            // source of this particular flow is a switch, not a host.
+            //
+            // TODO: It would be useful, at least for debugging
+            // output, to differentiate between when the source is a
+            // switch and when it's a host that the hosttracker
+            // doesn't know about. The latter would be an error.
+            if (srcHost == null) {
+                log.debug("Source host is null for Flow " + f.getFlow() + ". This is NOT necessarily an error.");
+                continue;
+            } else if (dstHost == null) {
+                log.debug("Error: Destination host is null for Flow " + f.getFlow());
                 continue;
             }
 
