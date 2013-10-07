@@ -68,7 +68,7 @@ class Stats:
                     print "!! Anomaly detected between %s and %s" % (self.src, self.dst)
                 elif (self.stat_type == "affinityLink"):
                     print "!! Anomaly detected on AffinityLink %s" % (self.al)
-                print "!! Rate rose from %1.1f mbit/s to %1.1f mbit/s" % ((self.rate_ewma/10**6), (new_rate_ewma/10**6))
+                print "!! Rate rose from %1.1f Mbit/s to %1.1f Mbit/s" % ((self.rate_ewma/10**6), (new_rate_ewma/10**6))
             self.rate_ewma = new_rate_ewma
 
     # Bytes
@@ -235,7 +235,7 @@ def run_passive_mode(affinity_links):
                 affinity_link_stats[al] = Stats("affinityLink", al=al)
             stat = affinity_link_stats[al]
             stat.refresh()
-            print "%d bytes (%1.1f mbit/s) on %s" % (stat.get_bytes(), (stat.get_bit_rate() / (10**6)), al)
+            print "%d bytes (%1.1f Mbit/s) on %s" % (stat.get_bytes(), (stat.get_bit_rate() / (10**6)), al)
         time.sleep(2)
 
 def main():
@@ -249,6 +249,7 @@ def main():
     affinity_control.add_affinity_group("testAG1", ["10.0.0.1", "10.0.0.2"])
     affinity_control.add_affinity_group("testAG2", ["10.0.0.3", "10.0.0.4"])
     affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
+    raw_input("[Press enter to continue] ")
 
     interactive_mode = False
 
