@@ -79,21 +79,6 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
     void setAffinityManager(IAffinityManager a) {
         this.affinityManager = a;
-
-        // TODO: Testing
-        AffinityGroup ag1 = new AffinityGroup("testAG1");
-        ag1.add("10.0.0.1");
-        //        ag1.add("10.0.0.2");
-        AffinityGroup ag2 = new AffinityGroup("testAG2");
-        ag2.add("10.0.0.3");
-        //        ag2.add("10.0.0.4");
-        this.affinityManager.addAffinityGroup(ag1);
-        this.affinityManager.addAffinityGroup(ag2);
-        AffinityLink al = new AffinityLink("testAL", ag1, ag2);
-        this.affinityManager.addAffinityLink(al);
-        al.setAttribute("redirect");
-        al.setWaypoint("10.0.0.4");
-        // TODO: End testing
     }
 
     void unsetAffinityManager(IAffinityManager a) {

@@ -8,7 +8,7 @@ from mininet.link import TCLink
 #   > sudo mn --custom affinity-topo.py --topo affinity --link tc
 # Using spaces rather than '=' is very important, as is having the --link flag
 
-class CustomTopo(Topo):
+class AffinityTopo(Topo):
 
     def __init__(self, **opts):
         Topo.__init__(self, **opts)
@@ -27,11 +27,6 @@ class CustomTopo(Topo):
         h2 = self.addHost('h2')
         h3 = self.addHost('h3')
         h4 = self.addHost('h4')
-        h1.setIP('10.0.0.10')
-        h1.setIP('10.0.0.20')
-        h1.setIP('10.0.0.30')
-        h1.setIP('10.0.0.40')
-
 
         # Connect hosts to switches
         self.addLink(h1, s2, bw=10) # These two links get limited
@@ -39,4 +34,4 @@ class CustomTopo(Topo):
         self.addLink(h3, s3)
         self.addLink(h4, s3)
 
-topos = { 'affinity' : (lambda: CustomTopo()) }
+topos = { 'affinity' : (lambda: AffinityTopo()) }

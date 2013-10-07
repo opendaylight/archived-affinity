@@ -65,10 +65,10 @@ class Stats:
             new_rate_ewma = alpha * new_bitrate + (1 - alpha) * self.rate_ewma
             if (self.rate_ewma > 0 and new_rate_ewma > anomaly_threshold * self.rate_ewma):
                 if (self.stat_type == "host"):
-                    print "Anomaly detected between %s and %s" % (self.src, self.dst)
+                    print "!! Anomaly detected between %s and %s" % (self.src, self.dst)
                 elif (self.stat_type == "affinityLink"):
-                    print "Anomaly detected on AffinityLink %s" % (self.al)
-                print "Rate rose from %1.1f mbit/s to %1.1f mbit/s" % ((self.rate_ewma/10**6), (new_rate_ewma/10**6))
+                    print "!! Anomaly detected on AffinityLink %s" % (self.al)
+                print "!! Rate rose from %1.1f mbit/s to %1.1f mbit/s" % ((self.rate_ewma/10**6), (new_rate_ewma/10**6))
             self.rate_ewma = new_rate_ewma
 
     # Bytes
@@ -86,6 +86,38 @@ class Stats:
         except Exception as e:
             bitrate = 0.0
         return bitrate
+
+
+class AffinityControl:
+
+    def __init__(self):
+        self.http = httplib2.Http(".cache")
+        self.http.add_credentials("admin", "admin")
+        self.url_prefix = "http://localhost:8080/affinity/nb/v2/affinity/default/"
+        self.groups = []
+        self.links = []        
+
+    def add_affinity_group(self, group_name, ips):
+        resp, content = self.http.request(self.url_prefix + "create/group/%s" % group_name, "PUT")
+        if (resp.status != 201):
+            print "AffinityGroup %s could not be created" % group_name
+            return
+        for ip in ips:
+            resp, content = self.http.request(self.url_prefix + "group/%s/add/ip/%s" % (group_name, ip), "PUT")
+            if (resp.status != 201):
+                print "IP %s could not be added to AffinityGroup %s" % (ip, group_name)
+                return
+        self.groups.append(group_name)
+        print "AffinityGroup %s added successfully. IPs are %s" % (group_name, ips)
+
+
+    def add_affinity_link(self, link_name, src_group, dst_group):
+        resp, content = self.http.request(self.url_prefix + "create/link/%s/from/%s/to/%s" % (link_name, src_group, dst_group), "PUT")
+        if (resp.status != 201):
+            print "AffinityLink %s could not be added between %s and %s" % (link_name, src_group, dst_group)
+            return
+        self.links.append(link_name)
+        print "AffinityLink %s added between %s and %s" % (link_name, src_group, dst_group)
 
 
 '''
@@ -192,35 +224,38 @@ def get_all_hosts():
     return active_hosts
 
 
-def run_passive_mode():
-
+def run_passive_mode(affinity_links):
+    # TODO: Get affinity_links automatically
     affinity_link_stats = {}
-    affinity_links = set(["testAL"]) # TODO: Get these automatically
 
+    # Go through all affinity link stats
     while True:
-        # Go through all affinity link stats
         for al in affinity_links:
             if al not in affinity_link_stats:
                 affinity_link_stats[al] = Stats("affinityLink", al=al)
             stat = affinity_link_stats[al]
             stat.refresh()
             print "%d bytes (%1.1f mbit/s) on %s" % (stat.get_bytes(), (stat.get_bit_rate() / (10**6)), al)
-
         time.sleep(2)
 
 def main():
 
-    # Default subnet is required for the host tracker to work.  Run
-    # this script once *before* you start mininet.
+    # Default subnet is required for the host tracker to work.
     subnet_control = SubnetControl()
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
+
+    # Set up an affinity link
+    affinity_control = AffinityControl()
+    affinity_control.add_affinity_group("testAG1", ["10.0.0.1", "10.0.0.2"])
+    affinity_control.add_affinity_group("testAG2", ["10.0.0.3", "10.0.0.4"])
+    affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
 
     interactive_mode = False
 
     if interactive_mode:
         run_interactive_mode()
     else:
-        run_passive_mode()
+        run_passive_mode(["testAL"])
 
 if __name__ == "__main__":
     main()
