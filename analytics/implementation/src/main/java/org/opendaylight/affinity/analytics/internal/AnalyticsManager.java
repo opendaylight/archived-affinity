@@ -8,6 +8,7 @@
 
 package org.opendaylight.affinity.analytics.internal;
 
+import java.lang.Short;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -249,6 +250,68 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         return b;
     }
 
+    private InetAddress getPrefix(InetAddress ip, Short mask) {
+        byte[] prefix = ip.getAddress();
+        InetAddress newIP = null;
+        try {
+            int bits = (32 - mask) % 8;
+            int bytes = 4 - ((int) mask / 8);
+            if (bits > 0) {
+                bytes--;
+            }
+            // zero out the bytes
+            for (int i = 1; i <= bytes; i++) {
+                prefix[prefix.length - i] = 0x0;
+            }
+            // zero out the bits
+            if (bits > 0) {
+                prefix[prefix.length - bytes - 1] &= (0xFF << bits);
+            }
+            newIP = InetAddress.getByAddress(prefix);
+        } catch (UnknownHostException e) {
+            // TODO:
+        }
+        return newIP;
+    }
+
+    public long getByteCountIntoHost(Host targetHost) {
+        long totalBytes = 0;
+        // We're calculating bytes *into* the target host, not out of
+        for (Host sourceHost : this.hostsToStats.keySet()) {
+            if (this.hostsToStats.get(sourceHost).get(targetHost) != null) {
+                totalBytes += this.hostsToStats.get(sourceHost).get(targetHost).getByteCount();
+            }
+        }
+        return totalBytes;
+    }
+
+    public long getByteCountIntoPrefix(String prefixAndMask, Set <HostNodeConnector> allHosts) {
+        long totalBytes = 0;
+        InetAddress ip;
+        Short mask;
+
+        // Split 1.2.3.4/5 format into the prefix (1.2.3.4) and the mask (5)
+        try {
+            String[] splitPrefix = prefixAndMask.split("/");
+            ip = InetAddress.getByName(splitPrefix[0]);
+            mask = (splitPrefix.length == 2) ? Short.valueOf(splitPrefix[1]) : 32;
+        } catch (UnknownHostException e) {
+            log.debug("Incorrect prefix/mask format: " + prefixAndMask);
+            return 0;
+        }
+
+        // Match on prefixes
+        InetAddress targetPrefix = getPrefix(ip, mask);
+        for (HostNodeConnector host : allHosts) {
+            InetAddress hostPrefix = getPrefix(host.getNetworkAddress(), mask);
+            if (hostPrefix.equals(targetPrefix)) {
+                totalBytes += getByteCountIntoHost(host);
+            }
+        }
+
+        return totalBytes;
+    }
+
     @Override
     public void nodeFlowStatisticsUpdated(Node node, List<FlowOnNode> flowStatsList) {
         Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
@@ -264,11 +327,12 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
             // output, to differentiate between when the source is a
             // switch and when it's a host that the hosttracker
             // doesn't know about. The latter would be an error.
-            if (srcHost == null) {
-                log.debug("Source host is null for Flow " + f.getFlow() + ". This is NOT necessarily an error.");
-                continue;
-            } else if (dstHost == null) {
+            if (dstHost == null) {
                 log.debug("Error: Destination host is null for Flow " + f.getFlow());
+                continue;
+            }
+            else if (srcHost == null) {
+                log.debug("Source host is null for Flow " + f.getFlow() + ". This is NOT necessarily an error.");
                 continue;
             }
 
