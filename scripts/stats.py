@@ -1,31 +1,43 @@
 import httplib2
 import json
+import pprint
  
 h = httplib2.Http(".cache")
 h.add_credentials('admin', 'admin')
 
-resp, content = h.request('http://localhost:8080/controller/nb/v2/statistics/default/flowstats', "GET")
-allFlowStats = json.loads(content)
-flowStats = allFlowStats['flowStatistics']
-print flowStats
+# Flow statistics. 
+def get_flow_stats(): 
+    global h
+    resp, content = h.request('http://localhost:8080/controller/nb/v2/statistics/default/flow', "GET")
+    allFlowStats = json.loads(content)
 
-# These JSON dumps were handy when trying to parse the responses 
-#print json.dumps(flowStats[0]['flowStat'][1], indent = 2)
-#print json.dumps(flowStats[4], indent = 2)
-for fs in flowStats:
-    print "\nSwitch ID : " + fs['node']['@id']
-    print '{0:8} {1:8} {2:5} {3:15}'.format('Count', 'Action', 'Port', 'DestIP')
-    for aFlow in fs['flowStat']:
-        count = aFlow['packetCount']
-actions = aFlow['flow']['actions'] 
-actionType = ''
-actionPort = ''
-#print actions
-if(type(actions) == type(list())):
-    actionType = actions[1]['@type']
-    actionPort = actions[1]['port']['@id']
-else:
-    actionType = actions['@type']
-    actionPort = actions['port']['@id']
-dst = aFlow['flow']['match']['matchField'][0]['value']
-print '{0:8} {1:8} {2:5} {3:15}'.format(count, actionType, actionPort, dst)
+    # raw dump
+    print content
+
+    # raw dumps
+    json.dumps(allFlowStats, indent=2, default=str)
+    s = pprint.pformat(allFlowStats, indent=4)
+    print s
+
+
+    for fs in allFlowStats["flowStatistics"]: 
+        node = fs["node"]
+        flows = fs["flowStatistic"]
+
+        print "#### Switch = " + node["id"] + ", type = " + node["type"]
+        print "# flows =  %d" % len(flows)
+        for f in flows: 
+            print f["flow"]["match"], "priority = ", f["flow"]["priority"]
+            print "\t Actions:"
+            for a in f["flow"]["actions"]:
+                print "\t \t", a 
+
+
+def get_all_nodes():
+    global h
+    resp, content = h.request('http://localhost:8080/controller/nb/v2/switchmanager/default/nodes', 'GET')
+    nodes = json.loads(content)
+    return nodes
+
+get_flow_stats()
+#get_all_nodes()

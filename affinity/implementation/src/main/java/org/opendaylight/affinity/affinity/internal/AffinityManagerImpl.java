@@ -50,7 +50,12 @@ import org.opendaylight.controller.clustering.services.ICacheUpdateAware;
 import org.opendaylight.controller.clustering.services.IClusterContainerServices;
 import org.opendaylight.controller.clustering.services.IClusterServices;
 import org.opendaylight.controller.configuration.IConfigurationContainerAware;
-import org.opendaylight.controller.forwardingrulesmanager.FlowEntry;
+//import org.opendaylight.controller.forwardingrulesmanager.FlowEntry;
+//import org.opendaylight.controller.forwardingrulesmanager.IForwardingRulesManager;
+import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
+import org.opendaylight.controller.sal.flowprogrammer.Flow;
+import org.opendaylight.controller.sal.utils.IPProtocols;
+
 import org.opendaylight.controller.sal.core.IContainer;
 import org.opendaylight.controller.sal.core.Node;
 import org.opendaylight.controller.sal.core.Host;
@@ -58,13 +63,14 @@ import org.opendaylight.controller.sal.core.NodeConnector;
 import org.opendaylight.controller.sal.core.NodeTable;
 import org.opendaylight.controller.sal.core.Property;
 import org.opendaylight.controller.sal.core.UpdateType;
-import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
+
 import org.opendaylight.controller.sal.flowprogrammer.Flow;
 import org.opendaylight.controller.sal.match.Match;
 import org.opendaylight.controller.sal.match.MatchType;
 import org.opendaylight.controller.sal.match.MatchField;
 import org.opendaylight.controller.sal.action.Action;
 import org.opendaylight.controller.sal.action.Output;
+import org.opendaylight.controller.sal.utils.EtherTypes;
 
 import org.opendaylight.controller.sal.reader.FlowOnNode;
 import org.opendaylight.controller.sal.reader.IReadService;
@@ -105,7 +111,9 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     private static final String SAVE = "Save";
     private String affinityLinkFileName = null;
     private String affinityGroupFileName = null;
-    private IFlowProgrammerService fps = null;
+    //    private IForwardingRulesManager ruleManager;
+    private IFlowProgrammerService programmer = null;
+    
     private ISwitchManager switchManager = null;
     private IfL2Agent l2agent = null;
     private IfIptoHost hostTracker = null;
@@ -125,6 +133,8 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
     private String containerName = GlobalConstants.DEFAULT.toString();
     private boolean isDefaultContainer = true;
     private static final int REPLACE_RETRY = 1;
+
+    private static short REDIRECT_IPSWITCH_PRIORITY = 3;
 
     public enum ReasonCode {
         SUCCESS("Success"), FAILURE("Failure"), INVALID_CONF(
@@ -236,14 +246,27 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             this.hostTracker = null;
         }
     }
-    void setFlowProgrammerService(IFlowProgrammerService s)
-    {
-        this.fps = s;
+    /*    public void setForwardingRulesManager(
+            IForwardingRulesManager forwardingRulesManager) {
+        log.debug("Setting ForwardingRulesManager");
+        this.ruleManager = forwardingRulesManager;
     }
 
-    void unsetFlowProgrammerService(IFlowProgrammerService s) {
-        if (this.fps == s) {
-            this.fps = null;
+    public void unsetForwardingRulesManager(
+            IForwardingRulesManager forwardingRulesManager) {
+        if (this.ruleManager == forwardingRulesManager) {
+            this.ruleManager = null;
+        }
+    }
+    */
+    public void setFlowProgrammerService(IFlowProgrammerService s)
+    {
+        this.programmer = s;
+    }
+
+    public void unsetFlowProgrammerService(IFlowProgrammerService s) {
+        if (this.programmer == s) {
+            this.programmer = null;
         }
     }
     void setL2Agent(IfL2Agent s)
@@ -309,13 +332,33 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
         return new Status(StatusCode.SUCCESS);
     }
 
+    /*
+    private Status installRedirectionFlow(Node sw, Flow flow) {
+        FlowEntry fEntry = new FlowEntry("path-redir", "flow", flow, sw);
+        Status success = new Status(StatusCode.SUCCESS);
+        Status error = new Status(StatusCode.NOTFOUND);
+            
+        log.info("Install flow entry {} on node {}", fEntry.toString(), sw.toString());
+        
+        if (!this.ruleManager.checkFlowEntryConflict(fEntry)) {
+            if (this.ruleManager.installFlowEntry(fEntry).isSuccess()) {
+                return success;
+            } else {
+                log.error("Error in installing flow entry to node : {}", sw);
+            }
+        } else {
+            log.error("Conflicting flow entry exists : {}", fEntry.toString());
+        }
+        return error;
+    }
+    */
 
     /** 
      * Fetch all node connectors. Each switch port will receive a flow
      * rule. Do not stop on error. Pass in the waypointMAC address so
      * that the correct output port can be determined.
      */
-    public Status pushFlowRule(Flow flow, byte [] waypointMAC) {
+    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] waypointMAC) {
         /* Get all node connectors. */
         Set<Node> nodes = switchManager.getNodes();
         Status success = new Status(StatusCode.SUCCESS);
@@ -325,18 +368,32 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
             log.debug("No nodes in network.");
             return success;
         } 
+
+        /* Send this flow rule to all nodes in the network. */
         for (Node node: nodes) {
+            List<Action> actions = new ArrayList<Action>();
+            Match match = new Match();
+            match.setField(new MatchField(MatchType.NW_SRC, from, null));
+            match.setField(new MatchField(MatchType.NW_DST, to, null));
+            match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
+        
+            Flow f = new Flow(match, actions);
+            f.setMatch(match);
+            f.setPriority(REDIRECT_IPSWITCH_PRIORITY);
+
             /* Look up the output port leading to the waypoint. */
             NodeConnector dst_connector = l2agent.lookup_output_port(node, waypointMAC);
 
             log.debug("Waypoint direction: node {} and connector {}", node, dst_connector);
             if (dst_connector != null) {
-                flow.addAction(new Output(dst_connector));
-                log.debug("flow push flow = {} to node = {} using fps = {} ", flow, node, fps);
-                Status status = fps.addFlow(node, flow);
+                f.setActions(actions);
+                f.addAction(new Output(dst_connector));
+                log.debug("flow push flow = {} to node = {} ", f, node);
+                /*                Status status = installRedirectionFlow(node, flow);*/
+                Status status = programmer.addFlow(node, f);
                 if (!status.isSuccess()) {
                     log.debug("Error during addFlow: {} on {}. The failure is: {}",
-                              flow, node, status.getDescription());
+                              f, node, status.getDescription());
                 }
             }
         }
@@ -347,33 +404,32 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
      * add flow rules for each node connector.
      */
     public Status addFlowRulesForRedirect(AffinityLink al) throws Exception {
-        Match match = new Match();
-        List<Action> actions = new ArrayList<Action>();
 
         InetAddress address1, address2;
         InetAddress mask;
         mask = InetAddress.getByName("255.255.255.255");
 
-        Flow f = new Flow(match, actions);
         String waypoint = al.getWaypoint();
 
         log.debug("addFlowRulesForRedirect link = {} waypoint = {}", al.getName(), al.getWaypoint());
         List<Entry<Host,Host>> hostPairList= getAllFlowsByHost(al);
         for (Entry<Host,Host> hostPair : hostPairList) {
             /* Create a match for each host pair in the affinity link. */
+            Match match = new Match();
+
             log.debug("Processing next hostPair {}", hostPair);
             Host host1 = hostPair.getKey();
             Host host2 = hostPair.getValue();
+            if (host1 == null || host2 == null) {
+                log.debug("Hosts in hostpair {} -> {} not found in hosttracker.", host1, host2);
+                return new Status(StatusCode.NOTFOUND);
+            }
             log.debug("Adding a flow for host pair {} -> {}", host1, host2);
             address1 = host1.getNetworkAddress();
             address2 = host2.getNetworkAddress();
             log.debug("Adding a flow for {} -> {}", address1, address2);
-            match.setField(MatchType.NW_SRC, address1, mask);
-            match.setField(MatchType.NW_DST, address2, mask);
-            
-            /* Send this flow rule to all nodes in the network. */
-            byte [] dstMAC = InetAddressToMAC(waypoint);
-            pushFlowRule(f, dstMAC);
+            byte [] waypointMAC = InetAddressToMAC(waypoint);
+            pushFlowRule(address1, address2, waypointMAC);
         }
 	return new Status(StatusCode.SUCCESS);
     }
