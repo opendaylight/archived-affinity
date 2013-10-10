@@ -17,13 +17,25 @@ def rest_method(url, verb):
     print content
     print "return code %d" % (resp.status)
     print "done"
-    
+    return content
+
 
 def list_all_hosts(): 
 
-    print "list all hosts"
+    print "list active hosts"
     put_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active'
+    content = rest_method(put_url, "GET")
+    hostCfg = json.loads(content)
+    for host in hostCfg['hostConfig']:
+        print host
+
+    print "list inactive hosts"
+    put_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/inactive'
     rest_method(put_url, "GET")
+    content = rest_method(put_url, "GET")
+    hostCfg = json.loads(content)
+    for host in hostCfg['hostConfig']:
+        print host
     
 
 def waypoint_init():
@@ -42,15 +54,15 @@ def waypoint_init():
     rest_method(put_url, "PUT")
 
     print "add ip to webservers"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/192.168.1.1'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/10.0.0.1'
     rest_method(put_url, "PUT")
 
-    print "add ip to webservers"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/192.168.1.2'
-    rest_method(put_url, "PUT")
+#    print "add ip to webservers"
+#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/10.0.0.2'
+#    rest_method(put_url, "PUT")
 
     print "add ip to external"    
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/clients/add/ip/10.10.0.0'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/clients/add/ip/10.0.0.3'
     rest_method(put_url, "PUT")
 
 
@@ -59,6 +71,7 @@ def get_all_affinity_groups():
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/affinity-groups'
     rest_method(get_url, "GET")
 
+# Tbd
 def get_all_affinity_links(): 
     print "get all affinity groups"
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/affinity-links'
@@ -69,35 +82,30 @@ def get_affinity_group(groupname):
     rest_method(get_url, "GET")
 
 def set_waypoint_address():
-    wp = "192.168.1.10"
+    wp = "10.0.0.2"
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/inflows/setwaypoint/' + wp
-    rest_method(put_url, "PUT")
-
-def demo_set_waypoint_address():
-    wp = "10.0.0.4"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/testAL/setwaypoint/' + wp
     rest_method(put_url, "PUT")
 
 # Add waypoint IP to an affinity link.
 def main():
     global h
-    h = httplib2.Http(".cache")
-    h.add_credentials('admin', 'admin')
 
-#    waypoint_init()
-    demo_set_waypoint_address()
-#    unset_waypoint_address()
+    waypoint_init()
 
-#    get_affinity_group('webservers')
-#    get_affinity_group('clients')
+    get_affinity_group('webservers')
+    get_affinity_group('clients')
 
-#    get_all_affinity_groups()
-
+    get_all_affinity_groups()
     list_all_hosts()
-#    get_all_affinity_links()
 
-if __name__ == "__main__":
-    main()
+    set_waypoint_address()
+
+#if __name__ == "__main__":
+#    main()
+
+h = httplib2.Http(".cache")
+h.add_credentials('admin', 'admin')
+
 
     
 

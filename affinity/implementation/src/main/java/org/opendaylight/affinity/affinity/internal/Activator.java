@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
+//import org.opendaylight.controller.forwardingrulesmanager.IForwardingRulesManager;
 
 /**
  * AffinityManager Bundle Activator
@@ -101,8 +102,15 @@ public class Activator extends ComponentActivatorAbstractBase {
                   .setService(IfL2Agent.class)
                   .setCallbacks("setL2Agent", "unsetL2Agent")
                   .setRequired(true));
-            c.add(createContainerServiceDependency(containerName).setService(IFlowProgrammerService.class)
-                    .setCallbacks("setFlowProgrammerService", "unsetFlowProgrammerService").setRequired(true));
+            /*            c.add(createContainerServiceDependency(containerName).setService(
+                    IForwardingRulesManager.class).setCallbacks(
+                    "setForwardingRulesManager", "unsetForwardingRulesManager")
+                    .setRequired(true));
+            */
+            c.add(createContainerServiceDependency(containerName)
+                  .setService(IFlowProgrammerService.class)
+                  .setCallbacks("setFlowProgrammerService", "unsetFlowProgrammerService")
+                  .setRequired(true));
             c.add(createContainerServiceDependency(containerName).setService(
                     IClusterContainerServices.class).setCallbacks(
                     "setClusterContainerService",
