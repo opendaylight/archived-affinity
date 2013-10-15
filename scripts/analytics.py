@@ -44,6 +44,14 @@ class Stats:
         self.http.add_credentials('admin', 'admin')
         self.refresh()
 
+    def __str__(self):
+        if (self.stat_type == "host"):
+            return "host pair %s -> %s" % (self.src, self.dst)
+        elif (self.stat_type == "affinityLink"):
+            return "AffinityLink %s" % self.al
+        else:
+            return "Unknown Stats type"
+
     # Refresh statistics
     def refresh(self):
         if (self.stat_type == "host"):
@@ -52,6 +60,7 @@ class Stats:
             resp, content = self.http.request(self.url_prefix + self.al, "GET")
         self.stats = json.loads(content)
         self.handle_rate_ewma()
+        self.check_large_flow()
 
     # EWMA calculation for bit rate
     def handle_rate_ewma(self):
@@ -64,12 +73,13 @@ class Stats:
         else:
             new_rate_ewma = alpha * new_bitrate + (1 - alpha) * self.rate_ewma
             if (self.rate_ewma > 0 and new_rate_ewma > anomaly_threshold * self.rate_ewma):
-                if (self.stat_type == "host"):
-                    print "!! Anomaly detected between %s and %s" % (self.src, self.dst)
-                elif (self.stat_type == "affinityLink"):
-                    print "!! Anomaly detected on AffinityLink %s" % (self.al)
+                print "!! Anomaly detected on %s" % self
                 print "!! Rate rose from %1.1f Mbit/s to %1.1f Mbit/s" % ((self.rate_ewma/10**6), (new_rate_ewma/10**6))
             self.rate_ewma = new_rate_ewma
+
+    def check_large_flow(self):
+        if (self.get_bytes() > 5 * (10**6)):
+            print "!! Large flow detected on %s" % self
 
     # Bytes
     def get_bytes(self):
