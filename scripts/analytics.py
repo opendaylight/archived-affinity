@@ -184,38 +184,46 @@ def run_interactive_mode():
             if (request_type == "quit"):
                 sys.exit()
 
-            action = request[1]
-
             if (request_type == "host"):
+                action = request[1]
                 src, dst = request[2:4]
+                host_stat = Stats("host", src=src, dst=dst)
                 if (action == "bytes"):
-                    host_stat = Stats("host", src=src, dst=dst)
                     print("%d bytes between %s and %s" % (host_stat.get_bytes(), src, dst))
                 elif (action == "rate"):
-                    host_stat = Stats("host", src=src, dst=dst)
                     print("%f bit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
                 else:
+                    print "wrong action"
                     raise Exception
 
-            # TODO: Change this to use AffinityLinkStats
             elif (request_type == "link"):
+                action = request[1]
                 link = request[2]
+                link_stat = Stats("affinityLink", al=link)
+                if (action == "bytes"):
+                    print("%d bytes on %s" % (link_stat.get_bytes(), link))
+                elif (action == "rate"):
+                    print("%f bit/s on %s" % (link_stat.get_bit_rate(), link))
+                else:
+                    print "wrong action 2"
+                    raise Exception
+
+            elif (request_type == "prefix"):
+                prefix = request[1]
                 h = httplib2.Http(".cache")
                 h.add_credentials("admin", "admin")
-                resp, content = h.request("http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/" + link, "GET")
-                al_stats = json.loads(content)
-
-                if (action == "bytes"):
-                    print("%d bytes on %s" % (long(al_stats["byteCount"]), link))
-                elif (action == "rate"):
-                    print("%f bit/s on %s" % (float(al_stats["bitRate"]), link))
-                else:
-                    raise Exception
+                url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/prefixstats/"
+                resp, content = h.request(url_prefix + prefix, "GET")
+                if (resp.status == 200):
+                    data = json.loads(content)
+                    print data['byteCount'], "bytes"
 
             else:
+                print "something else"
                 raise Exception
         except Exception as e:
             print "Error"
+            print e
 
 
 def get_all_hosts():
@@ -259,9 +267,9 @@ def main():
     affinity_control.add_affinity_group("testAG1", ["10.0.0.1", "10.0.0.2"])
     affinity_control.add_affinity_group("testAG2", ["10.0.0.3", "10.0.0.4"])
     affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
-    raw_input("[Press enter to continue] ")
+    raw_input("[Press enter to continue]" )
 
-    interactive_mode = False
+    interactive_mode = True
 
     if interactive_mode:
         run_interactive_mode()
