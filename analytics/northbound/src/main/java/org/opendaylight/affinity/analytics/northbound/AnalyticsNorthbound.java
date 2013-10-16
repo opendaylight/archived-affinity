@@ -8,6 +8,7 @@
 
 package org.opendaylight.affinity.analytics.northbound;
 
+import java.lang.Long;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -174,6 +175,41 @@ public class AnalyticsNorthbound {
         double bitRate = analyticsManager.getBitRateOnAffinityLink(al);
 
         return new AffinityLinkStatistics(al, byteCount, bitRate);
+    }
+
+    /**
+     * Returns TODO:
+     *
+     * @param containerName
+     *            Name of the Container. The Container name for the base
+     *            controller is "default".
+     * @param TODO:
+     * @return TODO:
+     */
+    @Path("/{containerName}/prefixstats/{ip}/{mask}/")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    //    @TypeHint(Long.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public PrefixStatistics getPrefixMaskStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("ip") String ip,
+        @PathParam("mask") String mask) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        }
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null) {
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+
+        long byteCount = analyticsManager.getByteCountIntoPrefix(ip + "/" + mask);
+        return new PrefixStatistics(byteCount);
     }
 
     private void handleDefaultDisabled(String containerName) {

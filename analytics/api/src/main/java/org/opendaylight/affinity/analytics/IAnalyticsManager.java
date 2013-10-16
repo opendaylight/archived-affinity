@@ -20,4 +20,6 @@ public interface IAnalyticsManager {
     long getByteCountOnAffinityLink(AffinityLink al);
 
     double getBitRateOnAffinityLink(AffinityLink al);
+
+    long getByteCountIntoPrefix(String ipAndMask);
 }

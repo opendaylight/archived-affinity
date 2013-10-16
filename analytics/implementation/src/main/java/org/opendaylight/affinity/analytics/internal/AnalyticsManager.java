@@ -285,7 +285,7 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         return totalBytes;
     }
 
-    public long getByteCountIntoPrefix(String prefixAndMask, Set <HostNodeConnector> allHosts) {
+    public long getByteCountIntoPrefix(String prefixAndMask) {
         long totalBytes = 0;
         InetAddress ip;
         Short mask;
@@ -302,6 +302,7 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
         // Match on prefixes
         InetAddress targetPrefix = getPrefix(ip, mask);
+        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
         for (HostNodeConnector host : allHosts) {
             InetAddress hostPrefix = getPrefix(host.getNetworkAddress(), mask);
             if (hostPrefix.equals(targetPrefix)) {
