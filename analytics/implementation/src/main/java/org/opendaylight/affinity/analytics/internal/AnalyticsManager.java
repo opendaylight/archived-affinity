@@ -44,6 +44,9 @@ import org.opendaylight.controller.sal.reader.NodeTableStatistics;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.statisticsmanager.IStatisticsManager;
 
+// TODO: get "analytics" somewhere in this namespace
+//import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.rev131016.HostStatistics;
+
 public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsManager.class);

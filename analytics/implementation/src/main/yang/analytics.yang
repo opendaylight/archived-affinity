@@ -1,0 +1,13 @@
+module analytics-model { 
+  namespace "urn:opendaylight:affinity"; // TODO: Change?
+  prefix affinity; // TODO: Change?
+
+  revision "2013-10-16" { description "Initial revision of analytics model"; }
+
+  grouping host-statistics {
+    leaf byte-count { type uint64; }
+    leaf duration {
+      type decimal64 { fraction-digits 2; } // TODO: More?
+    }
+  }
+}
