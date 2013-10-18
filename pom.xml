@@ -49,7 +49,7 @@
 
     <modules>
       <module>affinity/api</module> 
-<!--      <module>affinity/yang</module>  -->
+      <module>affinity/yang</module>  
       <module>affinity/implementation</module>
       <module>affinity/integrationtest</module>
       <module>affinity/northbound</module>

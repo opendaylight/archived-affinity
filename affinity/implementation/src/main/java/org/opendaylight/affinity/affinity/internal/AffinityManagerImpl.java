@@ -93,6 +93,7 @@ import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 
 import org.opendaylight.controller.hosttracker.IfIptoHost;
+import org.opendaylight.controller.hosttracker.IfNewHostNotify;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
@@ -101,10 +102,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The class caches latest network nodes statistics as notified by reader
- * services and provides API to retrieve them.
+ * Affinity configuration.
  */
-public class AffinityManagerImpl implements IAffinityManager, IConfigurationContainerAware, IObjectReader, ICacheUpdateAware<Long, String> {
+public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
+                                            IConfigurationContainerAware, IObjectReader, ICacheUpdateAware<Long, String> {
     private static final Logger log = LoggerFactory.getLogger(AffinityManagerImpl.class);
 
     private static String ROOT = GlobalConstants.STARTUPHOME.toString();
@@ -598,6 +599,24 @@ public class AffinityManagerImpl implements IAffinityManager, IConfigurationCont
 	}
 	return hostPairList;
     }
+
+    private void notifyHostUpdate(HostNodeConnector host, boolean added) {
+        if (host == null) {
+            return;
+        }
+        log.info("Host update received (new = {}).", added);
+    }
+
+    @Override
+    public void notifyHTClient(HostNodeConnector host) {
+        notifyHostUpdate(host, true);
+    }
+
+    @Override
+    public void notifyHTClientHostRemoved(HostNodeConnector host) {
+        notifyHostUpdate(host, false);
+    }
+
 
     @Override
     public Status saveConfiguration() {
