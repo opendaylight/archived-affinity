@@ -17,7 +17,6 @@ import org.apache.felix.dm.Component;
 import org.opendaylight.controller.clustering.services.ICacheUpdateAware;
 import org.opendaylight.controller.clustering.services.IClusterContainerServices;
 import org.opendaylight.controller.configuration.IConfigurationContainerAware;
-import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase;
 import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.IAffinityManagerAware;
@@ -27,6 +26,9 @@ import org.slf4j.LoggerFactory;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 //import org.opendaylight.controller.forwardingrulesmanager.IForwardingRulesManager;
+import org.opendaylight.controller.hosttracker.IfIptoHost;
+import org.opendaylight.controller.hosttracker.IfNewHostNotify;
+
 
 /**
  * AffinityManager Bundle Activator
@@ -93,6 +95,7 @@ public class Activator extends ComponentActivatorAbstractBase {
             c.setInterface(new String[] {
                     IAffinityManager.class.getName(),
                     ICacheUpdateAware.class.getName(),
+                    IfNewHostNotify.class.getName(),
                     IConfigurationContainerAware.class.getName() }, props);
 
             // Now lets add a service dependency to make sure the

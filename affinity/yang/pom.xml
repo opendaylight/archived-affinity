@@ -19,7 +19,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <yang.version>0.5.8-SNAPSHOT</yang.version>
+        <yang.version>0.5.9-SNAPSHOT</yang.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
