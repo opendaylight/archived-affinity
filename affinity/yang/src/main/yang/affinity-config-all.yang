@@ -6,6 +6,7 @@ module affinity-config-all {
     import ietf-yang-types { prefix yang; }
     import yang-ext { prefix ext; }
     import opendaylight-inventory {prefix inv;}
+    import opendaylight-l2-types { prefix l2types; }
 
     revision "2013-09-25" {
         description "Initial revision of affinity model to be reviewed";
@@ -45,12 +46,11 @@ module affinity-config-all {
             description "Mac or Inet address";
             type union {
                 type inet:ip-address;
-                type inet:ip-prefix; // tbd
-                type inet:ip-range; // tbd
-                type yang:vlanid; // tbd
+                type inet:ip-prefix; 
+                type l2types:vlan-id; // tbd
                 type yang:mac-address;
-                type yang:mac-address-range;
-                type yang:tp-address; // tbd
+//                type yang:mac-address-range;
+//                type yang:tp-address; // tbd
             }
         }
     }
@@ -67,6 +67,23 @@ module affinity-config-all {
         type instance-identifier;
     }
 
+
+    grouping affinity-element {
+        leaf id {
+            type string;
+        }
+        choice element {
+            description "affinity element";
+            case affinity-endpoint {
+                 uses affinity-endpoint;
+                }
+                
+            // Apply waypoint routing to the selected flows and send it through service chain. 
+            case affinity-address-domain {
+                 uses affinity-address-domain;
+            }
+        }
+    }       
   //**************************************************
   // Affinity group
   //**************************************************
@@ -74,9 +91,9 @@ module affinity-config-all {
         leaf id {
             type string;
         }   
-        list affinity-identifiers {
+        list affinity-element {
             key id;
-            uses affinity-identifier;
+            uses affinity-element;
         }
     }
 
@@ -104,6 +121,13 @@ module affinity-config-all {
         }
     }
 
+    typedef affinity-access-control-type {
+              type enumeration {
+                  enum permit;
+                  enum deny;
+              }
+    }
+
     //**************************************************
     // Affinity attribute. Each is expanded in their own grouping construct below. 
     //**************************************************
@@ -114,12 +138,9 @@ module affinity-config-all {
         choice attribute-type {
             description "affinity attribute";
             // Apply access control to selected flows. 
-            case access-control {
-                    leaf access-control {
-                        type values {
-                            enum permit;
-                            enum deny;
-                        }
+            case affinity-access-control {
+                    leaf affinity-access-control {
+                        type  affinity-access-control-type;
                     }
                 }
                 
@@ -181,66 +202,6 @@ module affinity-config-all {
         }
     }
 
-    //******************************
-    // RPCs to create affinity groups, add endpoints and address domains. 
-    //******************************
-    rpc create-affinity-group {
-        input {
-            uses affinity-group;
-        }
-        output {
-            leaf status {
-                type string;
-            }
-        }
-    }
-
-    rpc add-affinity-endpoint {
-        input {
-            leaf affinity-endpoint {
-                type inv:node-connector-id;
-            }
-        }
-        output {
-            leaf status {
-                type string;
-            }
-        }
-    }
-
-    rpc add-affinity-domain {
-        input {
-            leaf affinity-domain {
-                type affinity-domain;
-            }
-        }    
-        output {
-            leaf status {
-                type string;
-            }
-        }
-    }
-
-    rpc get-affinity-groups {
-        output {
-            list affinity-group {
-            key id;
-            uses affinity-group;
-            }
-        }
-    }
-    rpc get-affinity-links;
-    rpc get-affinity-group;
-    rpc get-affinity-link;
-
-    rpc get-stats-per-affinity-link;
-
-    //**************************************************
-    // Notifications 
-    //**************************************************
-    notification new-affinity-endpoint;
-    notification new-affinity-domain;
-    notification modify-affinity-attribute;
 }
 
 
