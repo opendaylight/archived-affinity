@@ -58,6 +58,7 @@
       <module>analytics/integrationtest</module>
       <module>analytics/northbound</module>
       <module>l2agent</module>
+      <module>nfchain</module>
     </modules>
 
     <repositories>

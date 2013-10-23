@@ -1,0 +1,87 @@
+module nfchain { 
+    namespace "urn:opendaylight:affinity:nfchain";
+    prefix nfchain;
+
+    import ietf-inet-types { prefix inet; }
+    import ietf-yang-types { prefix yang; }
+    import yang-ext { prefix ext; }
+    import opendaylight-inventory {prefix inv;}
+    import opendaylight-l2-types { prefix l2types; }
+
+    revision "2013-10-20" {
+        description "Initial revision of affinity model to be reviewed";
+    }
+
+   //**************************************************
+    // Gateway hosting the network function. 
+    //**************************************************
+    grouping gateway {
+        leaf id {
+            type string;
+        }
+        // Address is either an IP address, MAC address, or switch/port. 
+        leaf location {
+            description "Mac or Inet address";
+            type union {
+                type inv:node-connector-id;
+                type inet:ip-address;
+            }
+        }
+    }
+
+    // Each nf chain has an id, a flowspec and a list of gateways. 
+    grouping chain {
+        leaf id {
+            type chain-id;
+        }   
+        leaf flowSpec {
+            type uint32; // tbd
+        }
+        list gateway {
+            key id;
+            ext:context-instance "gateway-context";
+            uses gateway;
+        }
+    }   
+
+    // Container for all nf_chain objects
+    container nfdb {
+        list chain {
+            key id;
+            ext:context-instance "chain";
+            uses chain;
+        }
+    }
+
+    typedef chain-id {
+        type inet:uri;
+    }
+
+    typedef gateway-ref {
+        type instance-identifier;
+    }
+
+    identity gateway-context;
+
+    // nf chain reference.
+    typedef chain-ref {
+        type instance-identifier;
+    }
+    identity chain-context;
+
+    //**************************************************
+    // Gateway chain. 
+    //**************************************************
+    rpc add {
+        input {
+              leaf chain {
+                  type chain-id;
+              }
+              container gateway {
+                  uses gateway;
+              }
+        }
+    }
+    rpc list {
+    }
+}
