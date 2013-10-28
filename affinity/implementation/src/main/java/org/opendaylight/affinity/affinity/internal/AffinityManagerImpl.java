@@ -97,6 +97,8 @@ import org.opendaylight.controller.hosttracker.IfNewHostNotify;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
+import org.opendaylight.affinity.nfchainagent.NFchainAgent;
+import org.opendaylight.affinity.nfchainagent.NFchainconfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +116,7 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
     private String affinityGroupFileName = null;
     //    private IForwardingRulesManager ruleManager;
     private IFlowProgrammerService programmer = null;
+    private NFchainAgent nfchainagent = null;
     
     private ISwitchManager switchManager = null;
     private IfL2Agent l2agent = null;
@@ -270,6 +273,19 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
             this.programmer = null;
         }
     }
+
+    void setNFchainAgent(NFchainAgent s)
+    {
+        log.info("Setting nfchainagent {}", s);
+        this.nfchainagent = s;
+    }
+
+    void unsetNFchainAgent(NFchainAgent s) {
+        if (this.nfchainagent == s) {
+            this.nfchainagent = null;
+        }
+    }
+
     void setL2Agent(IfL2Agent s)
     {
         log.info("Setting l2agent {}", s);
@@ -333,115 +349,13 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
         return new Status(StatusCode.SUCCESS);
     }
 
-    /*
-    private Status installRedirectionFlow(Node sw, Flow flow) {
-        FlowEntry fEntry = new FlowEntry("path-redir", "flow", flow, sw);
-        Status success = new Status(StatusCode.SUCCESS);
-        Status error = new Status(StatusCode.NOTFOUND);
-            
-        log.info("Install flow entry {} on node {}", fEntry.toString(), sw.toString());
-        
-        if (!this.ruleManager.checkFlowEntryConflict(fEntry)) {
-            if (this.ruleManager.installFlowEntry(fEntry).isSuccess()) {
-                return success;
-            } else {
-                log.error("Error in installing flow entry to node : {}", sw);
-            }
-        } else {
-            log.error("Conflicting flow entry exists : {}", fEntry.toString());
-        }
-        return error;
-    }
-    */
-
-    /** 
-     * Fetch all node connectors. Each switch port will receive a flow
-     * rule. Do not stop on error. Pass in the waypointMAC address so
-     * that the correct output port can be determined.
-     */
-    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] waypointMAC) {
-        /* Get all node connectors. */
-        Set<Node> nodes = switchManager.getNodes();
-        Status success = new Status(StatusCode.SUCCESS);
-        Status notfound = new Status(StatusCode.NOTFOUND);
-
-        if (nodes == null) {
-            log.debug("No nodes in network.");
-            return success;
-        } 
-
-        /* Send this flow rule to all nodes in the network. */
-        for (Node node: nodes) {
-            List<Action> actions = new ArrayList<Action>();
-            Match match = new Match();
-            match.setField(new MatchField(MatchType.NW_SRC, from, null));
-            match.setField(new MatchField(MatchType.NW_DST, to, null));
-            match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
-        
-            Flow f = new Flow(match, actions);
-            f.setMatch(match);
-            f.setPriority(REDIRECT_IPSWITCH_PRIORITY);
-
-            /* Look up the output port leading to the waypoint. */
-            NodeConnector dst_connector = l2agent.lookup_output_port(node, waypointMAC);
-
-            log.debug("Waypoint direction: node {} and connector {}", node, dst_connector);
-            if (dst_connector != null) {
-                f.setActions(actions);
-                f.addAction(new Output(dst_connector));
-                log.debug("flow push flow = {} to node = {} ", f, node);
-                /*                Status status = installRedirectionFlow(node, flow);*/
-                Status status = programmer.addFlow(node, f);
-                if (!status.isSuccess()) {
-                    log.debug("Error during addFlow: {} on {}. The failure is: {}",
-                              f, node, status.getDescription());
-                }
-            }
-        }
-        return success;
-    }
-
-    /** 
-     * add flow rules for each node connector.
-     */
-    public Status addFlowRulesForRedirect(AffinityLink al) throws Exception {
-
-        InetAddress address1, address2;
-        InetAddress mask;
-        mask = InetAddress.getByName("255.255.255.255");
-
-        String waypoint = al.getWaypoint();
-
-        log.debug("addFlowRulesForRedirect link = {} waypoint = {}", al.getName(), al.getWaypoint());
-        List<Entry<Host,Host>> hostPairList= getAllFlowsByHost(al);
-        for (Entry<Host,Host> hostPair : hostPairList) {
-            /* Create a match for each host pair in the affinity link. */
-            Match match = new Match();
-
-            log.debug("Processing next hostPair {}", hostPair);
-            Host host1 = hostPair.getKey();
-            Host host2 = hostPair.getValue();
-            if (host1 == null || host2 == null) {
-                log.debug("Hosts in hostpair {} -> {} not found in hosttracker.", host1, host2);
-                return new Status(StatusCode.NOTFOUND);
-            }
-            log.debug("Adding a flow for host pair {} -> {}", host1, host2);
-            address1 = host1.getNetworkAddress();
-            address2 = host2.getNetworkAddress();
-            log.debug("Adding a flow for {} -> {}", address1, address2);
-            byte [] waypointMAC = InetAddressToMAC(waypoint);
-            pushFlowRule(address1, address2, waypointMAC);
-        }
-	return new Status(StatusCode.SUCCESS);
-    }
-
-    public byte [] InetAddressToMAC(String ipaddress) {
-        InetAddress inetAddr = NetUtils.parseInetAddress(ipaddress);
-        HostNodeConnector host = (HostNodeConnector) hostTracker.hostFind(inetAddr);
+    /*    public byte [] InetAddressToMAC(InetAddress inetAddr) {
+        //        HostNodeConnector 
         log.debug("Find {} -> {} using hostTracker {}", inetAddr, host, hostTracker);
         byte [] dst_mac = host.getDataLayerAddressBytes();
         return dst_mac;
     }
+    */
 
     public Status removeAffinityLink(String name) {
 	affinityLinkList.remove(name);
@@ -724,5 +638,56 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
             log.debug("Cluster Service removed for affinity mgr!");
             this.clusterContainerService = null;
         }
+    }
+    
+    /* Add a nfchain config for this affinity link. */
+    List<Flow> getFlowlist(AffinityLink al) {
+        InetAddress from, to;
+
+        log.debug("get flowlist affinity link = {}", al.getName());
+        List<Flow> flowlist = new ArrayList<Flow>();
+        List<Entry<Host,Host>> hostPairList= getAllFlowsByHost(al);
+
+        /* Create a Flow for each host pair in the affinity link. */
+        for (Entry<Host,Host> hostPair : hostPairList) {
+            log.debug("Processing next hostPair {}", hostPair);
+
+            Match match = new Match();
+            from = hostPair.getKey().getNetworkAddress();
+            to = hostPair.getValue().getNetworkAddress();
+            log.debug("Adding a flow for {} -> {}", from, to);
+
+            if (from == null ||to == null) {
+                /* Skip host pairs if one end is null. */
+                log.debug("Hosts in hostpair {} -> {} not found in hosttracker.", from, to);
+                continue;
+            } else {
+                match.setField(new MatchField(MatchType.NW_SRC, from, null));
+                match.setField(new MatchField(MatchType.NW_DST, to, null));
+                match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
+                Flow flow = new Flow(match, null);
+                flow.setPriority(REDIRECT_IPSWITCH_PRIORITY);
+                flowlist.add(flow);
+            }
+        }
+	return flowlist;
+    }
+
+    /* From affinity link, create a nfc config. Pass this nfc config to nfchainagent. */
+    public Status addNfchain(AffinityLink al) {
+        List<Flow> flowlist = getFlowlist(al);
+        InetAddress waypoint = NetUtils.parseInetAddress(al.getWaypoint());
+        NFchainconfig nfcc = new NFchainconfig(al.getName(), flowlist, waypoint);
+        /* Only one hop initially... */
+        List<NFchainconfig> nfclist = new ArrayList<NFchainconfig>();
+        String key = al.getName();
+        nfclist.add(nfcc);
+        nfchainagent.addNfchain(key, nfclist);
+        return new Status(StatusCode.SUCCESS);
+    }
+
+    public Status enableRedirect(AffinityLink al) throws Exception {
+        String nfccname = al.getName();
+        return nfchainagent.enable(nfccname);
     }
 }

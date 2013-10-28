@@ -54,6 +54,9 @@ public class NfchainManager implements NfchainService, NfchainData {
     private final ExecutorService executor;
     private Future<RpcResult<Void>> currentTask;
 
+    private IFlowProgrammerService programmer = null;
+    private ISwitchManager switchManager = null;
+
     public NfchainManager() {
         executor = Executors.newFixedThreadPool(1);
     }
@@ -94,6 +97,78 @@ public class NfchainManager implements NfchainService, NfchainData {
     public void setNotificationProvider(NotificationProviderService salService) {
         this.notificationProvider = salService;
     }
+
+    public void setFlowProgrammerService(IFlowProgrammerService s)
+    {
+        this.programmer = s;
+    }
+
+    public void unsetFlowProgrammerService(IFlowProgrammerService s) {
+        if (this.programmer == s) {
+            this.programmer = null;
+        }
+    }
+
+    void setSwitchManager(ISwitchManager s)
+    {
+        this.switchManager = s;
+    }
+
+    void unsetSwitchManager(ISwitchManager s) {
+        if (this.switchManager == s) {
+            this.switchManager = null;
+        }
+    }
+
+
+    /* Include this once dependencies are correctly established in osgi. 
+    /** 
+     * Fetch all node connectors. Each switch port will receive a flow
+     * rule. Do not stop on error. Pass in the waypointMAC address so
+     * that the correct output port can be determined.
+     */
+    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] waypointMAC) {
+        /* Get all node connectors. */
+        Set<Node> nodes = switchManager.getNodes();
+        Status success = new Status(StatusCode.SUCCESS);
+        Status notfound = new Status(StatusCode.NOTFOUND);
+
+        if (nodes == null) {
+            log.debug("No nodes in network.");
+            return success;
+        } 
+
+        /* Send this flow rule to all nodes in the network. */
+        for (Node node: nodes) {
+            List<Action> actions = new ArrayList<Action>();
+            Match match = new Match();
+            match.setField(new MatchField(MatchType.NW_SRC, from, null));
+            match.setField(new MatchField(MatchType.NW_DST, to, null));
+            match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
+        
+            Flow f = new Flow(match, actions);
+            f.setMatch(match);
+            f.setPriority(REDIRECT_IPSWITCH_PRIORITY);
+
+            /* Look up the output port leading to the waypoint. */
+            NodeConnector dst_connector = l2agent.lookup_output_port(node, waypointMAC);
+
+            log.debug("Waypoint direction: node {} and connector {}", node, dst_connector);
+            if (dst_connector != null) {
+                f.setActions(actions);
+                f.addAction(new Output(dst_connector));
+                log.debug("flow push flow = {} to node = {} ", f, node);
+                /*                Status status = installRedirectionFlow(node, flow);*/
+                Status status = programmer.addFlow(node, f);
+                if (!status.isSuccess()) {
+                    log.debug("Error during addFlow: {} on {}. The failure is: {}",
+                              f, node, status.getDescription());
+                }
+            }
+        }
+        return success;
+    }
+    */
 
     private class addGatewayTask implements Callable<RpcResult<Void>> {
 

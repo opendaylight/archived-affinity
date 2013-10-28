@@ -32,18 +32,18 @@ import org.opendaylight.affinity.affinity.AffinityLink;
  */
 public interface IAffinityManager {
 
+    public Status addAffinityGroup(AffinityGroup ag);
+    public Status removeAffinityGroup(String name);
+    
+    public AffinityGroup getAffinityGroup(String name);
+    public List<AffinityGroup> getAllAffinityGroups();
+
     public Status addAffinityLink(AffinityLink al);
     public Status removeAffinityLink(AffinityLink al);
     public Status removeAffinityLink(String linkName);
 
     public AffinityLink getAffinityLink(String name);    
     public List<AffinityLink> getAllAffinityLinks();
-
-    public Status addAffinityGroup(AffinityGroup ag);
-    public Status removeAffinityGroup(String name);
-    
-    public AffinityGroup getAffinityGroup(String name);
-    public List<AffinityGroup> getAllAffinityGroups();
 
     /* Save all configs to their respective files. */
     public Status saveAffinityConfig();
@@ -53,6 +53,12 @@ public interface IAffinityManager {
     public List<Entry<Host, Host>> getAllFlowsByHost(AffinityLink al);
     public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlowsByAffinityIdentifier(AffinityLink al);
 
-    public Status addFlowRulesForRedirect(AffinityLink al) throws Exception;
-    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] mac);
+
+    /* Program the nf service chain for this affinity link. */
+    /* Methods to add and enable network service chains. */
+    public Status addNfchain(AffinityLink al);
+    public Status enableRedirect(AffinityLink al) throws Exception;
+
+    //    public Status addFlowRulesForRedirect(AffinityLink al) throws Exception;
+    //    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] mac);
 }

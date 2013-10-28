@@ -36,6 +36,7 @@
             <Import-Package>
               org.opendaylight.affinity.affinity,
               org.opendaylight.affinity.l2agent,
+              org.opendaylight.affinity.nfchainagent,
               org.opendaylight.controller.clustering.services,
               org.opendaylight.controller.configuration,
               org.opendaylight.controller.hosttracker,
@@ -127,6 +128,11 @@
     <dependency>
       <groupId>org.opendaylight.affinity</groupId>
       <artifactId>l2agent</artifactId>
+      <version>0.4.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.affinity</groupId>
+      <artifactId>nfchainagent</artifactId>
       <version>0.4.0-SNAPSHOT</version>
     </dependency>
   </dependencies>

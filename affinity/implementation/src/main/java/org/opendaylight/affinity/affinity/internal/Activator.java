@@ -23,12 +23,11 @@ import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.opendaylight.affinity.l2agent.IfL2Agent;
-import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
-//import org.opendaylight.controller.forwardingrulesmanager.IForwardingRulesManager;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.IfNewHostNotify;
-
+import org.opendaylight.affinity.l2agent.IfL2Agent;
+import org.opendaylight.affinity.nfchainagent.NFchainAgent;
+import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 
 /**
  * AffinityManager Bundle Activator
@@ -105,11 +104,10 @@ public class Activator extends ComponentActivatorAbstractBase {
                   .setService(IfL2Agent.class)
                   .setCallbacks("setL2Agent", "unsetL2Agent")
                   .setRequired(true));
-            /*            c.add(createContainerServiceDependency(containerName).setService(
-                    IForwardingRulesManager.class).setCallbacks(
-                    "setForwardingRulesManager", "unsetForwardingRulesManager")
+            c.add(createContainerServiceDependency(containerName).setService(
+                    NFchainAgent.class).setCallbacks(
+                    "setNfchainAgent", "unsetNfchainAgent")
                     .setRequired(true));
-            */
             c.add(createContainerServiceDependency(containerName)
                   .setService(IFlowProgrammerService.class)
                   .setCallbacks("setFlowProgrammerService", "unsetFlowProgrammerService")

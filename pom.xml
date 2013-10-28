@@ -12,6 +12,7 @@
   </scm>
 
   <properties>
+    <bundle.plugin.version>2.3.7</bundle.plugin.version>
     <checkstyle.version>2.10</checkstyle.version>
     <commons.lang.version>3.1</commons.lang.version>
     <compiler.version>2.3.2</compiler.version>
@@ -58,7 +59,7 @@
       <module>analytics/integrationtest</module>
       <module>analytics/northbound</module>
       <module>l2agent</module>
-      <module>nfchain</module>
+      <module>nfchainagent</module>
     </modules>
 
     <repositories>
