@@ -683,6 +683,7 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
         String key = al.getName();
         nfclist.add(nfcc);
         nfchainagent.addNfchain(key, nfclist);
+        log.info("Added nfchain {}", al.getName());
         return new Status(StatusCode.SUCCESS);
     }
 

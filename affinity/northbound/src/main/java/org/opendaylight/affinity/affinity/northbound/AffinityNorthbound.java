@@ -275,6 +275,7 @@ public class AffinityNorthbound {
         AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
         al1.setWaypoint(waypointIP);
         try {
+            affinityManager.addNfchain(al1);
             affinityManager.enableRedirect(al1);
         } catch (Exception e) {
             String message = "An error occurred during flow programming.";

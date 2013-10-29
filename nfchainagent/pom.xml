@@ -14,7 +14,7 @@
 
   <groupId>org.opendaylight.affinity</groupId>
   <artifactId>nfchainagent</artifactId>
-  <version>0.4.0-SNAPSHOT</version>
+  <version>0.4.1-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <build>
@@ -73,12 +73,12 @@
     <dependency>
       <groupId>org.opendaylight.affinity</groupId>
       <artifactId>l2agent</artifactId>
-      <version>0.4.0-SNAPSHOT</version>
+      <version>0.4.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.affinity</groupId>
       <artifactId>affinity</artifactId>
-      <version>0.4.0-SNAPSHOT</version>
+      <version>0.4.1-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>

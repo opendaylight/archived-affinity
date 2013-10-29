@@ -106,7 +106,7 @@ public class Activator extends ComponentActivatorAbstractBase {
                   .setRequired(true));
             c.add(createContainerServiceDependency(containerName).setService(
                     NFchainAgent.class).setCallbacks(
-                    "setNfchainAgent", "unsetNfchainAgent")
+                    "setNFchainAgent", "unsetNFchainAgent")
                     .setRequired(true));
             c.add(createContainerServiceDependency(containerName)
                   .setService(IFlowProgrammerService.class)

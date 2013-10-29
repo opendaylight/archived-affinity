@@ -22,6 +22,7 @@ import org.opendaylight.controller.sal.packet.IDataPacketService;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 
+import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
 import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 //import org.opendaylight.controller.forwardingrulesmanager.IForwardingRulesManager;
@@ -81,14 +82,15 @@ public class Activator extends ComponentActivatorAbstractBase {
             // export the services
             Dictionary<String, String> props = new Hashtable<String, String>();
             props.put("salListenerName", "NFchainAgent");
-            c.setInterface(new String[] { IListenDataPacket.class.getName(),                    
-                                          NFchainAgent.class.getName() }, props);
+            c.setInterface(new String[] { NFchainAgent.class.getName() }, props);
 
             // register dependent modules
             c.add(createContainerServiceDependency(containerName)
                   .setService(IfL2Agent.class)
                   .setCallbacks("setL2Agent", "unsetL2Agent")
                   .setRequired(true));
+            c.add(createContainerServiceDependency(containerName).setService(IfIptoHost.class)
+                  .setCallbacks("setHostTracker", "unsetHostTracker").setRequired(true));
 
             c.add(createContainerServiceDependency(containerName).setService(
                     ISwitchManager.class).setCallbacks("setSwitchManager",
