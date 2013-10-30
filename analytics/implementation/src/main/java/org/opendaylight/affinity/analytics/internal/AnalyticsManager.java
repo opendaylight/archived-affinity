@@ -277,6 +277,49 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         return newIP;
     }
 
+    // Return the set of hosts that transfer data to the targetHost
+    public Set<Host> getIncomingHosts(Host targetHost) {
+        Set<Host> incomingHosts = new HashSet<Host>();
+        for (Host sourceHost : this.hostsToStats.keySet()) {
+            if (this.hostsToStats.get(sourceHost).get(targetHost) != null) {
+                long bytes = this.hostsToStats.get(sourceHost).get(targetHost).getByteCount();
+                if (bytes > 0) {
+                    incomingHosts.add(sourceHost);
+                }
+            }
+        }
+        return incomingHosts;
+    }
+
+    // Return the set of hosts that transfer data into any host in this subnet
+    public Set<Host> getIncomingHosts(String prefixAndMask) {
+        InetAddress ip;
+        Short mask;
+        Set<Host> hosts = new HashSet<Host>();
+
+        // Split 1.2.3.4/5 format into the prefix (1.2.3.4) and the mask (5)
+        try {
+            String[] splitPrefix = prefixAndMask.split("/");
+            ip = InetAddress.getByName(splitPrefix[0]);
+            mask = (splitPrefix.length == 2) ? Short.valueOf(splitPrefix[1]) : 32;
+        } catch (UnknownHostException e) {
+            log.debug("Incorrect prefix/mask format: " + prefixAndMask);
+            return hosts;
+        }
+
+        // Match on prefixes
+        InetAddress targetPrefix = getPrefix(ip, mask);
+        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
+        for (HostNodeConnector host : allHosts) {
+            InetAddress hostPrefix = getPrefix(host.getNetworkAddress(), mask);
+            if (hostPrefix.equals(targetPrefix)) {
+                hosts.addAll(getIncomingHosts(host));
+            }
+        }
+
+        return hosts;
+    }
+
     public long getByteCountIntoHost(Host targetHost) {
         long totalBytes = 0;
         // We're calculating bytes *into* the target host, not out of
@@ -292,6 +335,8 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         long totalBytes = 0;
         InetAddress ip;
         Short mask;
+
+        Set<Host> hosts = getIncomingHosts(prefixAndMask);
 
         // Split 1.2.3.4/5 format into the prefix (1.2.3.4) and the mask (5)
         try {
