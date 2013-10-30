@@ -609,7 +609,7 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
     /**
      * Function called after registering the service in OSGi service registry.
      */
-    void started(){
+    void started() {
         // Retrieve current statistics so we don't have to wait for next refresh
         IAffinityManager affinityManager = (IAffinityManager) ServiceHelper.getInstance(
                 IAffinityManager.class, this.getContainerName(), this);
@@ -691,4 +691,15 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
         String nfccname = al.getName();
         return nfchainagent.enable(nfccname);
     }
+ 
+   public Status disableRedirect(AffinityLink al) throws Exception {
+        String nfccname = al.getName();
+        return nfchainagent.disable(nfccname);
+    }
+
+   public Status removeNfchain(AffinityLink al) throws Exception {
+        String nfccname = al.getName();
+        return nfchainagent.removeNfchain(nfccname);
+    }
+
 }

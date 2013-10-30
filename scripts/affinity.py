@@ -86,6 +86,14 @@ def set_waypoint_address():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/inflows/setwaypoint/' + wp
     rest_method(put_url, "PUT")
 
+def enable_waypoint():
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/inflows/enable/' 
+    rest_method(put_url, "PUT")
+
+def disable_waypoint():
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/inflows/disable/'
+    rest_method(put_url, "PUT")
+
 # Add waypoint IP to an affinity link.
 def main():
     global h
@@ -99,6 +107,8 @@ def main():
     list_all_hosts()
 
     set_waypoint_address()
+    enable_waypoint()
+    disable_waypoint()
 
 #if __name__ == "__main__":
 #    main()

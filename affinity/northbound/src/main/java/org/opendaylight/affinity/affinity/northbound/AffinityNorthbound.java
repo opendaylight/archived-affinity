@@ -276,6 +276,40 @@ public class AffinityNorthbound {
         al1.setWaypoint(waypointIP);
         try {
             affinityManager.addNfchain(al1);
+        } catch (Exception e) {
+            String message = "An error occurred during flow programming.";
+            log.error(message, e);
+        }
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+
+    @Path("/{containerName}/link/{affinityLinkName}/enable")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response enableLink(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Enable (link) " + affinityLinkName);
+
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        try {
             affinityManager.enableRedirect(al1);
         } catch (Exception e) {
             String message = "An error occurred during flow programming.";
@@ -284,6 +318,39 @@ public class AffinityNorthbound {
         return Response.status(Response.Status.CREATED).build();
     }
 
+    @Path("/{containerName}/link/{affinityLinkName}/disable")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response disableLink(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Disable (link) " + affinityLinkName);
+
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        try {
+            affinityManager.disableRedirect(al1);
+        } catch (Exception e) {
+            String message = "An error occurred during flow programming.";
+            log.error(message, e);
+        }
+        return Response.status(Response.Status.CREATED).build();
+    }
 
     /**
      * Add IP addresses to a group. 

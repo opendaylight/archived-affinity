@@ -152,11 +152,11 @@ public class NFchainAgent implements Serializable {
             /* Look up the output port leading to the waypoint. */
             NodeConnector dst_connector = l2agent.lookup_output_port(node, wphost.getDataLayerAddressBytes());
 
-            log.debug("Waypoint direction: node {} and connector {}", node, dst_connector);
+            log.debug("Waypoint direction added: node {} and connector {}", node, dst_connector);
             if (dst_connector != null) {
                 f.setActions(actions);
                 f.addAction(new Output(dst_connector));
-                log.debug("flow push flow = {} to node = {} ", f, node);
+                log.debug("flow push add flow = {} to node = {} ", f, node);
                 Status status = programmer.addFlow(node, f);
                 if (!status.isSuccess()) {
                     log.debug("Error during addFlow: {} on {}. The failure is: {}",
@@ -167,6 +167,42 @@ public class NFchainAgent implements Serializable {
         return new Status(StatusCode.SUCCESS); 
     }
 
+
+
+    /** 
+     * remove flow rules for set of flows in nfchainconfig. Do this for
+     * each node connector in the network proactively.
+     */
+    public Status removerules(Node node, NFchainconfig nfcc) throws Exception {
+        List<Flow> flowlist = nfcc.getFlowList();
+        for (Flow f: flowlist) {
+            HostNodeConnector wphost = (HostNodeConnector) hostTracker.hostFind(nfcc.getWaypointIP()); 
+            List<Action> actions = new ArrayList<Action>();
+            /* Look up the output port leading to the waypoint. */
+            NodeConnector dst_connector = l2agent.lookup_output_port(node, wphost.getDataLayerAddressBytes());
+
+            log.debug("Waypoint settings removed: node {} and connector {}", node, dst_connector);
+            if (dst_connector != null) {
+                f.setActions(actions);
+                f.addAction(new Output(dst_connector));
+                log.debug("flow push remove flow = {} to node = {} ", f, node);
+                Status status = programmer.removeFlow(node, f);
+                if (!status.isSuccess()) {
+                    log.debug("Error during removeFlow: {} on {}. The failure is: {}",
+                              f, node, status.getDescription());
+                }
+            }
+        }
+        return new Status(StatusCode.SUCCESS); 
+    }
+
+
+    public Status removeNfchain(String key) {
+        if (allconfigs != null) {
+            allconfigs.remove(key);
+        }
+        return new Status(StatusCode.SUCCESS); 
+    }
 
     /** 
      * Enable the nfchain by programming flow rules on its behalf. 
@@ -188,6 +224,30 @@ public class NFchainAgent implements Serializable {
         /* Send this flow rule to all nodes in the network. */
         for (Node node: nodes) {
             ret = addrules(node, cfg);
+        }
+        return new Status(StatusCode.SUCCESS);         
+    }
+
+    /** 
+     * Remove openflow rules added earlier. Restore default routing via standard L2 learning methods. 
+     */
+    public Status disable(String cfgname) throws Exception {
+        /* Get all node connectors. */
+        Set<Node> nodes = switchManager.getNodes();
+        NFchainconfig cfg = allconfigs.get(cfgname).get(0);
+
+        Status success = new Status(StatusCode.SUCCESS);
+        Status notfound = new Status(StatusCode.NOTFOUND);
+        Status ret;
+
+        if (nodes == null) {
+            log.debug("No nodes in network.");
+            return success;
+        } 
+
+        /* Send this flow rule to all nodes in the network. */
+        for (Node node: nodes) {
+            ret = removerules(node, cfg);
         }
         return new Status(StatusCode.SUCCESS);         
     }

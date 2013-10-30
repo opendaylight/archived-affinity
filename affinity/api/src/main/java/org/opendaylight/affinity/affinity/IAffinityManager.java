@@ -58,6 +58,7 @@ public interface IAffinityManager {
     /* Methods to add and enable network service chains. */
     public Status addNfchain(AffinityLink al);
     public Status enableRedirect(AffinityLink al) throws Exception;
+    public Status disableRedirect(AffinityLink al) throws Exception;
 
     //    public Status addFlowRulesForRedirect(AffinityLink al) throws Exception;
     //    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] mac);
