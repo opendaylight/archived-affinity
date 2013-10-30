@@ -8,6 +8,8 @@
 
 package org.opendaylight.affinity.analytics;
 
+import java.util.Set;
+
 import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.controller.sal.core.Host;
 
@@ -22,4 +24,6 @@ public interface IAnalyticsManager {
     double getBitRateOnAffinityLink(AffinityLink al);
 
     long getByteCountIntoPrefix(String ipAndMask);
+
+    Set<Host> getIncomingHosts(String ipAndMask);
 }
