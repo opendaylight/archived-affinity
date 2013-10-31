@@ -646,15 +646,16 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
 
         log.debug("get flowlist affinity link = {}", al.getName());
         List<Flow> flowlist = new ArrayList<Flow>();
-        List<Entry<Host,Host>> hostPairList= getAllFlowsByHost(al);
+        List<Entry<AffinityIdentifier,AffinityIdentifier>> hostPairList= getAllFlowsByAffinityIdentifier(al);
 
         /* Create a Flow for each host pair in the affinity link. */
-        for (Entry<Host,Host> hostPair : hostPairList) {
+        for (Entry<AffinityIdentifier,AffinityIdentifier> hostPair : hostPairList) {
             log.debug("Processing next hostPair {}", hostPair);
 
             Match match = new Match();
-            from = hostPair.getKey().getNetworkAddress();
-            to = hostPair.getValue().getNetworkAddress();
+            
+            from = (InetAddress) hostPair.getKey().get();
+            to = (InetAddress) hostPair.getValue().get();
             log.debug("Adding a flow for {} -> {}", from, to);
 
             if (from == null ||to == null) {
