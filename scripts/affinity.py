@@ -53,8 +53,12 @@ def waypoint_init():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/inflows/from/clients/to/webservers'
     rest_method(put_url, "PUT")
 
-    print "add ip to webservers"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/10.0.0.1'
+#    print "add ip to webservers"
+#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/10.0.0.1'
+#    rest_method(put_url, "PUT")
+
+    print "add subnet to webservers"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/addsubnet/ipprefix/10.0.0.1/mask/31'
     rest_method(put_url, "PUT")
 
 #    print "add ip to webservers"
