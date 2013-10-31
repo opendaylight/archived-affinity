@@ -16,42 +16,51 @@ from stats import Stats
 global sigint
 sigint = False
 
+# Handle SIG_INT
+def signal_handler(signal, frame):
+    global sigint
+    sigint = True
+
 # Monitors statistics
-class Monitor(Thread):
+class WaypointMonitor(Thread):
 
     def __init__(self, monitor_type, **kwargs):
         Thread.__init__(self)
         self.stat = Stats(monitor_type, **kwargs)
         self.stat_type = monitor_type
-        self.did_waypoint = False
+        self.waypoint_address = None
+
+    def set_waypoint(self, waypoint_ip):
+        self.waypoint_address = waypoint_ip
+        print "Registered waypoint for %s.  Any large flows will be redirected to %s." % (self.stat, waypoint_ip)
 
     def run(self):
         global sigint
+        did_waypoint = False
         while not sigint:
-            is_fast, is_big = self.stat.refresh()
-            self.stat.get_incoming_hosts()
-            if is_big and not self.did_waypoint:
-                print "Large flow; redirect here"
+            _, is_big = self.stat.refresh()
+            if is_big and not did_waypoint:
+                print "Large flow detected"
                 ac = AffinityControl()
                 # First AG: Sources sending data into this subnet
+                src_ag_name = "sources"
                 src_ips = self.stat.get_incoming_hosts()
-                ac.add_affinity_group("webservers", ips=src_ips)
+                ac.add_affinity_group(src_ag_name, ips=src_ips)
                 # Second AG: This entity
-                if (self.stat_type == "prefix"):
-                    ac.add_affinity_group("clients", subnet=self.stat.subnet)
+                dst_ag_name = "client"
+                if (self.stat_type == Stats.TYPE_PREFIX):
+                    ac.add_affinity_group(dst_ag_name, subnet=self.stat.subnet)
+                elif (self.stat_type == Stats.TYPE_HOST):
+                    pass
                 else:
                     print "type", self.stat_type, "not supported for redirection"
                 # AL: Between them
-                ac.add_affinity_link("inflows", "webservers", "client")
-                # TODO: This IP should be an option
-                ac.add_waypoint("inflows", "10.0.0.2")
-                self.did_waypoint = True
+                link_name = "inflows"
+                ac.add_affinity_link(link_name, src_ag_name, dst_ag_name)
+                ac.add_waypoint(link_name, self.waypoint_address)
+                ac.enable_waypoint(link_name)
+                did_waypoint = True
             time.sleep(1)
-
-# Handle SIG_INT
-def signal_handler(signal, frame):
-    global sigint
-    sigint = True
 
 def main():
 
@@ -59,7 +68,8 @@ def main():
     subnet_control = SubnetControl()
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
 
-    m = Monitor("prefix", subnet="10.0.0.0/31")
+    m = WaypointMonitor(Stats.TYPE_PREFIX, subnet="10.0.0.0/31")
+    m.set_waypoint("10.0.0.2")
     m.start()
 
     # Register signal-handler to catch SIG_INT

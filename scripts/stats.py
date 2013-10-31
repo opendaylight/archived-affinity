@@ -4,20 +4,24 @@ import httplib2
 import json
 
 '''
-Class for keeping track of host stats or affinity link stats, depending.
+Class for keeping track of host statistics
 '''
 class Stats:
 
+    TYPE_HOST = 0
+    TYPE_AL = 1 # AffinityLink
+    TYPE_PREFIX = 2
+
     def __init__(self, stat_type, **kwargs):
         self.stat_type = stat_type
-        if stat_type == "host":
+        if stat_type == Stats.TYPE_HOST:
             self.src = kwargs['src']
             self.dst = kwargs['dst']
             self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/" 
-        elif stat_type == "affinityLink":
+        elif stat_type == Stats.TYPE_AL:
             self.al = kwargs['al']
             self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/"
-        elif stat_type == "prefix":
+        elif stat_type == Stats.TYPE_PREFIX:
             self.subnet = kwargs['subnet']
             self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/prefixstats/"
         else:
@@ -29,22 +33,22 @@ class Stats:
         self.http.add_credentials('admin', 'admin')
 
     def __str__(self):
-        if (self.stat_type == "host"):
+        if (self.stat_type == Stats.TYPE_HOST):
             return "host pair %s -> %s" % (self.src, self.dst)
-        elif (self.stat_type == "affinityLink"):
-            return "AffinityLink %s" % self.al
-        elif (self.stat_type == "prefix"):
-            return "Prefix %s" % self.subnet
+        elif (self.stat_type == Stats.TYPE_AL):
+            return "affinity link %s" % self.al
+        elif (self.stat_type == Stats.TYPE_PREFIX):
+            return "prefix %s" % self.subnet
         else:
-            return "Unknown Stats type"
+            return "unknown Stats type"
 
     # Refresh statistics
     def refresh(self):
-        if (self.stat_type == "host"):
+        if (self.stat_type == Stats.TYPE_HOST):
             resp, content = self.http.request(self.url_prefix + self.src + "/" + self.dst, "GET")
-        elif (self.stat_type == "affinityLink"):
+        elif (self.stat_type == Stats.TYPE_AL):
             resp, content = self.http.request(self.url_prefix + self.al, "GET")
-        elif (self.stat_type == "prefix"):
+        elif (self.stat_type == Stats.TYPE_PREFIX):
             resp, content = self.http.request(self.url_prefix + self.subnet, "GET")
         try:
             self.stats = json.loads(content)
@@ -57,13 +61,15 @@ class Stats:
 
     # Return hosts that transferred data into this entity.  Right now only supports prefixes.
     def get_incoming_hosts(self):
-        if (self.stat_type == "prefix"):
+        if (self.stat_type == Stats.TYPE_PREFIX):
             resp, content = self.http.request(self.url_prefix + "incoming/" + self.subnet, "GET")
             data = json.loads(content)
             if (data != {}):
                 # IPs sometimes (always?) get returned as strings like /1.2.3.4; strip off the leading /
                 ips = [h.replace("/", "") for h in data['hosts']]
                 return ips
+        else:
+            print "Stat type not supported for incoming hosts"
         return []
 
     # EWMA calculation for bit rate.  Returns true if there is an anomaly.
