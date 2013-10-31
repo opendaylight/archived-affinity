@@ -99,6 +99,7 @@ import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
 import org.opendaylight.affinity.nfchainagent.NFchainAgent;
 import org.opendaylight.affinity.nfchainagent.NFchainconfig;
+import org.opendaylight.affinity.affinity.InetAddressMask;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -642,34 +643,49 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
     
     /* Add a nfchain config for this affinity link. */
     List<Flow> getFlowlist(AffinityLink al) {
-        InetAddress from, to;
+        InetAddress from = null, to = null;
 
-        log.debug("get flowlist affinity link = {}", al.getName());
+        log.info("get flowlist affinity link = {}", al.getName());
         List<Flow> flowlist = new ArrayList<Flow>();
         List<Entry<AffinityIdentifier,AffinityIdentifier>> hostPairList= getAllFlowsByAffinityIdentifier(al);
 
         /* Create a Flow for each host pair in the affinity link. */
         for (Entry<AffinityIdentifier,AffinityIdentifier> hostPair : hostPairList) {
-            log.debug("Processing next hostPair {}", hostPair);
+            log.info("Processing next hostPair {} ", hostPair);
 
             Match match = new Match();
-            
-            from = (InetAddress) hostPair.getKey().get();
-            to = (InetAddress) hostPair.getValue().get();
-            log.debug("Adding a flow for {} -> {}", from, to);
+            Object addr;
+            Object addrmask;
 
-            if (from == null ||to == null) {
-                /* Skip host pairs if one end is null. */
-                log.debug("Hosts in hostpair {} -> {} not found in hosttracker.", from, to);
-                continue;
-            } else {
-                match.setField(new MatchField(MatchType.NW_SRC, from, null));
-                match.setField(new MatchField(MatchType.NW_DST, to, null));
-                match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
-                Flow flow = new Flow(match, null);
-                flow.setPriority(REDIRECT_IPSWITCH_PRIORITY);
-                flowlist.add(flow);
-            }
+            /* Set source fields. */
+            if (hostPair.getKey().get() instanceof InetAddress) {
+                addr = hostPair.getKey().get();
+                match.setField(new MatchField(MatchType.NW_SRC, (InetAddress) addr, null));
+            } else if (hostPair.getKey().get() instanceof InetAddressMask) {
+                addrmask = hostPair.getKey().get();
+                InetAddress faddr = ((InetAddressMask) addrmask).getNetworkAddress();
+                InetAddress fmask = NetUtils.getInetNetworkMask((int) ((InetAddressMask) addrmask).getMask(), false);
+                match.setField(new MatchField(MatchType.NW_SRC, faddr, fmask));
+            } 
+            /* xxx mac address ... */
+            
+            /* Set destination fields. */
+            if (hostPair.getValue().get() instanceof InetAddress) {
+                addr = (InetAddress) hostPair.getValue().get();
+                match.setField(new MatchField(MatchType.NW_DST, addr, null));
+            } else if (hostPair.getValue().get() instanceof InetAddressMask) {
+                addrmask = (InetAddressMask) hostPair.getValue().get();
+                InetAddress taddr = ((InetAddressMask) addrmask).getNetworkAddress();
+                InetAddress tmask = NetUtils.getInetNetworkMask((int) ((InetAddressMask) addrmask).getMask(), false);
+                match.setField(new MatchField(MatchType.NW_DST, taddr, tmask));
+            } 
+            /* xxx mac address ... */
+
+            /* Set other fields. */
+            match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
+            Flow flow = new Flow(match, null);
+            flow.setPriority(REDIRECT_IPSWITCH_PRIORITY);
+            flowlist.add(flow);
         }
 	return flowlist;
     }
