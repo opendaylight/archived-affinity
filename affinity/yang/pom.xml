@@ -172,6 +172,12 @@
         <artifactId>model-inventory</artifactId>
         <version>1.0-SNAPSHOT</version> 
       </dependency>
+
+      <dependency>
+        <groupId>org.opendaylight.controller.model</groupId>
+        <artifactId>model-flow-base</artifactId>
+        <version>1.0-SNAPSHOT</version>
+      </dependency>
       
       <dependency>
         <groupId>org.opendaylight.yangtools</groupId>
@@ -198,11 +204,6 @@
         <artifactId>yang-ext</artifactId>
         <version>2013.09.07-SNAPSHOT</version>
       </dependency> -->
-      <dependency>
-        <groupId>org.opendaylight.yangtools.model</groupId>
-        <artifactId>opendaylight-l2-types</artifactId>
-        <version>2013.08.27.1-SNAPSHOT</version>
-      </dependency>
     </dependencies>
 
 </project>

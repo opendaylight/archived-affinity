@@ -55,7 +55,7 @@ public class NFchainAgent implements Serializable {
     private IfIptoHost hostTracker = null;
     private ISwitchManager switchManager = null;
     
-    private HashMap<String, List<NFchainconfig>> allconfigs;
+    private HashMap<String, NFchainconfig> allconfigs;
 
     void init() {
         log.debug("INIT called!");
@@ -119,20 +119,20 @@ public class NFchainAgent implements Serializable {
         }
     }
 
-    public Status addNfchain(String key, List<NFchainconfig> nfclist) {
+    public Status addNfchain(String key, NFchainconfig nfcc) {
 	String name;
 
         if (allconfigs == null) {
-            allconfigs = new HashMap<String, List<NFchainconfig>>();
+            allconfigs = new HashMap<String, NFchainconfig>();
         }
         /* xxx compute changelist and push flow changes. */
 	if (allconfigs.containsKey(key)) {
 	    return new Status(StatusCode.CONFLICT,
 			      "NFchain with the specified name already configured.");
 	} 
-	List<NFchainconfig> oldcfg = allconfigs.get(key);
+	NFchainconfig oldcfg = allconfigs.get(key);
 	if (oldcfg == null) {
-	    if (allconfigs.put(key, nfclist) == null) {
+	    if (allconfigs.put(key, nfcc) == null) {
                 return new Status(StatusCode.SUCCESS); 
 	    } 
 	}
@@ -210,7 +210,7 @@ public class NFchainAgent implements Serializable {
     public Status enable(String cfgname) throws Exception {
         /* Get all node connectors. */
         Set<Node> nodes = switchManager.getNodes();
-        NFchainconfig cfg = allconfigs.get(cfgname).get(0);
+        NFchainconfig cfg = allconfigs.get(cfgname);
 
         Status success = new Status(StatusCode.SUCCESS);
         Status notfound = new Status(StatusCode.NOTFOUND);
@@ -234,7 +234,7 @@ public class NFchainAgent implements Serializable {
     public Status disable(String cfgname) throws Exception {
         /* Get all node connectors. */
         Set<Node> nodes = switchManager.getNodes();
-        NFchainconfig cfg = allconfigs.get(cfgname).get(0);
+        NFchainconfig cfg = allconfigs.get(cfgname);
 
         Status success = new Status(StatusCode.SUCCESS);
         Status notfound = new Status(StatusCode.NOTFOUND);

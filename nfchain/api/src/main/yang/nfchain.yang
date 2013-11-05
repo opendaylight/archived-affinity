@@ -7,6 +7,7 @@ module nfchain {
     import yang-ext { prefix ext; }
     import opendaylight-inventory {prefix inv;}
     import opendaylight-l2-types { prefix l2types; }
+    import opendaylight-flow-types { prefix flow-types; }
 
     revision "2013-10-20" {
         description "Initial revision of affinity model to be reviewed";
@@ -19,24 +20,23 @@ module nfchain {
         leaf id {
             type string;
         }
-        // Address is either an IP address, MAC address, or switch/port. 
+        // xxx address is an IP prefix.
         leaf location {
-            description "Mac or Inet address";
-            type union {
-                type inv:node-connector-id;
-                type inet:ip-address;
-            }
+            description "Inet address";
+            type inet:ipv4-prefix;
         }
     }
 
     // Each nf chain has an id, a flowspec and a list of gateways. 
     grouping chain {
-        leaf id {
-            type chain-id;
-        }   
-        leaf flowSpec {
-            type uint32; // tbd
+        leaf name {
+            type string;
         }
+
+        list flow {
+            uses flow-types:flow;
+        }
+        
         list gateway {
             key id;
             ext:context-instance "gateway-context";
@@ -48,20 +48,16 @@ module nfchain {
     container nfdb {
         list chain {
             key id;
-            ext:context-instance "chain";
+            ext:context-instance "chain-context";
             uses chain;
         }
     }
 
-    typedef chain-id {
-        type inet:uri;
-    }
+    identity gateway-context;
 
     typedef gateway-ref {
         type instance-identifier;
     }
-
-    identity gateway-context;
 
     // nf chain reference.
     typedef chain-ref {
@@ -70,18 +66,22 @@ module nfchain {
     identity chain-context;
 
     //**************************************************
-    // Gateway chain. 
+    // Add a chain to the service.
     //**************************************************
-    rpc add {
+    rpc addchain {
         input {
-              leaf chain {
-                  type chain-id;
-              }
-              container gateway {
-                  uses gateway;
+              container chain {
+                  uses chain;
               }
         }
     }
-    rpc list {
+
+    rpc enablechain {
+        input {
+            leaf chain {
+                type chain-ref;
+            }
+        }
     }
+    
 }

@@ -10,6 +10,8 @@
 package org.opendaylight.affinity.nfchain.provider;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -27,11 +29,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.NfchainData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.NfdbBuilder;
 
-import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.ChainId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.Gateway;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.chain.Gateway;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.Nfdb;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.NfdbBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.AddInput;
+
+
+import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.AddchainInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.EnablechainInput;
+
+import org.opendaylight.affinity.nfchainagent.NFchainconfig;
 
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
 import org.opendaylight.controller.sal.core.Node;
@@ -43,6 +49,13 @@ import org.slf4j.LoggerFactory;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.IfNewHostNotify;
 
+
+import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.addchain.input.Chain;
+import java.net.InetAddress;
+import org.opendaylight.controller.sal.compability.ToSalConversionsUtils;
+
+import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.nfchain.rev131020.chain.Flow;
+   
 /**
  * NfchainManager -- sends flow programming rules to flow programming service. 
  */
@@ -51,14 +64,9 @@ public class NfchainManager implements NfchainService, NfchainData {
     protected static final Logger log = LoggerFactory.getLogger(NfchainManager.class);
     
     private NotificationProviderService notificationProvider; 
-    private final ExecutorService executor;
     private Future<RpcResult<Void>> currentTask;
 
-    private IFlowProgrammerService programmer = null;
-    private ISwitchManager switchManager = null;
-
     public NfchainManager() {
-        executor = Executors.newFixedThreadPool(1);
     }
 
     @Override
@@ -67,123 +75,54 @@ public class NfchainManager implements NfchainService, NfchainData {
         return builder.build();
     }
 
-    @Override
-    public Future<RpcResult<Void>> add(AddInput input) {
-        // TODO Auto-generated method stub
-        log.info("add gateway - Received input chain = {}, gateway = {}.", input.getChain(), input.getGateway());
-        if (currentTask != null) {
-            return inProgressError();
+    /**
+     * Convert API Flow objects to flow programmer flow objects. 
+     */
+    List<org.opendaylight.controller.sal.flowprogrammer.Flow> fromAPIFlowlist(List<Flow> fl) {
+        List<org.opendaylight.controller.sal.flowprogrammer.Flow> flowlist = new ArrayList<org.opendaylight.controller.sal.flowprogrammer.Flow>();
+        
+        for (Flow f: fl) {
+            org.opendaylight.controller.sal.flowprogrammer.Flow fp_flow = ToSalConversionsUtils.toFlow(f);
+            flowlist.add(fp_flow);
         }
-        currentTask = executor.submit(new addGatewayTask(input));
-        return currentTask;
+        return flowlist;
+    }
+    
+    /**
+     * addchain synchronous. 
+     */
+    @Override
+    public Future<RpcResult<Void>> addchain(AddchainInput input) {
+        // TODO Auto-generated method stub
+        Chain chain = input.getChain();
+
+        List<org.opendaylight.controller.sal.flowprogrammer.Flow> flowlist = fromAPIFlowlist(chain.getFlow());
+        List<Gateway> gatewaylist = chain.getGateway();
+        String name = chain.getName();
+
+        if (gatewaylist.size() > 1) {
+            log.info("addNfchain function chain has {} elements", gatewaylist.size());
+        } else {
+
+            log.info("add gateway - Received input chain = {}, gateway = {}.", input.getChain(), chain.getGateway());
+            Gateway gw = gatewaylist.get(0);
+            InetAddress ip = ToSalConversionsUtils.inetAddressFrom(gw.getLocation());
+            NFchainconfig nfcc = new NFchainconfig(name, flowlist, ip);
+            /*        nfchainagent.addNfchain(); */
+        }
+        RpcResult<Void> result = Rpcs.<Void> getRpcResult(true, null, Collections.<RpcError> emptySet());
+        return Futures.immediateFuture(result);
     }
 
     @Override
-    public Future<RpcResult<Void>> list() {
-        log.info("List command received");
-        RpcResult<Void> result = Rpcs.<Void> getRpcResult(false, null, Collections.<RpcError> emptySet());
-        return Futures.immediateFuture(result);
-    }
+    public Future<RpcResult<java.lang.Void>> enablechain(EnablechainInput input) {
+        log.info("enable chain");
 
-    private Future<RpcResult<Void>> inProgressError() {
-        RpcResult<Void> result = Rpcs.<Void> getRpcResult(false, null, Collections.<RpcError> emptySet());
+        RpcResult<Void> result = Rpcs.<Void> getRpcResult(true, null, Collections.<RpcError> emptySet());
         return Futures.immediateFuture(result);
-    }
-
-    private void cancel() {
-        currentTask.cancel(true);
     }
 
     public void setNotificationProvider(NotificationProviderService salService) {
         this.notificationProvider = salService;
-    }
-
-    public void setFlowProgrammerService(IFlowProgrammerService s)
-    {
-        this.programmer = s;
-    }
-
-    public void unsetFlowProgrammerService(IFlowProgrammerService s) {
-        if (this.programmer == s) {
-            this.programmer = null;
-        }
-    }
-
-    void setSwitchManager(ISwitchManager s)
-    {
-        this.switchManager = s;
-    }
-
-    void unsetSwitchManager(ISwitchManager s) {
-        if (this.switchManager == s) {
-            this.switchManager = null;
-        }
-    }
-
-
-    /* Include this once dependencies are correctly established in osgi. 
-    /** 
-     * Fetch all node connectors. Each switch port will receive a flow
-     * rule. Do not stop on error. Pass in the waypointMAC address so
-     * that the correct output port can be determined.
-     */
-    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] waypointMAC) {
-        /* Get all node connectors. */
-        Set<Node> nodes = switchManager.getNodes();
-        Status success = new Status(StatusCode.SUCCESS);
-        Status notfound = new Status(StatusCode.NOTFOUND);
-
-        if (nodes == null) {
-            log.debug("No nodes in network.");
-            return success;
-        } 
-
-        /* Send this flow rule to all nodes in the network. */
-        for (Node node: nodes) {
-            List<Action> actions = new ArrayList<Action>();
-            Match match = new Match();
-            match.setField(new MatchField(MatchType.NW_SRC, from, null));
-            match.setField(new MatchField(MatchType.NW_DST, to, null));
-            match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
-        
-            Flow f = new Flow(match, actions);
-            f.setMatch(match);
-            f.setPriority(REDIRECT_IPSWITCH_PRIORITY);
-
-            /* Look up the output port leading to the waypoint. */
-            NodeConnector dst_connector = l2agent.lookup_output_port(node, waypointMAC);
-
-            log.debug("Waypoint direction: node {} and connector {}", node, dst_connector);
-            if (dst_connector != null) {
-                f.setActions(actions);
-                f.addAction(new Output(dst_connector));
-                log.debug("flow push flow = {} to node = {} ", f, node);
-                /*                Status status = installRedirectionFlow(node, flow);*/
-                Status status = programmer.addFlow(node, f);
-                if (!status.isSuccess()) {
-                    log.debug("Error during addFlow: {} on {}. The failure is: {}",
-                              f, node, status.getDescription());
-                }
-            }
-        }
-        return success;
-    }
-    */
-
-    private class addGatewayTask implements Callable<RpcResult<Void>> {
-
-        final AddInput input;
-
-        public addGatewayTask(AddInput input) {
-            this.input = input;
-        }
-
-        @Override
-        public RpcResult<Void> call() throws Exception {
-            Thread.sleep(1000);
-            log.info("add gateway returning");
-            currentTask = null;
-            return Rpcs.<Void> getRpcResult(true, null, Collections.<RpcError> emptySet());
-        }
     }
 }

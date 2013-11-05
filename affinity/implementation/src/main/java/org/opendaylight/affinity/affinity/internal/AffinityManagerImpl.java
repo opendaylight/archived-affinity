@@ -695,11 +695,8 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
         List<Flow> flowlist = getFlowlist(al);
         InetAddress waypoint = NetUtils.parseInetAddress(al.getWaypoint());
         NFchainconfig nfcc = new NFchainconfig(al.getName(), flowlist, waypoint);
-        /* Only one hop initially... */
-        List<NFchainconfig> nfclist = new ArrayList<NFchainconfig>();
         String key = al.getName();
-        nfclist.add(nfcc);
-        nfchainagent.addNfchain(key, nfclist);
+        nfchainagent.addNfchain(key, nfcc);
         log.info("Added nfchain {}", al.getName());
         return new Status(StatusCode.SUCCESS);
     }

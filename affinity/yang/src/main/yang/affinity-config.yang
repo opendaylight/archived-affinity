@@ -143,6 +143,14 @@ module affinity-config {
         }
     }
 
+    typedef level {
+        type enumeration {
+            enum high;
+            enum medium;
+            enum low;
+        }
+    }
+
     //**************************************************
     // Affinity attribute. Each is expanded in their own grouping construct below. 
     //**************************************************
@@ -182,6 +190,12 @@ module affinity-config {
                         uses access-control;
 		    }
 	    }		
+	    // Assign a priority
+	    case set-priority {
+                    leaf priority {
+                        type level;
+		    }
+            }		
 	}
     }
 

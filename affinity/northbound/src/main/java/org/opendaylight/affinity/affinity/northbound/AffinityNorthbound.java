@@ -465,4 +465,34 @@ public class AffinityNorthbound {
         return new AffinityGroupList(affinityManager.getAllAffinityGroups());
     }
 
+    /**
+    @Path("/{containerName}/")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AffinityGroupList.class)
+    @StatusCodes({ @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 401, condition = "User not authorized to perform this operation"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AffinityGroupList getAllAffinityGroups(@PathParam("containerName") String containerName) {
+
+        //        if (!isValidContainer(containerName)) {
+        //            throw new ResourceNotFoundException("Container " + containerName + " does not exist.");
+        //}
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                    + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("getallgroups");
+        return new AffinityGroupList(affinityManager.getAllAffinityGroups());
+    }
+    */
+
 }
