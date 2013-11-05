@@ -2,8 +2,10 @@ Affinity endpoint:
 =================
 
 This identifies an application endpoint, and may be one of the
-following. This is a stationary location wthin the combined physical +
-virtual network which does not move as VMs are migrated.
+following. This is a location wthin the combined physical + virtual
+network and may be a stationary location referring to a switch/port or
+a virtual endpoint that may move within the network as the
+corresponding virtual machine is moved.
 
  (a) Reference to VM or PM object in the database. In a controller
  that tracks data center compute resources (such as Open Stack or
@@ -58,10 +60,15 @@ Affinity attribute:
 An affinity attribute is assigned to an affinity link. An attribute is
 one of the following:
  
- (a) Path affinity. Path affinities may be one of the following types
- -- latency sensitive, bandwidth sensitive, or isolate.
-
- (a) Path affinity. Path affinities may be one of the following types -- 
+ (a) Path affinity. Path affinities define the type of path required
+ by the application. It may be one of the following types -- latency
+ sensitive for applications that require low latency between their
+ components. Examples include access to block storage and network
+ connections between the application and database tier. Bandwidth
+ sensitive applications include video or audio streaming or bulk data
+ operations desiring high throughput. Isolated paths may be required
+ for applications requiring dedicated paths without sharing or
+ interference from other applications.
 
      * Isolation. This is an attribute that specifies that the
        application flow must be assigned an isolated path on the
@@ -70,65 +77,55 @@ one of the following:
        links of the path, flows from different affinity links will be
        allocated to non-overlapping paths.
 
-    // Isolate flows according to certain constraints. 
+    // Isolate flows according to certain constraints. No sharing with any other traffic. 
     grouping isolate-path {
-        leaf max-flows-per-link {
+        // Average bandwidth requirement for each flow is estimated in Mbps. 
+        leaf average-bandwidth-per-flow {
+            type uint16;
+        }
+        // Peak burst bandwidth, total per affinity link.
+        leaf burst-bandwidth {
+            type uint16;
+        }       
+    }
+
+    * Low latency path. This is an attribute that specifies that the
+      flow is allocated lowest hopcount paths between source and
+      destination.
+
+    // Route through low latency path. May share with other types of traffic. 
+    grouping low-latency-path {
+        // Average bandwidth estimated per flow, in Mbps. 
+        leaf average-bandwidth-per-flow {
+            type uint16;
+        }
+        // Peak burst bandwidth, total per affinity link. 
+        leaf burst-bandwidth {
             type uint16;
         }
     }
 
-    // Route through shortest path per l2/l3 semantics. 
-    grouping shortest-path {
-        leaf max-flows-per-link {
-            type uint16;
-        }
-    }
+    * Bandwidth Optimized. Allocate a path of specified bandwidth to
+      this application.
    
-    // oversubscription path
-    grouping oversubscription-path {
-        leaf max-link-oversubscription-percent {
+    // Optimize this path such that specified bandwidth is available to it. May share 
+    // with other types of traffic. 
+    grouping bandwidth-optimized-path {
+        // Average bandwidth estimated per flow, in Mbps. 
+        leaf average-bandwidth-per-flow {
+            type uint16;
+        }
+        // Peak burst bandwidth, total per affinity link. 
+        leaf burst-bandwidth {
             type uint16;
         }
     }
 
-    * Shortest-path. This is an attribute that specifies that the
-      application flow travels along the shortest path between source
-      and destination.
+Flows from affinity links are interpreted as unicast (point to point)
+flows by an implementation of this API. 
 
-     
-    * Limit Oversubscription. This is an attribute that constrains the
-      path between source and destination such that the maximum link
-      oversubscription is limited to a certain fraction of link
-      capacity. This is useful for applications that demand a certain
-      bandwidth. (To be verified). 
+The following types of affinity dictate a strict action or rule. 
 
-
-    // Affinity attribute. 
-    grouping affinity-attribute {
-        leaf id {
-            type string;
-        }
-        choice attribute-type {
-            description "affinity attribute";
-            case isolate-path {
-                 container isolate-path {
-                     uses isolate-path;
-                 }
-            }
-            case shortest-path {
-                    container shortest-path {
-                        uses shortest-path;
-                    }
-            }
-            case limit-oversubscription-path {
-                    container limit-oversubscription-path {
-                        uses limit-oversubscription-path;
-                    }
-            }
-        }
-    }
-
- 
  (b) Access control affinity. This is an attribute that specifies that
  the application flow must either be permitted (PERMIT) or denied (DENY). 
 
