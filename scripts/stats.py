@@ -29,6 +29,7 @@ class Stats:
 
         self.stats = {}
         self.rate_ewma = None
+        self.large_flow_threshold = 5 * 10**6 # in bytes
         self.http = httplib2.Http(".cache")
         self.http.add_credentials('admin', 'admin')
 
@@ -59,18 +60,29 @@ class Stats:
             print "error: ", e
             return [False, False]
 
-    # Return hosts that transferred data into this entity.  Right now only supports prefixes.
-    def get_incoming_hosts(self):
+    def set_large_flow_threshold(self, s):
+        self.large_flow_threshold = s;
+
+    # Return all hosts that transferred a particular percentage of data into this entity.  Right now only supports prefixes.
+    def get_large_incoming_hosts(self):
         if (self.stat_type == Stats.TYPE_PREFIX):
             resp, content = self.http.request(self.url_prefix + "incoming/" + self.subnet, "GET")
             data = json.loads(content)
-            if (data != {}):
-                # IPs sometimes (always?) get returned as strings like /1.2.3.4; strip off the leading /
-                ips = [h.replace("/", "") for h in data['hosts']]
-                return ips
+            if (data == {}): return []
+            host_data = data['hosts']['entry']
+            ips = []
+            total_bytes_in = self.get_bytes()
+            n = len(host_data)
+            for d in host_data:
+                bytes_from_ip = int(d['value'])
+                ip = d['key'].replace("/", "") # IPs sometimes (always?) get returned as strings like /1.2.3.4
+                if (bytes_from_ip >= total_bytes_in / float(n)):
+                    ips.append(ip)
+            return ips
         else:
             print "Stat type not supported for incoming hosts"
         return []
+
 
     # EWMA calculation for bit rate.  Returns true if there is an anomaly.
     def handle_rate_ewma(self):
@@ -91,7 +103,7 @@ class Stats:
 
     # Returns true if this is a large flow
     def check_large_flow(self):
-        if (self.get_bytes() > 5 * (10**6)):
+        if (self.get_bytes() > self.large_flow_threshold):
             return True
         return False
 
@@ -100,6 +112,7 @@ class Stats:
         try:
             bytes = long(self.stats["byteCount"])
         except Exception as e:
+            print "exception: ", e
             bytes = 0
         return bytes
 

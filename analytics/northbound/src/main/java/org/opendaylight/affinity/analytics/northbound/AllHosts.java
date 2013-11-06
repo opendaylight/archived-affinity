@@ -8,27 +8,28 @@
 
 package org.opendaylight.affinity.analytics.northbound;
 
-import java.util.List;
+import java.util.Map;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name = "list")
+@XmlRootElement(name = "map")
 @XmlAccessorType(XmlAccessType.NONE)
 public class AllHosts {
     @XmlElement
-    List<String> hosts;
+    Map<String, Long> hosts;
+    // TODO: There is a better way to serialize a map
 
     @SuppressWarnings("unused") // To satisfy JAXB
     private AllHosts() {}
 
-    public AllHosts(List<String> hostIPs) {
-        this.hosts = hostIPs;
+    public AllHosts(Map<String, Long> hostData) {
+        this.hosts = hostData;
     }
 
-    public List<String> getHosts() {
+    public Map<String, Long> getHosts() {
         return this.hosts;
     }
 }

@@ -3,7 +3,6 @@
 import httplib2
 import json
 import signal
-import sys
 import time
 
 from threading import Thread
@@ -29,10 +28,15 @@ class WaypointMonitor(Thread):
         self.stat = Stats(monitor_type, **kwargs)
         self.stat_type = monitor_type
         self.waypoint_address = None
+        print "Created waypoint monitor for %s" % self.stat
 
     def set_waypoint(self, waypoint_ip):
         self.waypoint_address = waypoint_ip
         print "Registered waypoint for %s.  Any large flows will be redirected to %s." % (self.stat, waypoint_ip)
+
+    def set_large_flow_threshold(self, s):
+        self.stat.set_large_flow_threshold(s)
+        print "Set threshold for large flows to %d bytes" % s
 
     def run(self):
         global sigint
@@ -40,11 +44,13 @@ class WaypointMonitor(Thread):
         while not sigint:
             _, is_big = self.stat.refresh()
             if is_big and not did_waypoint:
-                print "Large flow detected"
+                print "Large flow detected (%d bytes)" % self.stat.get_bytes()
                 ac = AffinityControl()
                 # First AG: Sources sending data into this subnet
                 src_ag_name = "sources"
-                src_ips = self.stat.get_incoming_hosts()
+                src_ips = self.stat.get_large_incoming_hosts()
+                if (self.waypoint_address in src_ips):
+                    src_ips.remove(self.waypoint_address)
                 ac.add_affinity_group(src_ag_name, ips=src_ips)
                 # Second AG: This entity
                 dst_ag_name = "client"
@@ -70,6 +76,7 @@ def main():
 
     m = WaypointMonitor(Stats.TYPE_PREFIX, subnet="10.0.0.0/31")
     m.set_waypoint("10.0.0.2")
+    m.set_large_flow_threshold(2000) # 2000 bytes
     m.start()
 
     # Register signal-handler to catch SIG_INT

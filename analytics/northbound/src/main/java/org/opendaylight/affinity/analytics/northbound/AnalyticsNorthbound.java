@@ -13,6 +13,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 
 import javax.ws.rs.GET;
@@ -244,13 +246,13 @@ public class AnalyticsNorthbound {
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
         }
 
-        Set<Host> hosts = analyticsManager.getIncomingHosts(ip + "/" + mask);
-        List<String> ips = new ArrayList<String>();
-        for (Host h : hosts) {
+        Map<Host, Long> hostData = analyticsManager.getIncomingHosts(ip + "/" + mask);
+        Map<String, Long> hostDataWithStrings = new HashMap<String, Long>();
+        for (Host h : hostData.keySet()) {
             InetAddress i = h.getNetworkAddress();
-            ips.add(i.toString());
+            hostDataWithStrings.put(i.toString(), hostData.get(h));
         }
-        return new AllHosts(ips);
+        return new AllHosts(hostDataWithStrings);
     }
 
     private void handleDefaultDisabled(String containerName) {

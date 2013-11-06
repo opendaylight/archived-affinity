@@ -8,7 +8,7 @@
 
 package org.opendaylight.affinity.analytics;
 
-import java.util.Set;
+import java.util.Map;
 
 import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.controller.sal.core.Host;
@@ -25,5 +25,5 @@ public interface IAnalyticsManager {
 
     long getByteCountIntoPrefix(String ipAndMask);
 
-    Set<Host> getIncomingHosts(String ipAndMask);
+    Map<Host, Long> getIncomingHosts(String ipAndMask);
 }
