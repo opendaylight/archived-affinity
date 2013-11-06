@@ -33,12 +33,12 @@ class SubnetControl:
     # Add a subnet if it doesn't already exist.
     def add_subnet(self, subnet_name, subnet):
         if (self.exists(subnet)):
-            print "subnet", subnet, "already exists"
+            print "Subnet", subnet, "already exists"
             return
         subnet_config = dict(name=subnet_name, subnet=subnet)
         json_data = json.dumps(subnet_config)
         resp, content = self.http.request(self.url_prefix + "subnet/" + subnet_name, "POST", json_data, {'Content-Type': 'application/json'})
         if (resp.status == 201):
-            print "subnet", subnet, "added"
+            print "Subnet", subnet, "added"
         else:
-            print "subnet", subnet, "could not be added"
+            print "Subnet", subnet, "could not be added"
