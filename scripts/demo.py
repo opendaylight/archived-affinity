@@ -66,6 +66,8 @@ class WaypointMonitor(Thread):
                 ac.add_waypoint(link_name, self.waypoint_address)
                 ac.enable_waypoint(link_name)
                 did_waypoint = True
+                raw_input("[Press Enter to disable waypoint redirection] ")
+                ac.disable_waypoint(link_name)
             time.sleep(1)
 
 def main():

@@ -56,6 +56,13 @@ class AffinityControl:
         resp, content = self.http.request(self.url_prefix + "link/%s/enable" % link_name, "PUT")
         if (resp.status != 201):
             print "Waypoint could not be enabled for link %s" % link_name
-            print resp.status
             return
         print "Waypoint enabled for link %s" % link_name
+
+    # Disable waypoint
+    def disable_waypoint(self, link_name):
+        resp, content = self.http.request(self.url_prefix + "link/%s/disable" % link_name, "PUT")
+        if (resp.status != 201):
+            print "Waypoint could not be disabled for link %s" % link_name
+            return
+        print "Waypoint disabled for link %s" % link_name
