@@ -8,6 +8,23 @@
 
 package org.opendaylight.affinity.affinity.internal;
 
+
+import org.opendaylight.yang.gen.v1.affinity.rev130925.AffinityService;
+import org.opendaylight.yang.gen.v1.affinity.rev130925.HostEndpoint;
+import org.opendaylight.yang.gen.v1.affinity.rev130925.host_endpoint.L2address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+
+import org.opendaylight.yang.gen.v1.affinity.rev130925.CreategroupInput;
+import org.opendaylight.yang.gen.v1.affinity.rev130925.AddendpointInput;
+
+import java.util.concurrent.Future;
+import org.opendaylight.controller.sal.common.util.Futures;
+import org.opendaylight.controller.sal.common.util.Rpcs;
+
+import org.opendaylight.yangtools.yang.common.RpcError;
+import org.opendaylight.yangtools.yang.common.RpcResult;
+
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -107,7 +124,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Affinity configuration.
  */
-public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
+public class AffinityManagerImpl implements IAffinityManager, AffinityService, IfNewHostNotify,
                                             IConfigurationContainerAware, IObjectReader, ICacheUpdateAware<Long, String> {
     private static final Logger log = LoggerFactory.getLogger(AffinityManagerImpl.class);
 
@@ -716,4 +733,32 @@ public class AffinityManagerImpl implements IAffinityManager, IfNewHostNotify,
         return nfchainagent.removeNfchain(nfccname);
     }
 
+
+   /* public methods for the yang service. */
+   public Future<RpcResult<Void>> creategroup(CreategroupInput input) {
+       AffinityGroup ag1 = new AffinityGroup(input.getName());
+       
+       /* Correctly translate between status fields. */
+       Status ret = addAffinityGroup(ag1);
+       RpcResult<Void> result = Rpcs.<Void> getRpcResult(true, null, Collections.<RpcError> emptySet());
+       return Futures.immediateFuture(result);
+   }
+    
+   public Future<RpcResult<Void>> addendpoint(AddendpointInput input) {
+       AffinityGroup ag = getAffinityGroup(input.getGroupname());
+       RpcResult<Void> result;
+
+       if (ag != null) {
+           HostEndpoint endpoint = input.getEndpoint();
+           L2address l2address = endpoint.getL2address();
+           Ipv4Prefix l3address = endpoint.getL3address();
+           
+           /*   ag.addL2address(); */
+           ag.addInetMask(l3address.toString());
+           result = Rpcs.<Void> getRpcResult(true, null, Collections.<RpcError> emptySet());
+       } else {
+           result = Rpcs.<Void> getRpcResult(false, null, Collections.<RpcError> emptySet());
+       }
+       return Futures.immediateFuture(result);
+   }
 }

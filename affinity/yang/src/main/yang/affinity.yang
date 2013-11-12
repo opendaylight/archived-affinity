@@ -1,0 +1,176 @@
+module affinity { 
+    namespace "affinity";
+    prefix affinity;
+
+    import ietf-inet-types { prefix inet; }
+    import ietf-yang-types { prefix yang; }
+    import yang-ext { prefix ext; }
+    import opendaylight-inventory {prefix inv;}
+    import opendaylight-l2-types { prefix l2types; }
+
+    revision "2013-09-25" {
+	description "Initial revision of affinity model to be reviewed";
+    }
+
+
+  //**************************************************
+  // Switch + port. Access port on a physical switch. 
+  //**************************************************
+  grouping switch_endpoint {
+      leaf switch-port {
+	  type inv:node-connector-id;
+      }
+  }
+
+  //**************************************************
+  // Affinity address domain: This represents a domain (i.e, set) of one or
+  // more addresses. An affinity address may not always have a corresponding
+  // endpoint on the network, for example, an address domain representing 
+  // external addresses, or north-south traffic in a data center). Here the 
+  // IP address domain representing such external addresses does not map to 
+  // endpoints or node connectors on the network. 
+  //
+  // Affinity address domains specify one or more of the following: 
+  // layer 2 address (vlan + mac range)
+  // layer 3 address (IP prefix)
+  //**************************************************
+
+  // xxx  -- Includes access port on a hypervisor ovswitch to which a VM is connected.
+   grouping host_endpoint {
+       container l2address {
+	   leaf vlan {
+	       type l2types:vlan-id; 
+	   }
+	   leaf mac {
+	       type yang:mac-address;
+	   }
+       }
+
+       // l3-domain-address is IPv4 prefix
+       leaf l3address {
+	   type inet:ipv4-prefix;
+       }
+   }       
+
+   typedef group-ref {
+       type instance-identifier;
+   }
+   
+   typedef link-ref {
+       type instance-identifier;
+   }
+   
+   //**************************************************
+   // Affinity group
+   //**************************************************
+    grouping group {
+	leaf id {
+	    type string;
+	}   
+	list endpoints {
+	    key id;
+	    uses host_endpoint;
+	}
+    }
+
+    //**************************************************
+    // Affinity link connects one group (from group) to another (to
+    // group). It represents a set of flows that start from the source group
+    // and end in the destination group.  An affinity link has attributes
+    // (policies) attached to it that represent how these flows must be
+    // handled. An affinity link also has directionality associated with
+    // it. A bidirectional affinity link is equivalent to two unidirectional
+    // affinity links, one in each direction.
+    //**************************************************
+    grouping link {
+	leaf id {
+	    type string;
+	}
+	leaf from-group {
+	    type group-ref;
+	}
+	leaf to-group {
+	    type group-ref;
+	}
+	container attribute {
+	    uses attribute; 
+	}
+    }
+
+    //**************************************************
+    // Affinity attribute. Each is expanded in their own grouping construct below. 
+    //**************************************************
+    // Various types of affinity topologies. Used in union 'attribute'. 
+
+    // Affinity attribute. xxx add case statements for each type later. 
+    grouping attribute {
+        leaf attribute-type {   
+            description "affinity attribute";
+            type string;
+        }
+    }
+
+    // Main container that represents the complete set of affinity
+    // groups and links. Each set is represented as a YANG list with 'id'
+    // as the key. List contains affinity group and affinity link objects
+    // defined above.
+    container config {
+	list group {
+	    key id;
+	    ext:context-instance "group-context";
+	    uses group;
+	}
+	list link {
+	    key id;
+	    ext:context-instance "link-context";
+	    uses link;
+	}
+    }
+
+    //******************************
+    // RPCs to create affinity groups, add endpoints and address domains. 
+    //******************************
+    rpc creategroup {
+	input {
+            leaf name {
+                type string;
+            }
+	}
+    }
+
+    rpc addendpoint {
+	input {
+            leaf groupname {
+                type string;
+            }
+	    container endpoint {
+	        uses host_endpoint;
+	    }
+	}
+    }
+
+/*
+    rpc getgroups {
+	output {
+	    list group {
+	    key id;
+	    uses group;
+	    }
+	}
+    }
+    rpc get-links;
+    rpc get-group;
+    rpc get-link;
+
+    rpc get-stats-per-link;
+
+    //**************************************************
+    // Notifications 
+    //**************************************************
+    notification new-endpoint;
+    notification new-domain;
+    notification modify-attribute;
+*/
+}
+
+

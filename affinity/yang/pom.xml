@@ -16,7 +16,7 @@
     <groupId>org.opendaylight.affinity</groupId>
     <artifactId>model</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>bundle</packaging>
 
     <properties>
         <yang.version>0.5.9-SNAPSHOT</yang.version>
