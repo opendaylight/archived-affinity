@@ -8,44 +8,54 @@
 
 package org.opendaylight.affinity.analytics.internal;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.opendaylight.controller.sal.match.MatchField;
+import org.opendaylight.controller.sal.match.MatchType;
 import org.opendaylight.controller.sal.reader.FlowOnNode;
+import org.opendaylight.controller.sal.utils.IPProtocols;
 
 public class HostStats {
 
-    private long byteCount;
-    private double duration;
+    private Map<Byte, Long> byteCounts;
+    private Map<Byte, Double> durations;
 
     public HostStats() {
-        this.byteCount = 0;
-        this.duration = 0;
+        this.byteCounts = new HashMap<Byte, Long>();
+        this.durations = new HashMap<Byte, Double>();
     }
 
     public long getByteCount() {
-        return this.byteCount;
-    }
-
-    public void setByteCount(long byteCount) {
-        this.byteCount = byteCount;
+        long totalByteCount = 0;
+        for (Byte protocol : this.byteCounts.keySet())
+            totalByteCount += this.byteCounts.get(protocol);
+        return totalByteCount;
     }
 
     public double getDuration() {
-        return this.duration;
-    }
-
-    public void setDuration(double duration) {
-        this.duration = duration;
+        return Collections.max(this.durations.values());
     }
 
     public void setStatsFromFlow(FlowOnNode flow) {
+        MatchField protocolField = flow.getFlow().getMatch().getField(MatchType.NW_PROTO);
+        Byte protocolNumber;
+        if (protocolField == null)
+            protocolNumber = IPProtocols.ANY.byteValue();
+        else
+            protocolNumber = (Byte) protocolField.getValue();
+
         // Prevent stats from getting overwritten by zero-byte flows.
-        // TODO: Figure out why this happens
-        if (flow.getByteCount() > this.byteCount) {
-            this.byteCount = flow.getByteCount();
+        Long currentByteCount = this.byteCounts.get(protocolNumber);
+        Long thisByteCount = flow.getByteCount();
+        if (thisByteCount > 0 && (currentByteCount == null || currentByteCount <= thisByteCount)) {
+            this.byteCounts.put(protocolNumber, thisByteCount);
+            this.durations.put(protocolNumber, flow.getDurationSeconds() + .000000001 * flow.getDurationNanoseconds());
         }
-        this.duration = flow.getDurationSeconds() + .000000001 * flow.getDurationNanoseconds();
     }
 
     public double getBitRate() {
-        return (this.byteCount * 8)/(this.duration);
+        return (getByteCount() * 8)/getDuration();
     }
 }
