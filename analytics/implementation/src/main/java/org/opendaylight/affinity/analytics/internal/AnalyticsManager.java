@@ -42,7 +42,6 @@ import org.opendaylight.controller.sal.reader.NodeConnectorStatistics;
 import org.opendaylight.controller.sal.reader.NodeDescription;
 import org.opendaylight.controller.sal.reader.NodeTableStatistics;
 import org.opendaylight.controller.sal.utils.Status;
-import org.opendaylight.controller.statisticsmanager.IStatisticsManager;
 
 // TODO: get "analytics" somewhere in this namespace
 //import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.rev131016.HostStatistics;
@@ -52,33 +51,29 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     private static final Logger log = LoggerFactory.getLogger(AnalyticsManager.class);
 
     private IAffinityManager affinityManager;
-    private IStatisticsManager statisticsManager;
     private IfIptoHost hostTracker;
 
     private Map<MatchField, Host> destinationHostCache;
     private Map<MatchField, Host> sourceHostCache;
     private Map<Host, Map<Host, HostStats>> hostsToStats;
 
+    /* Initialize data structures */
     void init() {
-        log.debug("INIT called!");
         this.destinationHostCache = new HashMap<MatchField, Host>();
         this.sourceHostCache = new HashMap<MatchField, Host>();
         this.hostsToStats = new HashMap<Host, Map<Host, HostStats>>();
     }
 
     void destroy() {
-        log.debug("DESTROY called!");
     }
 
     void start() {
-        log.debug("START called!");
     }
 
     void started(){
     }
 
     void stop() {
-        log.debug("STOP called!");
     }
 
     void setAffinityManager(IAffinityManager a) {
@@ -86,19 +81,8 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     }
 
     void unsetAffinityManager(IAffinityManager a) {
-        if (this.affinityManager.equals(a)) {
+        if (this.affinityManager.equals(a))
             this.affinityManager = null;
-        }
-    }
-
-    void setStatisticsManager(IStatisticsManager s) {
-        this.statisticsManager = s;
-    }
-
-    void unsetStatisticsManager(IStatisticsManager s) {
-        if (this.statisticsManager.equals(s)) {
-            this.statisticsManager = null;
-        }
     }
 
     void setHostTracker(IfIptoHost h) {
@@ -106,32 +90,28 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     }
 
     void unsetHostTracker(IfIptoHost h) {
-        if (this.hostTracker.equals(h)) {
+        if (this.hostTracker.equals(h))
             this.hostTracker = null;
-        }
     }
 
     /* Returns the destination host associated with this flow, if one
-     * exists.  Returns null otherwise.
-     */
+     * exists.  Returns null otherwise. */
     protected Host getDestinationHostFromFlow(Flow flow, Set<HostNodeConnector> hosts) {
         Match match = flow.getMatch();
         MatchField dst = null;
 
         // Flow has to have DL_DST field or NW_DST field to proceed
-        if (match.isPresent(MatchType.DL_DST)) {
+        if (match.isPresent(MatchType.DL_DST))
             dst = match.getField(MatchType.DL_DST);
-        } else if (match.isPresent(MatchType.NW_DST)) {
+        else if (match.isPresent(MatchType.NW_DST))
             dst = match.getField(MatchType.NW_DST);
-        } else { 
+        else
             return null;
-        }
 
         // Check cache
         Host cacheHit = this.destinationHostCache.get(dst);
-        if (cacheHit != null) {
+        if (cacheHit != null) 
             return cacheHit;
-        }
 
         // Find the destination host
         Host dstHost = null;
@@ -163,8 +143,7 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     }
 
     /* Returns the source Host associated with this flow, if one
-     * exists.  Returns null otherwise.
-     */
+     * exists.  Returns null otherwise. */
     protected Host getSourceHostFromFlow(Flow flow, Set<HostNodeConnector> hosts) {
 
         Host srcHost = null;
@@ -177,9 +156,8 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
             // Check cache
             Host cacheHit = this.sourceHostCache.get(inPort);
-            if (cacheHit != null) {
+            if (cacheHit != null)
                 return cacheHit;
-            }
 
             // Find the source host by comparing the NodeConnectors
             NodeConnector inPortNc = (NodeConnector) inPort.getValue();
@@ -192,107 +170,148 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
                 }
             }
         }
-
         return srcHost;
     }
 
+    /* These are all basic getters/setters, most of which are required
+     * by IAnalyticsManager */
     public long getByteCountBetweenHosts(Host src, Host dst) {
+        return getByteCountBetweenHostsInternal(src, dst, null);
+    }
 
-        long byteCount = 0;
-        if (this.hostsToStats.get(src) != null &&
-            this.hostsToStats.get(src).get(dst) != null) {
-            byteCount = this.hostsToStats.get(src).get(dst).getByteCount();
-        }
-
-        return byteCount;
+    public long getByteCountBetweenHosts(Host src, Host dst, Byte protocol) {
+        return getByteCountBetweenHosts(src, dst, protocol);
     }
 
     public double getBitRateBetweenHosts(Host src, Host dst) {
-        double bitRate = 0;
-        if (this.hostsToStats.get(src) != null &&
-            this.hostsToStats.get(src).get(dst) != null) {
-            bitRate = this.hostsToStats.get(src).get(dst).getBitRate();
-        }
-
-        return bitRate;
+        return getBitRateBetweenHostsInternal(src, dst, null);
     }
 
-    public double getBitRateOnAffinityLink(AffinityLink al) {
-        // Returns bit rate in *bits-per-second*
-        double maxDuration = 0;
-        int totalBytes = 0;
-        List<Entry<Host, Host>> flows = this.affinityManager.getAllFlowsByHost(al);
-        for (Entry<Host, Host> flow : flows) {
-            Host h1 = flow.getKey();
-            Host h2 = flow.getValue();
-            if (this.hostsToStats.get(h1) != null &&
-                this.hostsToStats.get(h1).get(h2) != null) {
-                totalBytes += getByteCountBetweenHosts(h1, h2);
-                double duration = this.hostsToStats.get(h1).get(h2).getDuration();
-                if (duration > maxDuration) {
-                    maxDuration = duration;
-                }
-            }
-        }
-        if (maxDuration == 0.0) {
-            return 0.0;
-        } else {
-            return (totalBytes * 8.0) / maxDuration;
-        }
+    public double getBitRateBetweenHosts(Host src, Host dst, Byte protocol) {
+        return getBitRateBetweenHostsInternal(src, dst, protocol);
+    }
+
+    private double getDurationBetweenHosts(Host src, Host dst) {
+        return getDurationBetweenHostsInternal(src, dst, null);
+    }
+
+    private double getDurationBetweenHosts(Host src, Host dst, Byte protocol) {
+        return getDurationBetweenHostsInternal(src, dst, protocol);
     }
 
     public long getByteCountOnAffinityLink(AffinityLink al) {
+        return getByteCountOnAffinityLinkInternal(al, null);
+    }
+
+    public long getByteCountOnAffinityLink(AffinityLink al, Byte protocol) {
+        return getByteCountOnAffinityLinkInternal(al, protocol);
+    }
+
+    public double getBitRateOnAffinityLink(AffinityLink al) {
+        return getBitRateOnAffinityLinkInternal(al, null);
+    }
+
+    public double getBitRateOnAffinityLink(AffinityLink al, Byte protocol) {
+        return getBitRateOnAffinityLinkInternal(al, protocol);
+    }
+
+    public long getByteCountIntoPrefix(String prefixAndMask) {
+        return getByteCountIntoPrefixInternal(prefixAndMask, null);
+    }
+
+    public long getByteCountIntoPrefix(String prefixAndMask, Byte protocol) {
+        return getByteCountIntoPrefixInternal(prefixAndMask, protocol);
+    }
+
+    public Map<Host, Long> getIncomingHosts(String prefixAndMask) {
+        return getIncomingHostsInternal(prefixAndMask, null);
+    }
+
+    public Map<Host, Long> getIncomingHosts(String prefixAndMask, Byte protocol) {
+        return getIncomingHostsInternal(prefixAndMask, protocol);
+    }
+
+    /* Return byte count between two hosts, either per-protocol or not */
+    private long getByteCountBetweenHostsInternal(Host src, Host dst, Byte protocol) {
+        long byteCount = 0;
+        if (this.hostsToStats.get(src) != null &&
+            this.hostsToStats.get(src).get(dst) != null) {
+            if (protocol == null)
+                byteCount = this.hostsToStats.get(src).get(dst).getByteCount();
+            else
+                byteCount = this.hostsToStats.get(src).get(dst).getByteCount(protocol);
+        }
+        return byteCount;
+    }
+
+    /* Return the total bit rate between two hosts, either per-protocol or not */
+    private double getBitRateBetweenHostsInternal(Host src, Host dst, Byte protocol) {
+        double bitRate = 0;
+        if (this.hostsToStats.get(src) != null &&
+            this.hostsToStats.get(src).get(dst) != null) {
+            if (protocol == null)
+                bitRate = this.hostsToStats.get(src).get(dst).getBitRate();
+            else
+                bitRate = this.hostsToStats.get(src).get(dst).getBitRate(protocol);
+        }
+        return bitRate;
+    }
+
+    /* Return the duration between two hosts, either per-protocol or not */
+    private double getDurationBetweenHostsInternal(Host src, Host dst, Byte protocol) {
+        double duration = 0.0;
+        if (this.hostsToStats.get(src) != null &&
+            this.hostsToStats.get(src).get(dst) !=null) {
+            if (protocol == null)
+                duration = this.hostsToStats.get(src).get(dst).getDuration();
+            else
+                duration = this.hostsToStats.get(src).get(dst).getDuration(protocol);
+        }
+        return duration;
+    }
+
+    /* Return the byte count on an affinity link, per-protocol or not */
+    private long getByteCountOnAffinityLinkInternal(AffinityLink al, Byte protocol) {
         long b = 0;
         List<Entry<Host, Host>> flows = this.affinityManager.getAllFlowsByHost(al);
         for (Entry<Host, Host> flow : flows) {
             Host h1 = flow.getKey();
             Host h2 = flow.getValue();
-            b += getByteCountBetweenHosts(h1, h2);
+            // This will handle protocol being null
+            b += getByteCountBetweenHostsInternal(h1, h2, protocol);
         }
-
         return b;
     }
 
-    private InetAddress getPrefix(InetAddress ip, Short mask) {
-        byte[] prefix = ip.getAddress();
-        InetAddress newIP = null;
-        try {
-            int bits = (32 - mask) % 8;
-            int bytes = 4 - ((int) mask / 8);
-            if (bits > 0) {
-                bytes--;
-            }
-            // zero out the bytes
-            for (int i = 1; i <= bytes; i++) {
-                prefix[prefix.length - i] = 0x0;
-            }
-            // zero out the bits
-            if (bits > 0) {
-                prefix[prefix.length - bytes - 1] &= (0xFF << bits);
-            }
-            newIP = InetAddress.getByAddress(prefix);
-        } catch (UnknownHostException e) {
-            // TODO:
+    /* Returns bit rate in bits-per-second on an affinity link, per-protocol or not */
+    private double getBitRateOnAffinityLinkInternal(AffinityLink al, Byte protocol) {
+        double maxDuration = 0;
+        long totalBytes = 0;
+        for (Entry<Host, Host> flow : this.affinityManager.getAllFlowsByHost(al)) {
+            Host h1 = flow.getKey();
+            Host h2 = flow.getValue();
+            // This will handle protocol being null
+            totalBytes += getByteCountBetweenHostsInternal(h1, h2, protocol);
+            double duration = getDurationBetweenHostsInternal(h1, h2, protocol);
+            if (duration > maxDuration)
+                maxDuration = duration;
         }
-        return newIP;
+        if (maxDuration == 0.0)
+            return 0.0;
+        return (totalBytes * 8.0) / maxDuration;
     }
 
-    // Return the set of hosts that transfer data to the targetHost
-    public Map<Host, Long> getIncomingHosts(Host targetHost) {
-        Map<Host, Long> incomingHosts = new HashMap<Host, Long>();
-        for (Host sourceHost : this.hostsToStats.keySet()) {
-            if (this.hostsToStats.get(sourceHost).get(targetHost) != null) {
-                long bytes = this.hostsToStats.get(sourceHost).get(targetHost).getByteCount();
-                if (bytes > 0) {
-                    incomingHosts.put(sourceHost, bytes);
-                }
-            }
-        }
-        return incomingHosts;
+    /* Return the total bytes for a particular protocol into this prefix */
+    private long getByteCountIntoPrefixInternal(String prefixAndMask, Byte protocol) {
+        long totalBytes = 0;
+        Map<Host, Long> hostData = getIncomingHostsInternal(prefixAndMask, protocol);
+        for (Long byteCount : hostData.values())
+            totalBytes += byteCount;
+        return totalBytes;
     }
 
-    // Return the set of hosts that transfer data into any host in this subnet
-    public Map<Host, Long> getIncomingHosts(String prefixAndMask) {
+    /* Return the set of hosts that transfer data into any host in this subnet */
+    private Map<Host, Long> getIncomingHostsInternal(String prefixAndMask, Byte protocol) {
         InetAddress ip;
         Short mask;
         Map<Host, Long> hosts = new HashMap<Host, Long>();
@@ -313,28 +332,50 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         for (HostNodeConnector host : allHosts) {
             InetAddress hostPrefix = getPrefix(host.getNetworkAddress(), mask);
             if (hostPrefix.equals(targetPrefix)) {
-                Map<Host, Long> these_hosts = getIncomingHosts(host);
+                Map<Host, Long> these_hosts = getIncomingHostsInternal(host, protocol);
                 // Merge the two maps by summing bytes between them if necessary
                 for (Host h : these_hosts.keySet()) {
-                    if (hosts.get(h) == null) {
+                    if (hosts.get(h) == null)
                         hosts.put(h, these_hosts.get(h));
-                    } else {
+                    else
                         hosts.put(h, these_hosts.get(h) + hosts.get(h));
-                    }
                 }
             }
         }
-
         return hosts;
     }
 
-    public long getByteCountIntoPrefix(String prefixAndMask) {
-        long totalBytes = 0;
-        Map<Host, Long> hostData = getIncomingHosts(prefixAndMask);
-        for (Host h : hostData.keySet()) {
-            totalBytes += hostData.get(h);
+    /* Return a map between the set of hosts that transferred data to
+     * the targetHost and the amount of data they each transferred,
+     * per-protocol or not */
+    private Map<Host, Long> getIncomingHostsInternal(Host targetHost, Byte protocol) {
+        Map<Host, Long> incomingHosts = new HashMap<Host, Long>();
+        for (Host sourceHost : this.hostsToStats.keySet()) {
+            long bytes = getByteCountBetweenHostsInternal(sourceHost, targetHost, protocol);
+            if (bytes > 0)
+                incomingHosts.put(sourceHost, bytes);
         }
-        return totalBytes;
+        return incomingHosts;
+    }
+
+    private InetAddress getPrefix(InetAddress ip, Short mask) {
+        byte[] prefix = ip.getAddress();
+        InetAddress newIP = null;
+        try {
+            int bits = (32 - mask) % 8;
+            int bytes = 4 - ((int) mask / 8);
+            if (bits > 0)
+                bytes--;
+            // zero out the bytes
+            for (int i = 1; i <= bytes; i++)
+                prefix[prefix.length - i] = 0x0;
+            // zero out the bits
+            if (bits > 0)
+                prefix[prefix.length - bytes - 1] &= (0xFF << bits);
+            newIP = InetAddress.getByAddress(prefix);
+        } catch (UnknownHostException e) {
+        }
+        return newIP;
     }
 
     @Override
@@ -361,12 +402,10 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
                 continue;
             }
 
-            if (this.hostsToStats.get(srcHost) == null) {
+            if (this.hostsToStats.get(srcHost) == null)
                 this.hostsToStats.put(srcHost, new HashMap<Host, HostStats>());
-            }
-            if (this.hostsToStats.get(srcHost).get(dstHost) == null) {
+            if (this.hostsToStats.get(srcHost).get(dstHost) == null)
                 this.hostsToStats.get(srcHost).put(dstHost, new HostStats());
-            }
             this.hostsToStats.get(srcHost).get(dstHost).setStatsFromFlow(f);
         }
     }

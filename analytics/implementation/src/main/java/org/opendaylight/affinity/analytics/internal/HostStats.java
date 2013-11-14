@@ -27,6 +27,7 @@ public class HostStats {
         this.durations = new HashMap<Byte, Double>();
     }
 
+    // Returns the total byte count across all protocols
     public long getByteCount() {
         long totalByteCount = 0;
         for (Byte protocol : this.byteCounts.keySet())
@@ -34,10 +35,45 @@ public class HostStats {
         return totalByteCount;
     }
 
+    // Returns the byte count for a particular protocol
+    public long getByteCount(Byte protocol) {
+        Long byteCount = this.byteCounts.get(protocol);
+        if (byteCount == null)
+            byteCount = (long) 0;
+        return byteCount;
+    }
+
+    // Returns the maximum duration across all protocols
     public double getDuration() {
         return Collections.max(this.durations.values());
     }
 
+    // Returns the duration for a particular protocol
+    public double getDuration(Byte protocol) {
+        Double duration = this.durations.get(protocol);
+        if (duration == null)
+            duration = (double) 0.0;
+        return duration;
+    }
+
+    // Returns the bit rate across all protocols
+    public double getBitRate() {
+        return getBitRateInternal(getByteCount(), getDuration());
+    }
+
+    // Returns the bit rate for a particular protocol
+    public double getBitRate(Byte protocol) {
+        return getBitRateInternal(getByteCount(protocol), getDuration(protocol));
+    }
+
+    // Internal method to calculate bit rate
+    private double getBitRateInternal(long byteCount, double duration) {
+        if (duration == 0)
+            return 0.0;
+        return (byteCount * 8)/duration;
+    }
+
+    // Sets byte count and duration given a flow
     public void setStatsFromFlow(FlowOnNode flow) {
         MatchField protocolField = flow.getFlow().getMatch().getField(MatchType.NW_PROTO);
         Byte protocolNumber;
@@ -53,9 +89,5 @@ public class HostStats {
             this.byteCounts.put(protocolNumber, thisByteCount);
             this.durations.put(protocolNumber, flow.getDurationSeconds() + .000000001 * flow.getDurationNanoseconds());
         }
-    }
-
-    public double getBitRate() {
-        return (getByteCount() * 8)/getDuration();
     }
 }
