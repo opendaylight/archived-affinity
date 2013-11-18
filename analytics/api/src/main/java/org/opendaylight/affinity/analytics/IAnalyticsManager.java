@@ -9,6 +9,7 @@
 package org.opendaylight.affinity.analytics;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.controller.sal.core.Host;
@@ -16,22 +17,33 @@ import org.opendaylight.controller.sal.core.Host;
 public interface IAnalyticsManager {
 
     // Host pair statistics
-    long getByteCountBetweenHosts(Host src, Host dst);
-    long getByteCountBetweenHosts(Host src, Host dst, Byte protocol);
-    double getBitRateBetweenHosts(Host src, Host dst);
-    double getBitRateBetweenHosts(Host src, Host dst, Byte protocol);
+    long getByteCount(Host src, Host dst);
+    long getByteCount(Host src, Host dst, Byte protocol);
+    double getBitRate(Host src, Host dst);
+    double getBitRate(Host src, Host dst, Byte protocol);
+    Map<Byte, Long> getAllByteCounts(Host src, Host dst);
+    Map<Byte, Double> getAllBitRates(Host src, Host dst);
+    Set<Byte> getProtocols(Host src, Host dst);
 
     // AffinityLink statistics
-    long getByteCountOnAffinityLink(AffinityLink al);
-    long getByteCountOnAffinityLink(AffinityLink al, Byte protocol);
-    double getBitRateOnAffinityLink(AffinityLink al);
-    double getBitRateOnAffinityLink(AffinityLink al, Byte protocol);
+    long getByteCount(AffinityLink al);
+    long getByteCount(AffinityLink al, Byte protocol);
+    double getBitRate(AffinityLink al);
+    double getBitRate(AffinityLink al, Byte protocol);
+    Map<Byte, Long> getAllByteCounts(AffinityLink al);
+    Map<Byte, Double> getAllBitRates(AffinityLink al);
+    Set<Byte> getProtocols(AffinityLink al);
 
-    // Prefix statistics
-    long getByteCountIntoPrefix(String prefixAndMask);
-    long getByteCountIntoPrefix(String prefixAndMask, Byte protocol);
+    // Subnet statistics
+    long getByteCount(String srcSubnet, String dstSubnet);
+    long getByteCount(String srcSubnet, String dstSubnet, Byte protocol);
+    double getBitRate(String srcSubnet, String dstSubnet);
+    double getBitRate(String srcSubnet, String dstSubnet, Byte protocol);
+    Map<Byte, Long> getAllByteCounts(String srcSubnet, String dstSubnet);
+    Map<Byte, Double> getAllBitRates(String srcSubnet, String dstSubnet);
+    Set<Byte> getProtocols(String srcSubnet, String dstSubnet);
 
     // Miscellaneous
-    Map<Host, Long> getIncomingHosts(String prefixAndMask);
-    Map<Host, Long> getIncomingHosts(String prefixAndMask, Byte protocol);
+    Map<Host, Long> getIncomingHostByteCounts(String subnet);
+    Map<Host, Long> getIncomingHostByteCounts(String subnet, Byte protocol);
 }

@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2013 Plexxi, Inc.  All rights reserved.
  *
@@ -11,6 +12,7 @@ package org.opendaylight.affinity.analytics.internal;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.opendaylight.controller.sal.match.MatchField;
 import org.opendaylight.controller.sal.match.MatchType;
@@ -27,6 +29,11 @@ public class HostStats {
         this.durations = new HashMap<Byte, Double>();
     }
 
+    // Return the set of all protocols
+    public Set<Byte> getProtocols() {
+        return this.byteCounts.keySet();
+    }
+
     // Returns the total byte count across all protocols
     public long getByteCount() {
         long totalByteCount = 0;
@@ -41,6 +48,11 @@ public class HostStats {
         if (byteCount == null)
             byteCount = (long) 0;
         return byteCount;
+    }
+
+    // Returns the map of byte counts
+    public Map<Byte, Long> getAllByteCounts() {
+        return this.byteCounts;
     }
 
     // Returns the maximum duration across all protocols
@@ -64,6 +76,14 @@ public class HostStats {
     // Returns the bit rate for a particular protocol
     public double getBitRate(Byte protocol) {
         return getBitRateInternal(getByteCount(protocol), getDuration(protocol));
+    }
+
+    // Return all bit rates
+    public Map<Byte, Double> getAllBitRates() {
+        Map <Byte, Double> bitRates = new HashMap<Byte, Double>();
+        for (Byte protocol : this.byteCounts.keySet())
+            bitRates.put(protocol, getBitRate(protocol));
+        return bitRates;
     }
 
     // Internal method to calculate bit rate

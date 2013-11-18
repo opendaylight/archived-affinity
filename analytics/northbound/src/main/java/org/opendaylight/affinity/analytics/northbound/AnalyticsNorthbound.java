@@ -11,6 +11,7 @@ package org.opendaylight.affinity.analytics.northbound;
 import java.lang.Long;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
@@ -41,6 +42,7 @@ import org.opendaylight.controller.northbound.commons.utils.NorthboundUtils;
 import org.opendaylight.controller.sal.authorization.Privilege;
 import org.opendaylight.controller.sal.core.Host;
 import org.opendaylight.controller.sal.utils.GlobalConstants;
+import org.opendaylight.controller.sal.utils.IPProtocols;
 import org.opendaylight.controller.sal.utils.ServiceHelper;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 
@@ -77,39 +79,29 @@ public class AnalyticsNorthbound {
 
     private IAnalyticsManager getAnalyticsService(String containerName) {
         IContainerManager containerManager = (IContainerManager) ServiceHelper.getGlobalInstance(IContainerManager.class, this);
-        if (containerManager == null) {
+        if (containerManager == null)
             throw new ServiceUnavailableException("Container " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
 
         boolean found = false;
         List<String> containerNames = containerManager.getContainerNames();
-        for (String cName : containerNames) {
-            if (cName.trim().equalsIgnoreCase(containerName.trim())) {
+        for (String cName : containerNames)
+            if (cName.trim().equalsIgnoreCase(containerName.trim()))
                 found = true;
-            }
-        }
-
-        if (found == false) {
+        if (found == false)
             throw new ResourceNotFoundException(containerName + " " + RestMessages.NOCONTAINER.toString());
-        }
 
         IAnalyticsManager analyticsManager = (IAnalyticsManager) ServiceHelper.getInstance(IAnalyticsManager.class, containerName, this);
-        if (analyticsManager == null) {
+        if (analyticsManager == null)
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
         return analyticsManager;
     }
 
     /**
      * Returns Host Statistics for a (src, dst) pair
      *
-     * @param containerName
-     *            Name of the Container. The Container name for the base
-     *            controller is "default".
-     * @param dataLayerAddr
-     *            DataLayerAddress for the host
-     * @param networkAddr
-     *            NetworkAddress for the host
+     * @param containerName: Name of the Container
+     * @param dataLayerAddr: DataLayerAddress for the host
+     * @param networkAddr: NetworkAddress for the host
      * @return Host Statistics for a given Node.
      */
     @Path("/{containerName}/hoststats/{srcNetworkAddr}/{dstNetworkAddr}")
@@ -124,20 +116,18 @@ public class AnalyticsNorthbound {
         @PathParam("containerName") String containerName,
         @PathParam("srcNetworkAddr") String srcNetworkAddr,
         @PathParam("dstNetworkAddr") String dstNetworkAddr) {
-        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
-        }
         handleDefaultDisabled(containerName);
 
         IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
-        if (analyticsManager == null) {
+        if (analyticsManager == null)
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
 
         Host srcHost = handleHostAvailability(containerName, srcNetworkAddr);
         Host dstHost = handleHostAvailability(containerName, dstNetworkAddr);
-        long byteCount = analyticsManager.getByteCountBetweenHosts(srcHost, dstHost);
-        double bitRate = analyticsManager.getBitRateBetweenHosts(srcHost, dstHost);
+        long byteCount = analyticsManager.getByteCount(srcHost, dstHost);
+        double bitRate = analyticsManager.getBitRate(srcHost, dstHost);
 
         return new HostStatistics(srcHost, dstHost, byteCount, bitRate);
     }
@@ -145,11 +135,8 @@ public class AnalyticsNorthbound {
     /**
      * Returns the affinity link statistics for a given link.
      *
-     * @param containerName
-     *            Name of the Container. The Container name for the base
-     *            controller is "default".
-     * @param linkName
-     *            AffinityLink name.
+     * @param containerName: Name of the Container
+     * @param linkName: AffinityLink name
      * @return List of Affinity Link Statistics for a given link.
      */
     @Path("/{containerName}/affinitylinkstats/{linkName}")
@@ -163,68 +150,73 @@ public class AnalyticsNorthbound {
     public AffinityLinkStatistics getAffinityLinkStatistics(
         @PathParam("containerName") String containerName,
         @PathParam("linkName") String affinityLinkName) {
-        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
-        }
         handleDefaultDisabled(containerName);
 
         IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
-        if (analyticsManager == null) {
+        if (analyticsManager == null)
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
 
         AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
-        long byteCount = analyticsManager.getByteCountOnAffinityLink(al);
-        double bitRate = analyticsManager.getBitRateOnAffinityLink(al);
+        long byteCount = analyticsManager.getByteCount(al);
+        double bitRate = analyticsManager.getBitRate(al);
 
         return new AffinityLinkStatistics(al, byteCount, bitRate);
     }
 
     /**
-     * Returns PrefixStatistics
+     * Returns SubnetStatistics
      *
-     * @param containerName
-     *            Name of the Container. The Container name for the base
-     *            controller is "default".
-     * @param ip
-     * @return mask
+     * @param containerName: Name of the Container
+     * @param srcIP: IP prefix
+     * @param srcMask: Mask
+     * @param dstIP: IP prefix
+     * @param dstMask: Mask
+     * @return SubnetStatistics for a particular subnet
      */
-    @Path("/{containerName}/prefixstats/{ip}/{mask}/")
+    @Path("/{containerName}/subnetstats/{srcIP}/{srcMask}/{dstIP}/{dstMask}")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(PrefixStatistics.class)
+    @TypeHint(SubnetStatistics.class)
     @StatusCodes({
         @ResponseCode(code = 200, condition = "Operation successful"),
         @ResponseCode(code = 404, condition = "The containerName is not found"),
         @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public PrefixStatistics getPrefixMaskStatistics(
+    public SubnetStatistics getSubnetStatistics(
         @PathParam("containerName") String containerName,
-        @PathParam("ip") String ip,
-        @PathParam("mask") String mask) {
-        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+        @PathParam("srcIP") String srcIP,
+        @PathParam("srcMask") String srcMask,
+        @PathParam("dstIP") String dstIP,
+        @PathParam("dstMask") String dstMask) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
-        }
         handleDefaultDisabled(containerName);
 
         IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
-        if (analyticsManager == null) {
+        if (analyticsManager == null)
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
 
-        long byteCount = analyticsManager.getByteCountIntoPrefix(ip + "/" + mask);
-        return new PrefixStatistics(byteCount);
+        long byteCount;
+        // TODO: This is hardly the most elegant way to handle null prefixes
+        if (srcIP.equals("null") && srcMask.equals("null"))
+            byteCount = analyticsManager.getByteCount(null, dstIP + "/" + dstMask);
+        else if (dstIP.equals("null") && dstMask.equals("null"))
+            byteCount = analyticsManager.getByteCount(srcIP + "/" + srcMask, null);
+        else
+            byteCount = analyticsManager.getByteCount(srcIP + "/" + srcMask, dstIP + "/" + dstMask);
+        return new SubnetStatistics(byteCount);
     }
 
     /**
-     * Returns TODO:
+     * Returns hosts that sent data into this prefix
      *
-     * @param containerName
-     *            Name of the Container. The Container name for the base
-     *            controller is "default".
-     * @param TODO:
-     * @return TODO:
+     * @param containerName: Name of the Container
+     * @param ip: IP prefix
+     * @param mask: Mask
+     * @return AllHosts for the particular subnet
      */
-    @Path("/{containerName}/prefixstats/incoming/{ip}/{mask}/")
+    @Path("/{containerName}/subnetstats/incoming/{ip}/{mask}/")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
     @TypeHint(AllHosts.class)
@@ -232,67 +224,49 @@ public class AnalyticsNorthbound {
         @ResponseCode(code = 200, condition = "Operation successful"),
         @ResponseCode(code = 404, condition = "The containerName is not found"),
         @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public AllHosts getIncomingHosts(
+    public AllHosts getIncomingHostByteCounts(
         @PathParam("containerName") String containerName,
         @PathParam("ip") String ip,
         @PathParam("mask") String mask) {
-        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
-        }
         handleDefaultDisabled(containerName);
 
         IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
-        if (analyticsManager == null) {
+        if (analyticsManager == null)
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
 
-        Map<Host, Long> hostData = analyticsManager.getIncomingHosts(ip + "/" + mask);
-        Map<String, Long> hostDataWithStrings = new HashMap<String, Long>();
-        for (Host h : hostData.keySet()) {
-            InetAddress i = h.getNetworkAddress();
-            hostDataWithStrings.put(i.toString(), hostData.get(h));
-        }
-        return new AllHosts(hostDataWithStrings);
+        Map<Host, Long> hosts = analyticsManager.getIncomingHostByteCounts(ip + "/" + mask);
+        return new AllHosts(hosts);
     }
 
     private void handleDefaultDisabled(String containerName) {
         IContainerManager containerManager = (IContainerManager) ServiceHelper.getGlobalInstance(IContainerManager.class, this);
-        if (containerManager == null) {
+        if (containerManager == null)
             throw new InternalServerErrorException(RestMessages.INTERNALERROR.toString());
-        }
-
-        if (containerName.equals(GlobalConstants.DEFAULT.toString()) && containerManager.hasNonDefaultContainer()) {
+        if (containerName.equals(GlobalConstants.DEFAULT.toString()) && containerManager.hasNonDefaultContainer())
             throw new ResourceConflictException(RestMessages.DEFAULTDISABLED.toString());
-        }
     }
 
     private AffinityLink handleAffinityLinkAvailability(String containerName, String linkName) {
-
         IAffinityManager affinityManager = (IAffinityManager) ServiceHelper.getInstance(IAffinityManager.class, containerName, this);
-        if (affinityManager == null) {
+        if (affinityManager == null)
             throw new ServiceUnavailableException("Affinity manager " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
-
         AffinityLink al = affinityManager.getAffinityLink(linkName);
-        if (al == null) {
+        if (al == null)
             throw new ResourceNotFoundException(linkName + " : AffinityLink does not exist");
-        }
-
         return al;
     }
 
 
     private Host handleHostAvailability(String containerName, String networkAddr) {
-
         IfIptoHost hostTracker = (IfIptoHost) ServiceHelper.getInstance(IfIptoHost.class, containerName, this);
-        if (hostTracker == null) {
+        if (hostTracker == null)
             throw new ServiceUnavailableException("Host tracker " + RestMessages.SERVICEUNAVAILABLE.toString());
-        }
 
         Set<HostNodeConnector> allHosts = hostTracker.getAllHosts();
-        if (allHosts == null) {
+        if (allHosts == null)
             throw new ResourceNotFoundException(networkAddr + " : " + RestMessages.NOHOST.toString());
-        }
 
         Host host = null;
         try {
@@ -306,10 +280,8 @@ public class AnalyticsNorthbound {
         } catch (UnknownHostException e) {
         }
 
-        if (host == null) {
+        if (host == null)
             throw new ResourceNotFoundException(networkAddr + " : " + RestMessages.NOHOST.toString());
-        }
-
         return host;
     }
 }

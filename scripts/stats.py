@@ -10,7 +10,7 @@ class Stats:
 
     TYPE_HOST = 0
     TYPE_AL = 1 # AffinityLink
-    TYPE_PREFIX = 2
+    TYPE_SUBNET = 2
 
     def __init__(self, stat_type, **kwargs):
         self.stat_type = stat_type
@@ -21,9 +21,9 @@ class Stats:
         elif stat_type == Stats.TYPE_AL:
             self.al = kwargs['al']
             self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/"
-        elif stat_type == Stats.TYPE_PREFIX:
+        elif stat_type == Stats.TYPE_SUBNET:
             self.subnet = kwargs['subnet']
-            self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/prefixstats/"
+            self.url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/"
         else:
             print "incorrect stat type", stat_type
 
@@ -38,8 +38,8 @@ class Stats:
             return "host pair %s -> %s" % (self.src, self.dst)
         elif (self.stat_type == Stats.TYPE_AL):
             return "affinity link %s" % self.al
-        elif (self.stat_type == Stats.TYPE_PREFIX):
-            return "prefix %s" % self.subnet
+        elif (self.stat_type == Stats.TYPE_SUBNET):
+            return "subnet %s" % self.subnet
         else:
             return "unknown Stats type"
 
@@ -49,8 +49,8 @@ class Stats:
             resp, content = self.http.request(self.url_prefix + self.src + "/" + self.dst, "GET")
         elif (self.stat_type == Stats.TYPE_AL):
             resp, content = self.http.request(self.url_prefix + self.al, "GET")
-        elif (self.stat_type == Stats.TYPE_PREFIX):
-            resp, content = self.http.request(self.url_prefix + self.subnet, "GET")
+        elif (self.stat_type == Stats.TYPE_SUBNET):
+            resp, content = self.http.request(self.url_prefix + "null/null/" + self.subnet, "GET")
         try:
             self.stats = json.loads(content)
             is_fast = self.handle_rate_ewma()
@@ -63,9 +63,9 @@ class Stats:
     def set_large_flow_threshold(self, s):
         self.large_flow_threshold = s;
 
-    # Return all hosts that transferred a particular percentage of data into this entity.  Right now only supports prefixes.
+    # Return all hosts that transferred a particular percentage of data into this entity.  Right now only supports subnets.
     def get_large_incoming_hosts(self):
-        if (self.stat_type == Stats.TYPE_PREFIX):
+        if (self.stat_type == Stats.TYPE_SUBNET):
             resp, content = self.http.request(self.url_prefix + "incoming/" + self.subnet, "GET")
             data = json.loads(content)
             if (data == {}): return []
@@ -79,10 +79,10 @@ class Stats:
                 if (bytes_from_ip >= total_bytes_in / float(n)):
                     ips.append(ip)
             return ips
+
         else:
             print "Stat type not supported for incoming hosts"
         return []
-
 
     # EWMA calculation for bit rate.  Returns true if there is an anomaly.
     def handle_rate_ewma(self):

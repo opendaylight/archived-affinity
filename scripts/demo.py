@@ -54,7 +54,7 @@ class WaypointMonitor(Thread):
                 ac.add_affinity_group(src_ag_name, ips=src_ips)
                 # Second AG: This entity
                 dst_ag_name = "client"
-                if (self.stat_type == Stats.TYPE_PREFIX):
+                if (self.stat_type == Stats.TYPE_SUBNET):
                     ac.add_affinity_group(dst_ag_name, subnet=self.stat.subnet)
                 elif (self.stat_type == Stats.TYPE_HOST):
                     pass
@@ -76,7 +76,7 @@ def main():
     subnet_control = SubnetControl()
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
 
-    m = WaypointMonitor(Stats.TYPE_PREFIX, subnet="10.0.0.0/31")
+    m = WaypointMonitor(Stats.TYPE_SUBNET, subnet="10.0.0.0/31")
     m.set_waypoint("10.0.0.2")
     m.set_large_flow_threshold(2000) # 2000 bytes
     m.start()

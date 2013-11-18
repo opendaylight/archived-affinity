@@ -43,9 +43,6 @@ import org.opendaylight.controller.sal.reader.NodeDescription;
 import org.opendaylight.controller.sal.reader.NodeTableStatistics;
 import org.opendaylight.controller.sal.utils.Status;
 
-// TODO: get "analytics" somewhere in this namespace
-//import org.opendaylight.yang.gen.v1.urn.opendaylight.affinity.rev131016.HostStatistics;
-
 public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsManager.class);
@@ -175,60 +172,152 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
     /* These are all basic getters/setters, most of which are required
      * by IAnalyticsManager */
-    public long getByteCountBetweenHosts(Host src, Host dst) {
+    public long getByteCount(Host src, Host dst) {
         return getByteCountBetweenHostsInternal(src, dst, null);
     }
 
-    public long getByteCountBetweenHosts(Host src, Host dst, Byte protocol) {
-        return getByteCountBetweenHosts(src, dst, protocol);
+    public long getByteCount(Host src, Host dst, Byte protocol) {
+        return getByteCountBetweenHostsInternal(src, dst, protocol);
     }
 
-    public double getBitRateBetweenHosts(Host src, Host dst) {
+    public Map<Byte, Long> getAllByteCounts(Host src, Host dst) {
+        if (this.hostsToStats.get(src) == null ||
+            this.hostsToStats.get(src).get(dst) == null)
+            return new HashMap<Byte, Long>();
+        return this.hostsToStats.get(src).get(dst).getAllByteCounts();
+    }
+
+    public double getBitRate(Host src, Host dst) {
         return getBitRateBetweenHostsInternal(src, dst, null);
     }
 
-    public double getBitRateBetweenHosts(Host src, Host dst, Byte protocol) {
+    public double getBitRate(Host src, Host dst, Byte protocol) {
         return getBitRateBetweenHostsInternal(src, dst, protocol);
     }
 
-    private double getDurationBetweenHosts(Host src, Host dst) {
-        return getDurationBetweenHostsInternal(src, dst, null);
+    public Map<Byte, Double> getAllBitRates(Host src, Host dst) {
+        if (this.hostsToStats.get(src) == null ||
+            this.hostsToStats.get(src).get(dst) == null)
+            return new HashMap<Byte, Double>();
+        return this.hostsToStats.get(src).get(dst).getAllBitRates();
     }
 
-    private double getDurationBetweenHosts(Host src, Host dst, Byte protocol) {
-        return getDurationBetweenHostsInternal(src, dst, protocol);
+    public Set<Byte> getProtocols(Host src, Host dst) {
+        if (this.hostsToStats.get(src) == null ||
+            this.hostsToStats.get(src).get(dst) == null)
+            return new HashSet<Byte>();
+        return this.hostsToStats.get(src).get(dst).getProtocols();
     }
 
-    public long getByteCountOnAffinityLink(AffinityLink al) {
+    public long getByteCount(AffinityLink al) {
         return getByteCountOnAffinityLinkInternal(al, null);
     }
 
-    public long getByteCountOnAffinityLink(AffinityLink al, Byte protocol) {
+    public long getByteCount(AffinityLink al, Byte protocol) {
         return getByteCountOnAffinityLinkInternal(al, protocol);
     }
 
-    public double getBitRateOnAffinityLink(AffinityLink al) {
+    public Set<Byte> getProtocols(AffinityLink al) {
+        Set<Byte> protocols = new HashSet<Byte>();
+        for (Entry<Host, Host> flow : this.affinityManager.getAllFlowsByHost(al)) {
+            Host h1 = flow.getKey();
+            Host h2 = flow.getValue();
+            Set<Byte> thisProtocols = getProtocols(h1, h2);
+            protocols.addAll(thisProtocols);
+        }
+        return protocols;
+    }
+
+    public Map<Byte, Long> getAllByteCounts(AffinityLink al) {
+        Map<Byte, Long> byteCounts = new HashMap<Byte, Long>();
+        Set<Byte> protocols = getProtocols(al);
+        for (Byte protocol : protocols) {
+            Long thisByteCounts = getByteCount(al, protocol);
+            byteCounts.put(protocol, thisByteCounts);
+        }
+        return byteCounts;
+    }
+
+    public double getBitRate(AffinityLink al) {
         return getBitRateOnAffinityLinkInternal(al, null);
     }
 
-    public double getBitRateOnAffinityLink(AffinityLink al, Byte protocol) {
+    public double getBitRate(AffinityLink al, Byte protocol) {
         return getBitRateOnAffinityLinkInternal(al, protocol);
     }
 
-    public long getByteCountIntoPrefix(String prefixAndMask) {
-        return getByteCountIntoPrefixInternal(prefixAndMask, null);
+    public Map<Byte, Double> getAllBitRates(AffinityLink al) {
+        Map<Byte, Double> bitRates = new HashMap<Byte, Double>();
+        Set<Byte> protocols = getProtocols(al);
+        for (Byte protocol : protocols)
+            bitRates.put(protocol, getBitRate(al, protocol));
+        return bitRates;
     }
 
-    public long getByteCountIntoPrefix(String prefixAndMask, Byte protocol) {
-        return getByteCountIntoPrefixInternal(prefixAndMask, protocol);
+    public long getByteCount(String srcSubnet, String dstSubnet) {
+        return getByteCountBySubnetInternal(srcSubnet, dstSubnet, null);
     }
 
-    public Map<Host, Long> getIncomingHosts(String prefixAndMask) {
-        return getIncomingHostsInternal(prefixAndMask, null);
+    public long getByteCount(String srcSubnet, String dstSubnet, Byte protocol) {
+        return getByteCountBySubnetInternal(srcSubnet, dstSubnet, protocol);
     }
 
-    public Map<Host, Long> getIncomingHosts(String prefixAndMask, Byte protocol) {
-        return getIncomingHostsInternal(prefixAndMask, protocol);
+    public Map<Byte, Long> getAllByteCounts(String srcSubnet, String dstSubnet) {
+        Map<Byte, Long> byteCounts = new HashMap<Byte, Long>();
+        Set<Byte> protocols = getProtocols(srcSubnet, dstSubnet);
+        for (Byte protocol : protocols) {
+            byteCounts.put(protocol, getByteCount(srcSubnet, dstSubnet, protocol));
+        }
+        return byteCounts;
+    }
+
+    public double getBitRate(String srcSubnet, String dstSubnet) {
+        return getBitRateBySubnetInternal(srcSubnet, dstSubnet, null);
+    }
+
+    public double getBitRate(String srcSubnet, String dstSubnet, Byte protocol) {
+        return getBitRateBySubnetInternal(srcSubnet, dstSubnet, protocol);
+    }
+
+    public Map<Byte, Double> getAllBitRates(String srcSubnet, String dstSubnet) {
+        Map<Byte, Double> bitRates = new HashMap<Byte, Double>();
+        Set<Byte> protocols = getProtocols(srcSubnet, dstSubnet);
+        for (Byte protocol : protocols)
+            bitRates.put(protocol, getBitRate(srcSubnet, dstSubnet, protocol));
+        return bitRates;
+    }
+
+    public Set<Byte> getProtocols(String srcSubnet, String dstSubnet) {
+        if (srcSubnet == null && dstSubnet == null) {
+            log.debug("Source and destination subnets cannot both be null.");
+            return null;
+        }
+        Set<Byte> protocols = new HashSet<Byte>();
+        Set<Host> srcHosts;
+        Set<Host> dstHosts;
+        if (srcSubnet == null) {
+            dstHosts = getHostsInSubnet(dstSubnet);
+            srcHosts = getHostsNotInSubnet(dstSubnet);
+        } else if (dstSubnet == null) {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsNotInSubnet(srcSubnet);
+        } else {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsInSubnet(dstSubnet);
+        }
+
+        for (Host srcHost : srcHosts)
+            for (Host dstHost : dstHosts)
+                protocols.addAll(getProtocols(srcHost, dstHost));
+        return protocols;
+    }
+
+    public Map<Host, Long> getIncomingHostByteCounts(String subnet) {
+        return getIncomingHostByteCountsInternal(subnet, null);
+    }
+
+    public Map<Host, Long> getIncomingHostByteCounts(String subnet, Byte protocol) {
+        return getIncomingHostByteCountsInternal(subnet, protocol);
     }
 
     /* Return byte count between two hosts, either per-protocol or not */
@@ -285,80 +374,143 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
     /* Returns bit rate in bits-per-second on an affinity link, per-protocol or not */
     private double getBitRateOnAffinityLinkInternal(AffinityLink al, Byte protocol) {
-        double maxDuration = 0;
-        long totalBytes = 0;
+        double duration = getDurationOnAffinityLinkInternal(al, protocol);
+        long totalBytes = getByteCountOnAffinityLinkInternal(al, protocol);
+        if (duration == 0.0)
+            return 0.0;
+        return (totalBytes * 8.0) / duration;
+    }
+
+    /* Returns the duration of communication on an affinity link, per-protocol or not */
+    private double getDurationOnAffinityLinkInternal(AffinityLink al, Byte protocol) {
+        double maxDuration = 0.0;
         for (Entry<Host, Host> flow : this.affinityManager.getAllFlowsByHost(al)) {
             Host h1 = flow.getKey();
             Host h2 = flow.getValue();
             // This will handle protocol being null
-            totalBytes += getByteCountBetweenHostsInternal(h1, h2, protocol);
             double duration = getDurationBetweenHostsInternal(h1, h2, protocol);
             if (duration > maxDuration)
                 maxDuration = duration;
         }
-        if (maxDuration == 0.0)
-            return 0.0;
-        return (totalBytes * 8.0) / maxDuration;
+        return maxDuration;
     }
 
-    /* Return the total bytes for a particular protocol into this prefix */
-    private long getByteCountIntoPrefixInternal(String prefixAndMask, Byte protocol) {
+    /* Return the total bytes for a particular protocol between these subnets. */
+    private long getByteCountBySubnetInternal(String srcSubnet, String dstSubnet, Byte protocol) {
         long totalBytes = 0;
-        Map<Host, Long> hostData = getIncomingHostsInternal(prefixAndMask, protocol);
-        for (Long byteCount : hostData.values())
-            totalBytes += byteCount;
+        if (srcSubnet == null && dstSubnet == null) {
+            log.debug("Source and destination subnets cannot both be null.");
+            return totalBytes;
+        }
+        Set<Host> srcHosts;
+        Set<Host> dstHosts;
+        if (srcSubnet == null) {
+            dstHosts = getHostsInSubnet(dstSubnet);
+            srcHosts = getHostsNotInSubnet(dstSubnet);
+        } else if (dstSubnet == null) {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsNotInSubnet(srcSubnet);
+        } else {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsInSubnet(dstSubnet);
+        }
+
+        for (Host srcHost : srcHosts)
+            for (Host dstHost : dstHosts)
+                totalBytes += getByteCount(srcHost, dstHost, protocol);
         return totalBytes;
     }
 
-    /* Return the set of hosts that transfer data into any host in this subnet */
-    private Map<Host, Long> getIncomingHostsInternal(String prefixAndMask, Byte protocol) {
-        InetAddress ip;
-        Short mask;
-        Map<Host, Long> hosts = new HashMap<Host, Long>();
-
-        // Split 1.2.3.4/5 format into the prefix (1.2.3.4) and the mask (5)
-        try {
-            String[] splitPrefix = prefixAndMask.split("/");
-            ip = InetAddress.getByName(splitPrefix[0]);
-            mask = (splitPrefix.length == 2) ? Short.valueOf(splitPrefix[1]) : 32;
-        } catch (UnknownHostException e) {
-            log.debug("Incorrect prefix/mask format: " + prefixAndMask);
-            return hosts;
+    /* Returns the duration of communication between two subnetes, per-protocol or not */
+    private double getDurationBySubnetInternal(String srcSubnet, String dstSubnet, Byte protocol) {
+        double maxDuration = 0.0;
+        if (srcSubnet == null && dstSubnet == null) {
+            log.debug("Source and destination subnet cannot both be null.");
+            return maxDuration;
         }
+        Set<Host> srcHosts;
+        Set<Host> dstHosts;
+        if (srcSubnet == null) {
+            dstHosts = getHostsInSubnet(dstSubnet);
+            srcHosts = getHostsNotInSubnet(dstSubnet);
+        } else if (dstSubnet == null) {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsNotInSubnet(srcSubnet);
+        } else {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsInSubnet(dstSubnet);
+        }
+        for (Host srcHost : srcHosts) {
+            for (Host dstHost : dstHosts) {
+                double duration = getDurationBetweenHostsInternal(srcHost, dstHost, protocol);
+                if (duration > maxDuration)
+                    maxDuration = duration;
+            }
+        }
+        return maxDuration;
+    }
 
-        // Match on prefixes
-        InetAddress targetPrefix = getPrefix(ip, mask);
-        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
-        for (HostNodeConnector host : allHosts) {
-            InetAddress hostPrefix = getPrefix(host.getNetworkAddress(), mask);
-            if (hostPrefix.equals(targetPrefix)) {
-                Map<Host, Long> these_hosts = getIncomingHostsInternal(host, protocol);
-                // Merge the two maps by summing bytes between them if necessary
-                for (Host h : these_hosts.keySet()) {
-                    if (hosts.get(h) == null)
-                        hosts.put(h, these_hosts.get(h));
-                    else
-                        hosts.put(h, these_hosts.get(h) + hosts.get(h));
-                }
+    /* Returns the bit rate between these subnects, per-protocol or not. */
+    private double getBitRateBySubnetInternal(String srcSubnet, String dstSubnet, Byte protocol) {
+        double duration = getDurationBySubnetInternal(srcSubnet, dstSubnet, protocol);
+        long totalBytes = getByteCountBySubnetInternal(srcSubnet, dstSubnet, protocol);
+        if (duration == 0.0)
+            return 0.0;
+        return (totalBytes * 8.0) / duration;
+    }
+
+    /* Returns all hosts that transferred data into this subnet. */
+    private Map<Host, Long> getIncomingHostByteCountsInternal(String subnet, Byte protocol) {
+        Map<Host, Long> hosts = new HashMap<Host, Long>();
+        Set<Host> dstHosts = getHostsInSubnet(subnet);
+        Set<Host> otherHosts = getHostsNotInSubnet(subnet);
+        for (Host host : otherHosts) {
+            for (Host targetHost : dstHosts) {
+                Long byteCount = getByteCount(host, targetHost, protocol);
+                if (byteCount > 0)
+                    hosts.put(host, byteCount);
             }
         }
         return hosts;
     }
 
-    /* Return a map between the set of hosts that transferred data to
-     * the targetHost and the amount of data they each transferred,
-     * per-protocol or not */
-    private Map<Host, Long> getIncomingHostsInternal(Host targetHost, Byte protocol) {
-        Map<Host, Long> incomingHosts = new HashMap<Host, Long>();
-        for (Host sourceHost : this.hostsToStats.keySet()) {
-            long bytes = getByteCountBetweenHostsInternal(sourceHost, targetHost, protocol);
-            if (bytes > 0)
-                incomingHosts.put(sourceHost, bytes);
-        }
-        return incomingHosts;
+    private Set<Host> getHostsNotInSubnet(String subnet) {
+        Set<Host> hostsInSubnet = getHostsInSubnet(subnet);
+        Set<HostNodeConnector> otherHosts = this.hostTracker.getAllHosts();
+        otherHosts.removeAll(hostsInSubnet);
+        Set<Host> hostsNotInSubnet = new HashSet<Host>();
+        for (Host h : otherHosts)
+            hostsNotInSubnet.add(h);
+        return hostsNotInSubnet;
     }
 
-    private InetAddress getPrefix(InetAddress ip, Short mask) {
+    private Set<Host> getHostsInSubnet(String subnet) {
+        InetAddress ip;
+        Short mask;
+        Set<Host> hosts = new HashSet<Host>();
+
+        // Split 1.2.3.4/5 format into the subnet (1.2.3.4) and the mask (5)
+        try {
+            String[] splitSubnet = subnet.split("/");
+            ip = InetAddress.getByName(splitSubnet[0]);
+            mask = (splitSubnet.length == 2) ? Short.valueOf(splitSubnet[1]) : 32;
+        } catch (UnknownHostException e) {
+            log.debug("Incorrect subnet/mask format: " + subnet);
+            return hosts;
+        }
+
+        // Match on subnetes
+        InetAddress targetSubnet = getSubnet(ip, mask);
+        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
+        for (HostNodeConnector host : allHosts) {
+            InetAddress hostSubnet = getSubnet(host.getNetworkAddress(), mask);
+            if (hostSubnet.equals(targetSubnet))
+                hosts.add(host);
+        }
+        return hosts;
+    }
+
+    private InetAddress getSubnet(InetAddress ip, Short mask) {
         byte[] prefix = ip.getAddress();
         InetAddress newIP = null;
         try {

@@ -16,16 +16,16 @@ import org.opendaylight.controller.sal.core.Host;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class PrefixStatistics {
+public class SubnetStatistics {
     @XmlElement
     private long byteCount;
 
     // To satisfy JAXB
     @SuppressWarnings("unused")
-    private PrefixStatistics() {
+    private SubnetStatistics() {
     }
 
-    public PrefixStatistics(long byteCount) {
+    public SubnetStatistics(long byteCount) {
         super();
         this.byteCount = byteCount;
     }

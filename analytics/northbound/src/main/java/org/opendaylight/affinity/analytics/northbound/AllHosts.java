@@ -8,7 +8,11 @@
 
 package org.opendaylight.affinity.analytics.northbound;
 
+import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.Map;
+
+import org.opendaylight.controller.sal.core.Host;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -25,8 +29,12 @@ public class AllHosts {
     @SuppressWarnings("unused") // To satisfy JAXB
     private AllHosts() {}
 
-    public AllHosts(Map<String, Long> hostData) {
-        this.hosts = hostData;
+    public AllHosts(Map<Host, Long> hostData) {
+        this.hosts = new HashMap<String, Long>();
+        for (Host h : hostData.keySet()) {
+            InetAddress i = h.getNetworkAddress();
+            this.hosts.put(i.toString(), hostData.get(h));
+        }
     }
 
     public Map<String, Long> getHosts() {
