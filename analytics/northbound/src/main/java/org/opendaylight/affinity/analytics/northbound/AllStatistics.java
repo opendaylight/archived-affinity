@@ -8,8 +8,9 @@
 
 package org.opendaylight.affinity.analytics.northbound;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -20,14 +21,27 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.NONE)
 public class AllStatistics {
     @XmlElement
-    private Map<Byte, Statistics> data;
+    private List<ProtocolStatistics> stats;
 
-    public AllStatistics() {
-        super();
-        this.data = new HashMap<Byte, Statistics>();
+    // To satisfy JAXB
+    @SuppressWarnings("unused")
+    private AllStatistics() {
     }
 
-    public void addStat(Byte proto, Statistics stat) {
-        this.data.put(proto, stat);
+    public AllStatistics(Map<Byte, Long> byteCounts, Map<Byte, Double> bitRates) {
+        this.stats = new ArrayList<ProtocolStatistics>();
+        for (Byte protocol : byteCounts.keySet()) {
+            long byteCount = byteCounts.get(protocol);
+            double bitRate = bitRates.get(protocol);
+            this.stats.add(new ProtocolStatistics(protocol, new Statistics(byteCount, bitRate)));
+        }
+    }
+
+    public List<ProtocolStatistics> getStats() {
+        return this.stats;
+    }
+
+    public void setStats(List<ProtocolStatistics> stats) {
+        this.stats = stats;
     }
 }

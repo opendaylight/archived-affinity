@@ -8,15 +8,11 @@
 
 package org.opendaylight.affinity.analytics.northbound;
 
-import java.lang.Long;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -196,10 +192,7 @@ public class AnalyticsNorthbound {
         Host dstHost = handleHostAvailability(containerName, dstIP);
         Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(srcHost, dstHost);
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcHost, dstHost);
-        AllStatistics allStats = new AllStatistics();
-        for (Byte protocol : byteCounts.keySet())
-            allStats.addStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
-        return allStats;
+        return new AllStatistics(byteCounts, bitRates);
     }
 
     /**
@@ -293,10 +286,7 @@ public class AnalyticsNorthbound {
         AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
         Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(al);
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(al);
-        AllStatistics allStats = new AllStatistics();
-        for (Byte protocol : byteCounts.keySet())
-            allStats.addStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
-        return allStats;
+        return new AllStatistics(byteCounts, bitRates);
     }
 
     /**
@@ -426,10 +416,7 @@ public class AnalyticsNorthbound {
 
         Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(srcString, dstString);
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcString, dstString);
-        AllStatistics allStats = new AllStatistics();
-        for (Byte protocol : byteCounts.keySet())
-            allStats.addStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
-        return allStats;
+        return new AllStatistics(byteCounts, bitRates);
     }
 
     /**

@@ -32,18 +32,10 @@ def stats_hosts_protocol(src, dst, protocol):
 
 def all_stats_hosts(src, dst):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s/all" % (src, dst)
-    data = rest_method(url, "GET")['data']['entry']
-    if (type(data) == type({})):
-        host = data['key']
-        byte_count = data['value']
-        print("%s bytes from host %s" % (byte_count, host))
-    else:
-        for entry in data:
-            protocol = entry['key']
-            byte_count = entry['value']['byteCount']
-            bit_rate = entry['value']['bitRate']
-            print("%s bytes from protocol %s" % (byte_count, protocol))
-            print("%s bit/s from protocol %s" % (bit_rate, protocol))
+    data = rest_method(url, "GET")['stats']
+    for entry in data:
+        print("%s bytes from protocol %s" % (entry['stat']['byteCount'], entry['protocol']))
+        print("%s bit/s from protocol %s" % (entry['stat']['bitRate'], entry['protocol']))
 
 ### Affinity link statistics
 
@@ -61,18 +53,10 @@ def stats_link_protocol(al, protocol):
 
 def all_stats_link(al):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s/all" % al
-    data = rest_method(url, "GET")['data']['entry']
-    if (type(data) == type({})):
-        host = data['key']
-        byte_count = data['value']
-        print("%s bytes from host %s" % (byte_count, host))
-    else:
-        for entry in data:
-            protocol = entry['key']
-            byte_count = entry['value']['byteCount']
-            bit_rate = entry['value']['bitRate']
-            print("%s bytes from protocol %s" % (byte_count, protocol))
-            print("%s bit/s from protocol %s" % (bit_rate, protocol))
+    data = rest_method(url, "GET")['stats']
+    for entry in data:
+        print("%s bytes from protocol %s" % (entry['stat']['byteCount'], entry['protocol']))
+        print("%s bit/s from protocol %s" % (entry['stat']['bitRate'], entry['protocol']))
 
 ### Subnet statistics
 
@@ -104,44 +88,27 @@ def stats_subnet_protocol(src_sub, dst_sub, protocol):
 
 def all_stats_subnet(src_sub, dst_sub):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/%s/%s/all" % (src_sub, dst_sub)
-    data = rest_method(url, "GET")['data']['entry']
-    if (type(data) == type({})):
-        host = data['key']
-        byte_count = data['value']
-        print("%s bytes from host %s" % (byte_count, host))
-    else:
-        for entry in data:
-            protocol = entry['key']
-            byte_count = entry['value']['byteCount']
-            bit_rate = entry['value']['bitRate']
-            print("%s bytes from protocol %s" % (byte_count, protocol))
-            print("%s bit/s from protocol %s" % (bit_rate, protocol))
+    data = rest_method(url, "GET")['stats']
+    for entry in data:
+        print("%s bytes from protocol %s" % (entry['stat']['byteCount'], entry['protocol']))
+        print("%s bit/s from protocol %s" % (entry['stat']['bitRate'], entry['protocol']))
 
 def incoming_hosts(subnet):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/incoming/%s" % subnet
-    data = rest_method(url, "GET")['data']['entry']
+    data = rest_method(url, "GET")
+    data = rest_method(url, "GET")['stats']
     if (type(data) == type({})):
-        host = data['key']
-        byte_count = data['value']
-        print("%s bytes from host %s" % (byte_count, host))
-    else:
-        for entry in data:
-            host = entry['key']
-            byte_count = entry['value']
-            print("%s bytes from host %s" % (byte_count, host))
+        data = [data]
+    for entry in data:
+        print("%s bytes from host %s" % (entry['byteCount'], entry['hostIP']))
 
 def incoming_hosts_protocol(subnet, protocol):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/incoming/%s/%s" % (subnet, protocol)
     data = rest_method(url, "GET")['data']['entry']
     if (type(data) == type({})):
-        host = data['key']
-        byte_count = data['value']
-        print("%s bytes from host %s" % (byte_count, host))
-    else:
-        for entry in data:
-            host = entry['key']
-            byte_count = entry['value']
-            print("%s bytes from host %s" % (byte_count, host))
+        data = [data]
+    for entry in data:
+        print("%s bytes from host %s" % (entry['byteCount'], entry['hostIP']))
 
 def run_interactive_mode():
 
@@ -149,6 +116,7 @@ def run_interactive_mode():
 
     # Demo mode
     while True:
+
         request = raw_input("> ")
         request = request.split()
         request_type = request[0]

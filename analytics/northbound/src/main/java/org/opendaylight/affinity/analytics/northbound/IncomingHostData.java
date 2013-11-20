@@ -9,7 +9,8 @@
 package org.opendaylight.affinity.analytics.northbound;
 
 import java.net.InetAddress;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.controller.sal.core.Host;
@@ -23,19 +24,22 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.NONE)
 public class IncomingHostData {
     @XmlElement
-    Map<String, Long> data;
-    // TODO: There is a better way to serialize a map
+    List<HostStatistics> stats;
 
     @SuppressWarnings("unused") // To satisfy JAXB
     private IncomingHostData() {}
 
     public IncomingHostData(Map<Host, Long> hostData) {
-        this.data = new HashMap<String, Long>();
+        this.stats = new ArrayList<HostStatistics>();
         for (Host h : hostData.keySet())
-            this.data.put(h.getNetworkAddress().toString(), hostData.get(h));
+            this.stats.add(new HostStatistics(h.getNetworkAddress(), hostData.get(h)));
     }
 
-    public Map<String, Long> getData() {
-        return this.data;
+    public List<HostStatistics> getStats() {
+        return this.stats;
+    }
+
+    public void setStats(List<HostStatistics> stats) {
+        this.stats = stats;
     }
 }
