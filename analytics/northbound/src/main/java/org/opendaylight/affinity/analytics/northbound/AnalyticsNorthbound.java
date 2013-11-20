@@ -107,15 +107,15 @@ public class AnalyticsNorthbound {
     @Path("/{containerName}/hoststats/{srcNetworkAddr}/{dstNetworkAddr}")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(HostStatistics.class)
+    @TypeHint(Statistics.class)
     @StatusCodes({
-        @ResponseCode(code = 200, condition = "Operation successful"),
-        @ResponseCode(code = 404, condition = "The containerName is not found"),
-        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public HostStatistics getHostStatistics(
-        @PathParam("containerName") String containerName,
-        @PathParam("srcNetworkAddr") String srcNetworkAddr,
-        @PathParam("dstNetworkAddr") String dstNetworkAddr) {
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The containerName is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public Statistics getHostStatistics(
+           @PathParam("containerName") String containerName,
+           @PathParam("srcNetworkAddr") String srcNetworkAddr,
+           @PathParam("dstNetworkAddr") String dstNetworkAddr) {
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
         handleDefaultDisabled(containerName);
@@ -129,7 +129,7 @@ public class AnalyticsNorthbound {
         long byteCount = analyticsManager.getByteCount(srcHost, dstHost);
         double bitRate = analyticsManager.getBitRate(srcHost, dstHost);
 
-        return new HostStatistics(srcHost, dstHost, byteCount, bitRate);
+        return new Statistics(byteCount, bitRate);
     }
 
     /**
@@ -144,12 +144,12 @@ public class AnalyticsNorthbound {
     @Path("/{containerName}/hoststats/{srcIP}/{dstIP}/{protocol}")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(HostStatistics.class)
+    @TypeHint(Statistics.class)
     @StatusCodes({
         @ResponseCode(code = 200, condition = "Operation successful"),
         @ResponseCode(code = 404, condition = "The containerName is not found"),
         @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public HostStatistics getHostStatistics(
+    public Statistics getHostStatistics(
         @PathParam("containerName") String containerName,
         @PathParam("srcIP") String srcIP,
         @PathParam("dstIP") String dstIP,
@@ -167,7 +167,7 @@ public class AnalyticsNorthbound {
         long byteCount = analyticsManager.getByteCount(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
         double bitRate = analyticsManager.getBitRate(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
 
-        return new HostStatistics(srcHost, dstHost, byteCount, bitRate);
+        return new Statistics(byteCount, bitRate);
     }
 
     /**
@@ -181,12 +181,12 @@ public class AnalyticsNorthbound {
     @Path("/{containerName}/hoststats/{srcIP}/{dstIP}/all")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(AllHostStatistics.class)
+    @TypeHint(AllStatistics.class)
     @StatusCodes({
         @ResponseCode(code = 200, condition = "Operation successful"),
         @ResponseCode(code = 404, condition = "The containerName is not found"),
         @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public AllHostStatistics getAllHostStatistics(
+    public AllStatistics getAllHostStatistics(
         @PathParam("containerName") String containerName,
         @PathParam("srcIP") String srcIP,
         @PathParam("dstIP") String dstIP) {
@@ -202,10 +202,9 @@ public class AnalyticsNorthbound {
         Host dstHost = handleHostAvailability(containerName, dstIP);
         Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(srcHost, dstHost);
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcHost, dstHost);
-        AllHostStatistics allStats = new AllHostStatistics();
+        AllStatistics allStats = new AllStatistics();
         for (Byte protocol : byteCounts.keySet())
-            allStats.addHostStat(protocol, new HostStatistics(srcHost, dstHost, byteCounts.get(protocol), bitRates.get(protocol)));
-        System.out.println(">>> " + allStats);
+            allStats.addHostStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
         return allStats;
     }
 
@@ -219,12 +218,12 @@ public class AnalyticsNorthbound {
     @Path("/{containerName}/affinitylinkstats/{linkName}")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(HostStatistics.class)
+    @TypeHint(Statistics.class)
     @StatusCodes({
         @ResponseCode(code = 200, condition = "Operation successful"),
         @ResponseCode(code = 404, condition = "The containerName is not found"),
         @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public AffinityLinkStatistics getAffinityLinkStatistics(
+   public Statistics getAffinityLinkStatistics(
         @PathParam("containerName") String containerName,
         @PathParam("linkName") String affinityLinkName) {
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
@@ -239,7 +238,77 @@ public class AnalyticsNorthbound {
         long byteCount = analyticsManager.getByteCount(al);
         double bitRate = analyticsManager.getBitRate(al);
 
-        return new AffinityLinkStatistics(al, byteCount, bitRate);
+        return new Statistics(byteCount, bitRate);
+    }
+
+    /**
+     * Returns the affinity link statistics for a given link.
+     *
+     * @param containerName: Name of the Container
+     * @param linkName: AffinityLink name
+     * @param protocol: IP Protocol
+     * @return List of Affinity Link Statistics for a given link.
+     */
+    @Path("/{containerName}/affinitylinkstats/{linkName}/{protocol}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Statistics.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public Statistics getAffinityLinkStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("linkName") String affinityLinkName,
+        @PathParam("protocol") String protocol) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null)
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+
+        AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
+        long byteCount = analyticsManager.getByteCount(al, IPProtocols.getProtocolNumberByte(protocol));
+        double bitRate = analyticsManager.getBitRate(al, IPProtocols.getProtocolNumberByte(protocol));
+
+        return new Statistics(byteCount, bitRate);
+    }
+
+    /**
+     * Returns all affinity link statistics for a given link.
+     *
+     * @param containerName: Name of the Container
+     * @param linkName: AffinityLink name
+     * @return List of Affinity Link Statistics for a given link.
+     */
+    @Path("/{containerName}/affinitylinkstats/{linkName}/all")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AllStatistics.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AllStatistics getAllAffinityLinkStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("linkName") String affinityLinkName) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null)
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+
+        AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
+        Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(al);
+        Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(al);
+        AllStatistics allStats = new AllStatistics();
+        for (Byte protocol : byteCounts.keySet())
+            allStats.addHostStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
+        return allStats;
     }
 
     /**
@@ -257,15 +326,15 @@ public class AnalyticsNorthbound {
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
     @TypeHint(SubnetStatistics.class)
     @StatusCodes({
-        @ResponseCode(code = 200, condition = "Operation successful"),
-        @ResponseCode(code = 404, condition = "The containerName is not found"),
-        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public SubnetStatistics getSubnetStatistics(
-        @PathParam("containerName") String containerName,
-        @PathParam("srcIP") String srcIP,
-        @PathParam("srcMask") String srcMask,
-        @PathParam("dstIP") String dstIP,
-        @PathParam("dstMask") String dstMask) {
+            @ResponseCode(code = 200, condition = "Operation successful"),
+                @ResponseCode(code = 404, condition = "The containerName is not found"),
+                @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+                public SubnetStatistics getSubnetStatistics(
+                                                            @PathParam("containerName") String containerName,
+                                                            @PathParam("srcIP") String srcIP,
+                                                            @PathParam("srcMask") String srcMask,
+                                                            @PathParam("dstIP") String dstIP,
+                                                            @PathParam("dstMask") String dstMask) {
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
         handleDefaultDisabled(containerName);
@@ -298,13 +367,13 @@ public class AnalyticsNorthbound {
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
     @TypeHint(AllHosts.class)
     @StatusCodes({
-        @ResponseCode(code = 200, condition = "Operation successful"),
-        @ResponseCode(code = 404, condition = "The containerName is not found"),
-        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public AllHosts getIncomingHostByteCounts(
-        @PathParam("containerName") String containerName,
-        @PathParam("ip") String ip,
-        @PathParam("mask") String mask) {
+            @ResponseCode(code = 200, condition = "Operation successful"),
+                @ResponseCode(code = 404, condition = "The containerName is not found"),
+                @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+                public AllHosts getIncomingHostByteCounts(
+                                                          @PathParam("containerName") String containerName,
+                                                          @PathParam("ip") String ip,
+                                                          @PathParam("mask") String mask) {
         // TODO: Change AllHosts class name to something better
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);

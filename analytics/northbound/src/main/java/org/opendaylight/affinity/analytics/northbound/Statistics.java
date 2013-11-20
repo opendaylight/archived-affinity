@@ -13,13 +13,9 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.opendaylight.affinity.affinity.AffinityLink;
-
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class AffinityLinkStatistics {
-
-    private AffinityLink link;
+public class Statistics {
     @XmlElement
     private long byteCount;
     @XmlElement
@@ -27,22 +23,13 @@ public class AffinityLinkStatistics {
 
     // To satisfy JAXB
     @SuppressWarnings("unused")
-    private AffinityLinkStatistics() {
+    private Statistics() {
     }
 
-    public AffinityLinkStatistics(AffinityLink link, long byteCount, double bitRate) {
+    public Statistics(long byteCount, double bitRate) {
         super();
-        this.link = link;
         this.byteCount = byteCount;
         this.bitRate = bitRate;
-    }
-
-    public AffinityLink getLink() {
-        return this.link;
-    }
-
-    public void setLink(AffinityLink link) {
-        this.link = link;
     }
 
     public long getByteCount() {

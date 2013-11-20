@@ -56,6 +56,42 @@ def all_bit_rates_hosts(src, dst):
 
 ### Affinity link statistics
 
+def bytes_on_link(al):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s" % al
+    data = rest_method(url, "GET")
+    print("%s bytes on link %s" % (data['byteCount'], al))
+
+def bytes_on_link_protocol(al, protocol):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s/%s" % (al, protocol)
+    data = rest_method(url, "GET")
+    print("%s bytes on link %s for protocol %s" % (data['byteCount'], al, protocol))
+
+def rate_on_link(al):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s" % al
+    data = rest_method(url, "GET")
+    print("%s bit/s on link %s" % (data['bitRate'], al))
+
+def rate_on_link_protocol(al, protocol):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s/%s" % (al, protocol)
+    data = rest_method(url, "GET")
+    print("%s bit/s on link %s for protocol %s" % (data['bitRate'], al, protocol))
+
+def all_byte_counts_link(al):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s/all" % al
+    data = rest_method(url, "GET")['data']['entry']
+    for entry in data:
+        protocol = entry['key']
+        byte_count = entry['value']['byteCount']
+        print("%s bytes from protocol %s" % (byte_count, protocol))
+
+def all_bit_rates_link(al):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s/all" % al
+    data = rest_method(url, "GET")['data']['entry']
+    for entry in data:
+        protocol = entry['key']
+        bit_rate = entry['value']['bitRate']
+        print("%s bit/s from protocol %s" % (bit_rate, protocol))
+
 def run_interactive_mode():
 
     print "Usage: [host | link] [src dst | link-name] {protocol}"
@@ -63,30 +99,38 @@ def run_interactive_mode():
     # Demo mode
     while True:
         request = raw_input("> ")
-        try:
-            request = request.split()
-            request_type = request[0]
+        request = request.split()
+        request_type = request[0]
 
-            if (request_type == "quit" or request_type == "exit"):
-                sys.exit()
+        if (request_type == "quit" or request_type == "exit"):
+            sys.exit()
 
-            if (request_type == "host"):
-                if (len(request) == 3):
-                    src, dst = request[1:3]
-                    bytes_between_hosts(src, dst)
-                    rate_between_hosts(src, dst)
-                    all_byte_counts_hosts(src, dst)
-                    all_bit_rates_hosts(src, dst)
-                elif (len(request) == 4):
-                    src, dst, protocol = request[1:4]
-                    bytes_between_hosts_protocol(src, dst, int(protocol))
-                    rate_between_hosts_protocol(src, dst, int(protocol))
+        if (request_type == "host"):
+            if (len(request) == 3):
+                src, dst = request[1:3]
+                bytes_between_hosts(src, dst)
+                rate_between_hosts(src, dst)
+                all_byte_counts_hosts(src, dst)
+                all_bit_rates_hosts(src, dst)
+            elif (len(request) == 4):
+                src, dst, protocol = request[1:4]
+                bytes_between_hosts_protocol(src, dst, int(protocol))
+                rate_between_hosts_protocol(src, dst, int(protocol))
 
-            elif (request_type == "link"):
+        elif (request_type == "link"):
+            if (len(request) == 2):
                 link = request[1]
-
-            elif (request_type == "subnet"):
-                subnet = request[1]
+                bytes_on_link(link)
+                rate_on_link(link)
+                all_byte_counts_link(link)
+                all_bit_rates_link(link)
+            elif (len(request) == 3):
+                link, protocol = request[1:3]
+                bytes_on_link_protocol(link, protocol)
+                rate_on_link_protocol(link, protocol)
+                
+        elif (request_type == "subnet"):
+            subnet = request[1]
 
 def main():
 
@@ -95,10 +139,10 @@ def main():
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
 
     # Set up an affinity link
-#    affinity_control = AffinityControl()
-#    affinity_control.add_affinity_group("testAG1", ips=["10.0.0.1", "10.0.0.2"])
-#    affinity_control.add_affinity_group("testAG2", ips=["10.0.0.3", "10.0.0.4"])
-#    affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
+    affinity_control = AffinityControl()
+    affinity_control.add_affinity_group("testAG1", ips=["10.0.0.1", "10.0.0.2"])
+    affinity_control.add_affinity_group("testAG2", ips=["10.0.0.3", "10.0.0.4"])
+    affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
 #    raw_input("[Press enter to continue]" )
 
     run_interactive_mode()

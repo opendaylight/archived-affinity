@@ -18,16 +18,16 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class AllHostStatistics {
+public class AllStatistics {
     @XmlElement
-    private Map<Byte, HostStatistics> data;
+    private Map<Byte, Statistics> data;
 
-    public AllHostStatistics() {
+    public AllStatistics() {
         super();
-        this.data = new HashMap<Byte, HostStatistics>();
+        this.data = new HashMap<Byte, Statistics>();
     }
 
-    public void addHostStat(Byte proto, HostStatistics stat) {
+    public void addHostStat(Byte proto, Statistics stat) {
         this.data.put(proto, stat);
     }
 }
