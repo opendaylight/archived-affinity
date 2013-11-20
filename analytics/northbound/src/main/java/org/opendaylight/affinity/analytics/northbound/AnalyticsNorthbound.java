@@ -133,6 +133,83 @@ public class AnalyticsNorthbound {
     }
 
     /**
+     * Returns Host Statistics for a (src, dst) pair and a particular protocol
+     *
+     * @param containerName: Name of the Container
+     * @param srcIP: Source IP
+     * @param dstIP: Destination IP
+     * @param protocol: Protocol of interest
+     * @return Host Statistics for a given Node.
+     */
+    @Path("/{containerName}/hoststats/{srcIP}/{dstIP}/{protocol}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(HostStatistics.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public HostStatistics getHostStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("srcIP") String srcIP,
+        @PathParam("dstIP") String dstIP,
+        @PathParam("protocol") String protocol) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null)
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+
+        Host srcHost = handleHostAvailability(containerName, srcIP);
+        Host dstHost = handleHostAvailability(containerName, dstIP);
+        long byteCount = analyticsManager.getByteCount(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
+        double bitRate = analyticsManager.getBitRate(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
+
+        return new HostStatistics(srcHost, dstHost, byteCount, bitRate);
+    }
+
+    /**
+     * Returns all Host Statistics for a (src, dst) pair
+     *
+     * @param containerName: Name of the Container
+     * @param srcIP: Source IP
+     * @param dstIP: Destination IP
+     * @return Host Statistics for a given Node.
+     */
+    @Path("/{containerName}/hoststats/{srcIP}/{dstIP}/all")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AllHostStatistics.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AllHostStatistics getAllHostStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("srcIP") String srcIP,
+        @PathParam("dstIP") String dstIP) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null)
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+
+        Host srcHost = handleHostAvailability(containerName, srcIP);
+        Host dstHost = handleHostAvailability(containerName, dstIP);
+        Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(srcHost, dstHost);
+        Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcHost, dstHost);
+        AllHostStatistics allStats = new AllHostStatistics();
+        for (Byte protocol : byteCounts.keySet())
+            allStats.addHostStat(protocol, new HostStatistics(srcHost, dstHost, byteCounts.get(protocol), bitRates.get(protocol)));
+        System.out.println(">>> " + allStats);
+        return allStats;
+    }
+
+    /**
      * Returns the affinity link statistics for a given link.
      *
      * @param containerName: Name of the Container
@@ -228,6 +305,7 @@ public class AnalyticsNorthbound {
         @PathParam("containerName") String containerName,
         @PathParam("ip") String ip,
         @PathParam("mask") String mask) {
+        // TODO: Change AllHosts class name to something better
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
         handleDefaultDisabled(containerName);

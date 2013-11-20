@@ -202,30 +202,12 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         return this.hostsToStats.get(src).get(dst).getAllBitRates();
     }
 
-    public Set<Byte> getProtocols(Host src, Host dst) {
-        if (this.hostsToStats.get(src) == null ||
-            this.hostsToStats.get(src).get(dst) == null)
-            return new HashSet<Byte>();
-        return this.hostsToStats.get(src).get(dst).getProtocols();
-    }
-
     public long getByteCount(AffinityLink al) {
         return getByteCountOnAffinityLinkInternal(al, null);
     }
 
     public long getByteCount(AffinityLink al, Byte protocol) {
         return getByteCountOnAffinityLinkInternal(al, protocol);
-    }
-
-    public Set<Byte> getProtocols(AffinityLink al) {
-        Set<Byte> protocols = new HashSet<Byte>();
-        for (Entry<Host, Host> flow : this.affinityManager.getAllFlowsByHost(al)) {
-            Host h1 = flow.getKey();
-            Host h2 = flow.getValue();
-            Set<Byte> thisProtocols = getProtocols(h1, h2);
-            protocols.addAll(thisProtocols);
-        }
-        return protocols;
     }
 
     public Map<Byte, Long> getAllByteCounts(AffinityLink al) {
@@ -285,31 +267,6 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         for (Byte protocol : protocols)
             bitRates.put(protocol, getBitRate(srcSubnet, dstSubnet, protocol));
         return bitRates;
-    }
-
-    public Set<Byte> getProtocols(String srcSubnet, String dstSubnet) {
-        if (srcSubnet == null && dstSubnet == null) {
-            log.debug("Source and destination subnets cannot both be null.");
-            return null;
-        }
-        Set<Byte> protocols = new HashSet<Byte>();
-        Set<Host> srcHosts;
-        Set<Host> dstHosts;
-        if (srcSubnet == null) {
-            dstHosts = getHostsInSubnet(dstSubnet);
-            srcHosts = getHostsNotInSubnet(dstSubnet);
-        } else if (dstSubnet == null) {
-            srcHosts = getHostsInSubnet(srcSubnet);
-            dstHosts = getHostsNotInSubnet(srcSubnet);
-        } else {
-            srcHosts = getHostsInSubnet(srcSubnet);
-            dstHosts = getHostsInSubnet(dstSubnet);
-        }
-
-        for (Host srcHost : srcHosts)
-            for (Host dstHost : dstHosts)
-                protocols.addAll(getProtocols(srcHost, dstHost));
-        return protocols;
     }
 
     public Map<Host, Long> getIncomingHostByteCounts(String subnet) {
@@ -472,6 +429,49 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
             }
         }
         return hosts;
+    }
+
+    private Set<Byte> getProtocols(Host src, Host dst) {
+        if (this.hostsToStats.get(src) == null ||
+            this.hostsToStats.get(src).get(dst) == null)
+            return new HashSet<Byte>();
+        return this.hostsToStats.get(src).get(dst).getProtocols();
+    }
+
+    private Set<Byte> getProtocols(AffinityLink al) {
+        Set<Byte> protocols = new HashSet<Byte>();
+        for (Entry<Host, Host> flow : this.affinityManager.getAllFlowsByHost(al)) {
+            Host h1 = flow.getKey();
+            Host h2 = flow.getValue();
+            Set<Byte> thisProtocols = getProtocols(h1, h2);
+            protocols.addAll(thisProtocols);
+        }
+        return protocols;
+    }
+
+    private Set<Byte> getProtocols(String srcSubnet, String dstSubnet) {
+        if (srcSubnet == null && dstSubnet == null) {
+            log.debug("Source and destination subnets cannot both be null.");
+            return null;
+        }
+        Set<Byte> protocols = new HashSet<Byte>();
+        Set<Host> srcHosts;
+        Set<Host> dstHosts;
+        if (srcSubnet == null) {
+            dstHosts = getHostsInSubnet(dstSubnet);
+            srcHosts = getHostsNotInSubnet(dstSubnet);
+        } else if (dstSubnet == null) {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsNotInSubnet(srcSubnet);
+        } else {
+            srcHosts = getHostsInSubnet(srcSubnet);
+            dstHosts = getHostsInSubnet(dstSubnet);
+        }
+
+        for (Host srcHost : srcHosts)
+            for (Host dstHost : dstHosts)
+                protocols.addAll(getProtocols(srcHost, dstHost));
+        return protocols;
     }
 
     private Set<Host> getHostsNotInSubnet(String subnet) {

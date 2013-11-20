@@ -23,7 +23,6 @@ public interface IAnalyticsManager {
     double getBitRate(Host src, Host dst, Byte protocol);
     Map<Byte, Long> getAllByteCounts(Host src, Host dst);
     Map<Byte, Double> getAllBitRates(Host src, Host dst);
-    Set<Byte> getProtocols(Host src, Host dst);
 
     // AffinityLink statistics
     long getByteCount(AffinityLink al);
@@ -32,7 +31,6 @@ public interface IAnalyticsManager {
     double getBitRate(AffinityLink al, Byte protocol);
     Map<Byte, Long> getAllByteCounts(AffinityLink al);
     Map<Byte, Double> getAllBitRates(AffinityLink al);
-    Set<Byte> getProtocols(AffinityLink al);
 
     // Subnet statistics
     long getByteCount(String srcSubnet, String dstSubnet);
@@ -41,7 +39,6 @@ public interface IAnalyticsManager {
     double getBitRate(String srcSubnet, String dstSubnet, Byte protocol);
     Map<Byte, Long> getAllByteCounts(String srcSubnet, String dstSubnet);
     Map<Byte, Double> getAllBitRates(String srcSubnet, String dstSubnet);
-    Set<Byte> getProtocols(String srcSubnet, String dstSubnet);
 
     // Miscellaneous
     Map<Host, Long> getIncomingHostByteCounts(String subnet);

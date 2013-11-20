@@ -9,20 +9,56 @@ from stats import Stats
 from subnet import SubnetControl
 from affinity_control import AffinityControl
 
-# 1. Start the controller
-# 2. On the local machine (e.g., your laptop), start this script.
-#    > python analytics.py
-# 3. On the mininet VM, run:
-#    > sudo mn --controller=remote,ip=192.168.56.1 --topo tree,2
-#    > h1 ping h3
-# 4. Give commands to analytics.py.  For instance:
-#    > host bytes 10.0.0.1 10.0.0.3
-#   (There is a usage prompt that prints at the beginning of analytics.py)
-# 5. Type 'quit' to exit analytics.py
+# Generic REST query
+def rest_method(url, rest_type):
+    h = httplib2.Http(".cache")
+    h.add_credentials('admin', 'admin')
+    resp, content = h.request(url, rest_type)
+    return json.loads(content)
+
+### Host Statistics
+
+def bytes_between_hosts(src, dst):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s" % (src, dst)
+    data = rest_method(url, "GET")
+    print("%d bytes between %s and %s" % (int(data["byteCount"]), src, dst))
+
+def bytes_between_hosts_protocol(src, dst, protocol):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s/%d" % (src, dst, protocol)
+    data = rest_method(url, "GET")
+    print("%d bytes between %s and %s for protocol %d" % (int(data["byteCount"]), src, dst, protocol))
+
+def rate_between_hosts(src, dst):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s" % (src, dst)
+    data = rest_method(url, "GET")
+    print("%s bit/s between %s and %s" % (data["bitRate"], src, dst))
+
+def rate_between_hosts_protocol(src, dst, protocol):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s/%d" % (src, dst, protocol)
+    data = rest_method(url, "GET")
+    print("%s bit/s between %s and %s on protocol %d" % (data["bitRate"], src, dst, protocol))
+
+def all_byte_counts_hosts(src, dst):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s/all" % (src, dst)
+    data = rest_method(url, "GET")['data']['entry']
+    for entry in data:
+        protocol = entry['key']
+        byte_count = entry['value']['byteCount']
+        print("%s bytes from protocol %s" % (byte_count, protocol))
+
+def all_bit_rates_hosts(src, dst):
+    url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s/all" % (src, dst)
+    data = rest_method(url, "GET")['data']['entry']
+    for entry in data:
+        protocol = entry['key']
+        bit_rate = entry['value']['bitRate']
+        print("%s bit/s from protocol %s" % (bit_rate, protocol))
+
+### Affinity link statistics
 
 def run_interactive_mode():
 
-    print "Usage: [host | link] [bytes | rate] [src dst | link-name]"
+    print "Usage: [host | link] [src dst | link-name] {protocol}"
 
     # Demo mode
     while True:
@@ -31,45 +67,26 @@ def run_interactive_mode():
             request = request.split()
             request_type = request[0]
 
-            if (request_type == "quit"):
+            if (request_type == "quit" or request_type == "exit"):
                 sys.exit()
 
             if (request_type == "host"):
-                action = request[1]
-                src, dst = request[2:4]
-                host_stat = Stats(Stats.TYPE_HOST, src=src, dst=dst)
-                if (action == "bytes"):
-                    print("%d bytes between %s and %s" % (host_stat.get_bytes(), src, dst))
-                elif (action == "rate"):
-                    print("%f bit/s between %s and %s" % (host_stat.get_bit_rate(), src, dst))
-                else:
-                    raise Exception
+                if (len(request) == 3):
+                    src, dst = request[1:3]
+                    bytes_between_hosts(src, dst)
+                    rate_between_hosts(src, dst)
+                    all_byte_counts_hosts(src, dst)
+                    all_bit_rates_hosts(src, dst)
+                elif (len(request) == 4):
+                    src, dst, protocol = request[1:4]
+                    bytes_between_hosts_protocol(src, dst, int(protocol))
+                    rate_between_hosts_protocol(src, dst, int(protocol))
 
             elif (request_type == "link"):
-                action = request[1]
-                link = request[2]
-                link_stat = Stats(Stats.TYPE_AL, al=link)
-                if (action == "bytes"):
-                    print("%d bytes on %s" % (link_stat.get_bytes(), link))
-                elif (action == "rate"):
-                    print("%f bit/s on %s" % (link_stat.get_bit_rate(), link))
-                else:
-                    raise Exception
+                link = request[1]
 
-            elif (request_type == "prefix"):
-                prefix = request[1]
-                h = httplib2.Http(".cache")
-                h.add_credentials("admin", "admin")
-                url_prefix = "http://localhost:8080/affinity/nb/v2/analytics/default/prefixstats/"
-                resp, content = h.request(url_prefix + prefix, "GET")
-                if (resp.status == 200):
-                    data = json.loads(content)
-                    print data['byteCount'], "bytes"
-            else:
-                raise Exception
-        except Exception as e:
-            print "Error"
-            print e
+            elif (request_type == "subnet"):
+                subnet = request[1]
 
 def main():
 
@@ -78,11 +95,11 @@ def main():
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
 
     # Set up an affinity link
-    affinity_control = AffinityControl()
-    affinity_control.add_affinity_group("testAG1", ips=["10.0.0.1", "10.0.0.2"])
-    affinity_control.add_affinity_group("testAG2", ips=["10.0.0.3", "10.0.0.4"])
-    affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
-    raw_input("[Press enter to continue]" )
+#    affinity_control = AffinityControl()
+#    affinity_control.add_affinity_group("testAG1", ips=["10.0.0.1", "10.0.0.2"])
+#    affinity_control.add_affinity_group("testAG2", ips=["10.0.0.3", "10.0.0.4"])
+#    affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
+#    raw_input("[Press enter to continue]" )
 
     run_interactive_mode()
 
