@@ -21,23 +21,21 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "map")
 @XmlAccessorType(XmlAccessType.NONE)
-public class AllHosts {
+public class IncomingHostData {
     @XmlElement
-    Map<String, Long> hosts;
+    Map<String, Long> data;
     // TODO: There is a better way to serialize a map
 
     @SuppressWarnings("unused") // To satisfy JAXB
-    private AllHosts() {}
+    private IncomingHostData() {}
 
-    public AllHosts(Map<Host, Long> hostData) {
-        this.hosts = new HashMap<String, Long>();
-        for (Host h : hostData.keySet()) {
-            InetAddress i = h.getNetworkAddress();
-            this.hosts.put(i.toString(), hostData.get(h));
-        }
+    public IncomingHostData(Map<Host, Long> hostData) {
+        this.data = new HashMap<String, Long>();
+        for (Host h : hostData.keySet())
+            this.data.put(h.getNetworkAddress().toString(), hostData.get(h));
     }
 
-    public Map<String, Long> getHosts() {
-        return this.hosts;
+    public Map<String, Long> getData() {
+        return this.data;
     }
 }

@@ -27,7 +27,7 @@ public class AllStatistics {
         this.data = new HashMap<Byte, Statistics>();
     }
 
-    public void addHostStat(Byte proto, Statistics stat) {
+    public void addStat(Byte proto, Statistics stat) {
         this.data.put(proto, stat);
     }
 }

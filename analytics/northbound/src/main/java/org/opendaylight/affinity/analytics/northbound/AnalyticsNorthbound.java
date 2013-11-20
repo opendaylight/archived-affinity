@@ -97,12 +97,10 @@ public class AnalyticsNorthbound {
     }
 
     /**
-     * Returns Host Statistics for a (src, dst) pair
-     *
      * @param containerName: Name of the Container
      * @param dataLayerAddr: DataLayerAddress for the host
      * @param networkAddr: NetworkAddress for the host
-     * @return Host Statistics for a given Node.
+     * @return Statistics for a (src, dst) pair.
      */
     @Path("/{containerName}/hoststats/{srcNetworkAddr}/{dstNetworkAddr}")
     @GET
@@ -133,13 +131,11 @@ public class AnalyticsNorthbound {
     }
 
     /**
-     * Returns Host Statistics for a (src, dst) pair and a particular protocol
-     *
      * @param containerName: Name of the Container
      * @param srcIP: Source IP
      * @param dstIP: Destination IP
-     * @param protocol: Protocol of interest
-     * @return Host Statistics for a given Node.
+     * @param protocol: IP protocol
+     * @return Statistics for a (src, dst) pair and a particular protocol
      */
     @Path("/{containerName}/hoststats/{srcIP}/{dstIP}/{protocol}")
     @GET
@@ -171,12 +167,10 @@ public class AnalyticsNorthbound {
     }
 
     /**
-     * Returns all Host Statistics for a (src, dst) pair
-     *
      * @param containerName: Name of the Container
      * @param srcIP: Source IP
      * @param dstIP: Destination IP
-     * @return Host Statistics for a given Node.
+     * @return All statistics for a (src, dst) pair
      */
     @Path("/{containerName}/hoststats/{srcIP}/{dstIP}/all")
     @GET
@@ -204,16 +198,14 @@ public class AnalyticsNorthbound {
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcHost, dstHost);
         AllStatistics allStats = new AllStatistics();
         for (Byte protocol : byteCounts.keySet())
-            allStats.addHostStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
+            allStats.addStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
         return allStats;
     }
 
     /**
-     * Returns the affinity link statistics for a given link.
-     *
      * @param containerName: Name of the Container
      * @param linkName: AffinityLink name
-     * @return List of Affinity Link Statistics for a given link.
+     * @return Statistics for an affinity link
      */
     @Path("/{containerName}/affinitylinkstats/{linkName}")
     @GET
@@ -242,12 +234,10 @@ public class AnalyticsNorthbound {
     }
 
     /**
-     * Returns the affinity link statistics for a given link.
-     *
      * @param containerName: Name of the Container
      * @param linkName: AffinityLink name
      * @param protocol: IP Protocol
-     * @return List of Affinity Link Statistics for a given link.
+     * @return Statistics for an affinity link and a particular protocol
      */
     @Path("/{containerName}/affinitylinkstats/{linkName}/{protocol}")
     @GET
@@ -277,11 +267,9 @@ public class AnalyticsNorthbound {
     }
 
     /**
-     * Returns all affinity link statistics for a given link.
-     *
      * @param containerName: Name of the Container
      * @param linkName: AffinityLink name
-     * @return List of Affinity Link Statistics for a given link.
+     * @return All statistics for an affinity link
      */
     @Path("/{containerName}/affinitylinkstats/{linkName}/all")
     @GET
@@ -307,34 +295,32 @@ public class AnalyticsNorthbound {
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(al);
         AllStatistics allStats = new AllStatistics();
         for (Byte protocol : byteCounts.keySet())
-            allStats.addHostStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
+            allStats.addStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
         return allStats;
     }
 
     /**
-     * Returns SubnetStatistics
-     *
      * @param containerName: Name of the Container
-     * @param srcIP: IP prefix
-     * @param srcMask: Mask
-     * @param dstIP: IP prefix
-     * @param dstMask: Mask
-     * @return SubnetStatistics for a particular subnet
+     * @param srcIP: Source IP prefix
+     * @param srcMask: Source mask
+     * @param dstIP: Destination IP prefix
+     * @param dstMask: Destination mask
+     * @return Statistics between subnets
      */
     @Path("/{containerName}/subnetstats/{srcIP}/{srcMask}/{dstIP}/{dstMask}")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(SubnetStatistics.class)
+    @TypeHint(Statistics.class)
     @StatusCodes({
-            @ResponseCode(code = 200, condition = "Operation successful"),
-                @ResponseCode(code = 404, condition = "The containerName is not found"),
-                @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-                public SubnetStatistics getSubnetStatistics(
-                                                            @PathParam("containerName") String containerName,
-                                                            @PathParam("srcIP") String srcIP,
-                                                            @PathParam("srcMask") String srcMask,
-                                                            @PathParam("dstIP") String dstIP,
-                                                            @PathParam("dstMask") String dstMask) {
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public Statistics getSubnetStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("srcIP") String srcIP,
+        @PathParam("srcMask") String srcMask,
+        @PathParam("dstIP") String dstIP,
+        @PathParam("dstMask") String dstMask) {
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
         handleDefaultDisabled(containerName);
@@ -343,38 +329,127 @@ public class AnalyticsNorthbound {
         if (analyticsManager == null)
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
 
-        long byteCount;
+        String srcString = srcIP + "/" + srcMask;
+        String dstString = dstIP + "/" + dstMask;
         // TODO: This is hardly the most elegant way to handle null prefixes
-        if (srcIP.equals("null") && srcMask.equals("null"))
-            byteCount = analyticsManager.getByteCount(null, dstIP + "/" + dstMask);
-        else if (dstIP.equals("null") && dstMask.equals("null"))
-            byteCount = analyticsManager.getByteCount(srcIP + "/" + srcMask, null);
-        else
-            byteCount = analyticsManager.getByteCount(srcIP + "/" + srcMask, dstIP + "/" + dstMask);
-        return new SubnetStatistics(byteCount);
+        if (srcString.equals("null/null"))
+            srcString = null;
+        if (dstString.equals("null/null"))
+            dstString = null;
+        long byteCount = analyticsManager.getByteCount(srcString, dstString);
+        double bitRate = analyticsManager.getBitRate(srcString, dstString);
+
+        return new Statistics(byteCount, bitRate);
     }
 
     /**
-     * Returns hosts that sent data into this prefix
-     *
+     * @param containerName: Name of the Container
+     * @param srcIP: Source IP prefix
+     * @param srcMask: Source mask
+     * @param dstIP: Destination IP prefix
+     * @param dstMask: Destination mask
+     * @param protocol: IP protocol
+     * @return Statistics between subnets for a particular protocol
+     */
+    @Path("/{containerName}/subnetstats/{srcIP}/{srcMask}/{dstIP}/{dstMask}/{protocol}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Statistics.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public Statistics getSubnetStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("srcIP") String srcIP,
+        @PathParam("srcMask") String srcMask,
+        @PathParam("dstIP") String dstIP,
+        @PathParam("dstMask") String dstMask,
+        @PathParam("protocol") String protocol) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null)
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+
+        String srcString = srcIP + "/" + srcMask;
+        String dstString = dstIP + "/" + dstMask;
+        // TODO: This is hardly the most elegant way to handle null prefixes
+        if (srcString.equals("null/null"))
+            srcString = null;
+        if (dstString.equals("null/null"))
+            dstString = null;
+        long byteCount = analyticsManager.getByteCount(srcString, dstString, IPProtocols.getProtocolNumberByte(protocol));
+        double bitRate = analyticsManager.getBitRate(srcString, dstString, IPProtocols.getProtocolNumberByte(protocol));
+
+        return new Statistics(byteCount, bitRate);
+    }
+    /**
+     * @param containerName: Name of the Container
+     * @param srcIP: Source IP prefix
+     * @param srcMask: Source mask
+     * @param dstIP: Destination IP prefix
+     * @param dstMask: Destination mask
+     * @return Statistics between subnets for a particular protocol
+     */
+    @Path("/{containerName}/subnetstats/{srcIP}/{srcMask}/{dstIP}/{dstMask}/all")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AllStatistics.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AllStatistics getAllSubnetStatistics(
+        @PathParam("containerName") String containerName,
+        @PathParam("srcIP") String srcIP,
+        @PathParam("srcMask") String srcMask,
+        @PathParam("dstIP") String dstIP,
+        @PathParam("dstMask") String dstMask) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null)
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+
+        String srcString = srcIP + "/" + srcMask;
+        String dstString = dstIP + "/" + dstMask;
+        // TODO: This is hardly the most elegant way to handle null prefixes
+        if (srcString.equals("null/null"))
+            srcString = null;
+        if (dstString.equals("null/null"))
+            dstString = null;
+
+        Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(srcString, dstString);
+        Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcString, dstString);
+        AllStatistics allStats = new AllStatistics();
+        for (Byte protocol : byteCounts.keySet())
+            allStats.addStat(protocol, new Statistics(byteCounts.get(protocol), bitRates.get(protocol)));
+        return allStats;
+    }
+
+    /**
      * @param containerName: Name of the Container
      * @param ip: IP prefix
      * @param mask: Mask
-     * @return AllHosts for the particular subnet
+     * @return Hosts that sent data into this subnet
      */
     @Path("/{containerName}/subnetstats/incoming/{ip}/{mask}/")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(AllHosts.class)
+    @TypeHint(IncomingHostData.class)
     @StatusCodes({
-            @ResponseCode(code = 200, condition = "Operation successful"),
-                @ResponseCode(code = 404, condition = "The containerName is not found"),
-                @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-                public AllHosts getIncomingHostByteCounts(
-                                                          @PathParam("containerName") String containerName,
-                                                          @PathParam("ip") String ip,
-                                                          @PathParam("mask") String mask) {
-        // TODO: Change AllHosts class name to something better
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public IncomingHostData getIncomingHostByteCounts(
+        @PathParam("containerName") String containerName,
+        @PathParam("ip") String ip,
+        @PathParam("mask") String mask) {
         if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
             throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
         handleDefaultDisabled(containerName);
@@ -384,7 +459,39 @@ public class AnalyticsNorthbound {
             throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
 
         Map<Host, Long> hosts = analyticsManager.getIncomingHostByteCounts(ip + "/" + mask);
-        return new AllHosts(hosts);
+        return new IncomingHostData(hosts);
+    }
+
+    /**
+     * @param containerName: Name of the Container
+     * @param ip: IP prefix
+     * @param mask: Mask
+     * @param protocol: IP protocol
+     * @return Hosts that sent data into this subnet using this protocol
+     */
+    @Path("/{containerName}/subnetstats/incoming/{ip}/{mask}/{protocol}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(IncomingHostData.class)
+    @StatusCodes({
+        @ResponseCode(code = 200, condition = "Operation successful"),
+        @ResponseCode(code = 404, condition = "The containerName is not found"),
+        @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public IncomingHostData getIncomingHostByteCounts(
+        @PathParam("containerName") String containerName,
+        @PathParam("ip") String ip,
+        @PathParam("mask") String mask,
+        @PathParam("protocol") String protocol) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this))
+            throw new UnauthorizedException("User is not authorized to perform this operation on container " + containerName);
+        handleDefaultDisabled(containerName);
+
+        IAnalyticsManager analyticsManager = getAnalyticsService(containerName);
+        if (analyticsManager == null)
+            throw new ServiceUnavailableException("Analytics " + RestMessages.SERVICEUNAVAILABLE.toString());
+
+        Map<Host, Long> hosts = analyticsManager.getIncomingHostByteCounts(ip + "/" + mask, IPProtocols.getProtocolNumberByte(protocol));
+        return new IncomingHostData(hosts);
     }
 
     private void handleDefaultDisabled(String containerName) {
