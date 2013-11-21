@@ -69,13 +69,13 @@ class Stats:
             resp, content = self.http.request(self.url_prefix + "incoming/" + self.subnet, "GET")
             data = json.loads(content)
             if (data == {}): return []
-            host_data = data['hosts']['entry']
+            data = data['stats']
             ips = []
             total_bytes_in = self.get_bytes()
-            n = len(host_data)
-            for d in host_data:
-                bytes_from_ip = int(d['value'])
-                ip = d['key'].replace("/", "") # IPs sometimes (always?) get returned as strings like /1.2.3.4
+            n = len(data)
+            for d in data:
+                bytes_from_ip = int(d['byteCount'])
+                ip = d['hostIP'].replace("/", "") # IPs sometimes (always?) get returned as strings like /1.2.3.4
                 if (bytes_from_ip >= total_bytes_in / float(n)):
                     ips.append(ip)
             return ips

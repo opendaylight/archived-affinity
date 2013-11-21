@@ -57,6 +57,8 @@ public class HostStats {
 
     // Returns the maximum duration across all protocols
     public double getDuration() {
+        if (this.durations.isEmpty())
+            return 0.0;
         return Collections.max(this.durations.values());
     }
 
