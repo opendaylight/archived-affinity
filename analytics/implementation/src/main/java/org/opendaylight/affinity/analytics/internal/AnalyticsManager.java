@@ -475,8 +475,12 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     }
 
     private Set<Host> getHostsNotInSubnet(String subnet) {
-        Set<Host> hostsInSubnet = getHostsInSubnet(subnet);
-        Set<HostNodeConnector> otherHosts = this.hostTracker.getAllHosts();
+        return getHostsNotInSubnet(subnet, this.hostTracker.getAllHosts());
+    }
+
+    protected Set<Host> getHostsNotInSubnet(String subnet, Set<HostNodeConnector> allHosts) {
+        Set<Host> hostsInSubnet = getHostsInSubnet(subnet, allHosts);
+        Set<HostNodeConnector> otherHosts = new HashSet<HostNodeConnector>(allHosts); // copy constructor
         otherHosts.removeAll(hostsInSubnet);
         Set<Host> hostsNotInSubnet = new HashSet<Host>();
         for (Host h : otherHosts)
@@ -485,6 +489,10 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     }
 
     private Set<Host> getHostsInSubnet(String subnet) {
+        return getHostsInSubnet(subnet, this.hostTracker.getAllHosts());
+    }
+
+    protected Set<Host> getHostsInSubnet(String subnet, Set<HostNodeConnector> allHosts) {
         InetAddress ip;
         Short mask;
         Set<Host> hosts = new HashSet<Host>();
@@ -501,7 +509,6 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
         // Match on subnetes
         InetAddress targetSubnet = getSubnet(ip, mask);
-        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
         for (HostNodeConnector host : allHosts) {
             InetAddress hostSubnet = getSubnet(host.getNetworkAddress(), mask);
             if (hostSubnet.equals(targetSubnet))
@@ -532,8 +539,10 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
     @Override
     public void nodeFlowStatisticsUpdated(Node node, List<FlowOnNode> flowStatsList) {
-        Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
+        nodeFlowStatisticsUpdated(node, flowStatsList, this.hostTracker.getAllHosts());
+    }
 
+    protected void nodeFlowStatisticsUpdated(Node node, List<FlowOnNode> flowStatsList, Set<HostNodeConnector> allHosts) {
         for (FlowOnNode f : flowStatsList) {
             Host srcHost = getSourceHostFromFlow(f.getFlow(), allHosts);
             Host dstHost = getDestinationHostFromFlow(f.getFlow(), allHosts);
