@@ -384,11 +384,16 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
         return getIncomingHostByteCounts(subnet, null);
     }
 
-    /* Returns all hosts that transferred data into this subnet. */
     public Map<Host, Long> getIncomingHostByteCounts(String subnet, Byte protocol) {
+         Set<HostNodeConnector> allHosts = this.hostTracker.getAllHosts();
+         return getIncomingHostByteCounts(subnet, protocol, allHosts);
+    }
+
+    /* Returns all hosts that transferred data into this subnet. */
+    public Map<Host, Long> getIncomingHostByteCounts(String subnet, Byte protocol, Set<HostNodeConnector> allHosts) {
         Map<Host, Long> hosts = new HashMap<Host, Long>();
-        Set<Host> dstHosts = getHostsInSubnet(subnet);
-        Set<Host> otherHosts = getHostsNotInSubnet(subnet);
+        Set<Host> dstHosts = getHostsInSubnet(subnet, allHosts);
+        Set<Host> otherHosts = getHostsNotInSubnet(subnet, allHosts);
         for (Host host : otherHosts) {
             for (Host targetHost : dstHosts) {
                 Long byteCount = getByteCount(host, targetHost, protocol);

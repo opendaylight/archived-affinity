@@ -502,4 +502,111 @@ public class AnalyticsManagerTest extends TestCase {
             am.destroy();
         }
     }
+
+    @Test
+    public void testGetIncomingHostByteCounts() {
+        AnalyticsManager am = new AnalyticsManager();
+        am.init();
+        try {
+            // Set up the network
+            Node n1 = new Node(Node.NodeIDType.OPENFLOW, new Long(100L));
+            Node n2 = new Node(Node.NodeIDType.OPENFLOW, new Long(101L));
+            Node n3 = new Node(Node.NodeIDType.OPENFLOW, new Long(110L));
+            Node n4 = new Node(Node.NodeIDType.OPENFLOW, new Long(111L));
+            Node n5 = new Node(Node.NodeIDType.OPENFLOW, new Long(011L));
+            NodeConnector nc1 = new NodeConnector(NodeConnector.NodeConnectorIDType.OPENFLOW, new Short((short) 0xCAFC), n1);
+            NodeConnector nc2 = new NodeConnector(NodeConnector.NodeConnectorIDType.OPENFLOW, new Short((short) 0xCAFD), n2);
+            NodeConnector nc3 = new NodeConnector(NodeConnector.NodeConnectorIDType.OPENFLOW, new Short((short) 0xCAFE), n3);
+            NodeConnector nc4 = new NodeConnector(NodeConnector.NodeConnectorIDType.OPENFLOW, new Short((short) 0xCAFF), n4);
+            NodeConnector nc5 = new NodeConnector(NodeConnector.NodeConnectorIDType.OPENFLOW, new Short((short) 0xCAEF), n5);
+            HostNodeConnector hnc1 = new HostNodeConnector(new byte[]{0,0,0,0,0,1}, InetAddress.getByName("128.0.0.1"), nc1, (short) 1);
+            HostNodeConnector hnc2 = new HostNodeConnector(new byte[]{0,0,0,0,0,2}, InetAddress.getByName("128.0.0.2"), nc2, (short) 1);
+            HostNodeConnector hnc3 = new HostNodeConnector(new byte[]{0,0,0,0,0,3}, InetAddress.getByName("128.0.0.3"), nc3, (short) 1);
+            HostNodeConnector hnc4 = new HostNodeConnector(new byte[]{0,0,0,0,0,4}, InetAddress.getByName("129.0.0.1"), nc4, (short) 1);
+            HostNodeConnector hnc5 = new HostNodeConnector(new byte[]{0,0,0,0,0,5}, InetAddress.getByName("129.0.0.2"), nc5, (short) 1);
+            List<FlowOnNode> flowStatsList = new ArrayList<FlowOnNode>();
+            Set<HostNodeConnector> allHosts = new HashSet<HostNodeConnector>(Arrays.asList(hnc1, hnc2, hnc3, hnc4, hnc5));
+
+            // 128.0.0.1 -> 129.0.0.1
+            Match match = new Match();
+            match.setField(new MatchField(MatchType.IN_PORT, nc1));
+            match.setField(new MatchField(MatchType.DL_DST, new byte[]{0,0,0,0,0,4}));
+            match.setField(new MatchField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue()));
+            match.setField(new MatchField(MatchType.NW_PROTO, IPProtocols.TCP.byteValue()));
+            Flow f = new Flow();
+            f.setMatch(match);
+            FlowOnNode fon = new FlowOnNode(f);
+            fon.setByteCount(100);
+            flowStatsList.add(fon);
+            am.nodeFlowStatisticsUpdated(n1, flowStatsList, allHosts);
+
+            // 128.0.0.2 -> 129.0.0.1
+            match = new Match();
+            match.setField(new MatchField(MatchType.IN_PORT, nc2));
+            match.setField(new MatchField(MatchType.DL_DST, new byte[]{0,0,0,0,0,5}));
+            match.setField(new MatchField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue()));
+            match.setField(new MatchField(MatchType.NW_PROTO, IPProtocols.UDP.byteValue()));
+            f = new Flow();
+            f.setMatch(match);
+            fon = new FlowOnNode(f);
+            fon.setByteCount(200);
+            flowStatsList = new ArrayList<FlowOnNode>();
+            flowStatsList.add(fon);
+            am.nodeFlowStatisticsUpdated(n2, flowStatsList, allHosts);
+
+            // 128.0.0.3 -> 128.0.0.1
+            match = new Match();
+            match.setField(new MatchField(MatchType.IN_PORT, nc3));
+            match.setField(new MatchField(MatchType.DL_DST, new byte[]{0,0,0,0,0,1}));
+            f = new Flow();
+            f.setMatch(match);
+            fon = new FlowOnNode(f);
+            fon.setByteCount(300);
+            flowStatsList = new ArrayList<FlowOnNode>();
+            flowStatsList.add(fon);
+            am.nodeFlowStatisticsUpdated(n3, flowStatsList, allHosts);
+
+            // 129.0.0.2 -> 129.0.0.1
+            match = new Match();
+            match.setField(new MatchField(MatchType.IN_PORT, nc5));
+            match.setField(new MatchField(MatchType.DL_DST, new byte[]{0,0,0,0,0,4}));
+            f = new Flow();
+            f.setMatch(match);
+            fon = new FlowOnNode(f);
+            fon.setByteCount(400);
+            flowStatsList = new ArrayList<FlowOnNode>();
+            flowStatsList.add(fon);
+            am.nodeFlowStatisticsUpdated(n5, flowStatsList, allHosts);
+
+            Map<Host, Long> hostCounts = am.getIncomingHostByteCounts("129.0.0.0/8", null, allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 2);
+            Assert.assertTrue(hostCounts.get(hnc1) == 100);
+            Assert.assertTrue(hostCounts.get(hnc2) == 200);
+            hostCounts = am.getIncomingHostByteCounts("129.0.0.0/8", IPProtocols.TCP.byteValue(), allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 1);
+            Assert.assertTrue(hostCounts.get(hnc1) == 100);
+            hostCounts = am.getIncomingHostByteCounts("129.0.0.0/8", IPProtocols.UDP.byteValue(), allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 1);
+            Assert.assertTrue(hostCounts.get(hnc2) == 200);
+            hostCounts = am.getIncomingHostByteCounts("129.0.0.0/8", IPProtocols.ICMP.byteValue(), allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 0);
+            hostCounts = am.getIncomingHostByteCounts("129.0.0.1/32", null, allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 2);
+            Assert.assertTrue(hostCounts.get(hnc1) == 100);
+            Assert.assertTrue(hostCounts.get(hnc5) == 400);
+            hostCounts = am.getIncomingHostByteCounts("128.0.0.0/8", null, allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 0);
+            hostCounts = am.getIncomingHostByteCounts("128.0.0.1/31", null, allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 1);
+            Assert.assertTrue(hostCounts.get(hnc3) == 300);
+            hostCounts = am.getIncomingHostByteCounts("128.0.0.2/32", null, allHosts);
+            Assert.assertTrue(hostCounts.keySet().size() == 0);
+        } catch (ConstructionException e) {
+            Assert.assertTrue(false);
+        } catch (UnknownHostException e) {
+            Assert.assertTrue(false);
+        } finally {
+            am.destroy();
+        }
+    }
 }
