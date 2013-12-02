@@ -1,5 +1,13 @@
 #!/usr/local/bin/python
 
+'''
+Copyright (c) 2013 Plexxi, Inc.  All rights reserved.
+
+This program and the accompanying materials are made available under the
+terms of the Eclipse Public License v1.0 which accompanies this distribution,
+and is available at http://www.eclipse.org/legal/epl-v10.html
+'''
+
 import httplib2
 import json
 import signal
@@ -10,6 +18,20 @@ from threading import Thread
 from affinity_control import AffinityControl
 from subnet import SubnetControl
 from stats import Stats
+
+'''
+The instructions for running this demo are located at:
+https://wiki.opendaylight.org/view/Project_Proposals:Affinity_Metadata_Service#Current_Status
+
+Briefly:
+1.  In config.ini, make sure affinity jars are loaded and that of.flowStatsPollInterval = 1
+2.  Start the controller
+3.  Start mininet with a 2-level tree topology
+4.  In mininet:
+     > pingall
+     > h3 ping h1
+You will see an anomaly detected in demo.py's output, and the pings between h3 and h1 will halt.
+'''
 
 # If True, SIG_INT has been captured
 global sigint
