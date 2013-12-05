@@ -195,21 +195,7 @@ public class L2Agent implements IListenDataPacket, IfL2Agent {
                 
                 List<Action> actions = new ArrayList<Action>();
                 actions.add(new Output(dst_connector));
-
-                // Install a high(er)-priority flow for each of the three protocols we care about
-                List<Byte> protocolList = Arrays.asList(IPProtocols.ICMP.byteValue(), IPProtocols.TCP.byteValue(), IPProtocols.UDP.byteValue());
-                for (byte protocol : protocolList) {
-                    Match match = new Match();
-                    match.setField(new MatchField(MatchType.IN_PORT, incoming_connector));
-                    match.setField(new MatchField(MatchType.DL_DST, dstMAC.clone()));
-                    // To get the actual protocol used in this packet, if it's an IPv4 packet:
-                    // ((IPv4) formattedPak.getPayload()).getProtocol();
-                    match.setField(new MatchField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue()));
-                    match.setField(new MatchField(MatchType.NW_PROTO, protocol));
-                    installFlow(match, actions, incoming_node, (short) 2);
-                }
                 
-                // Install a low-priority flow to catch everything else
                 Match match = new Match();
                 match.setField(new MatchField(MatchType.IN_PORT, incoming_connector));
                 match.setField(new MatchField(MatchType.DL_DST, dstMAC.clone()));

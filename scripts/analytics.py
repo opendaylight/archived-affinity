@@ -8,8 +8,8 @@ terms of the Eclipse Public License v1.0 which accompanies this distribution,
 and is available at http://www.eclipse.org/legal/epl-v10.html
 '''
 
-import httplib2
 import json
+import requests
 import sys
 import time
 
@@ -17,12 +17,53 @@ from stats import Stats
 from subnet import SubnetControl
 from affinity_control import AffinityControl
 
+# This class has nothing to do with the analytics API, but it makes
+# adding flows *so* much easier.
+class Flow:
+
+    def __init__(self, node, data):
+        self.node_id = node['id']
+        self.priority = data['priority']
+        self.ether_type = '0x800'
+        for match_field in data['match']['matchField']:
+            if match_field['type'] == 'DL_DST':
+                self.dl_dst = match_field['value']
+            elif match_field['type'] == 'IN_PORT':
+                self.in_port = match_field['value'].split('@')[0].split('|')[-1]
+        self.output_port = data['actions'][0]['port']['id']
+
+    def set_priority(self, priority):
+        self.priority = priority
+
+    def set_protocol(self, protocol):
+        self.protocol = protocol
+
+    def get_json(self, name):
+        json_data = {'installInHw' : 'true',
+                     'name' : name,
+                     'node' : {'id' : self.node_id, 'type' : 'OF'},
+                     'priority' : self.priority,
+                     'etherType' : self.ether_type,
+                     'dlDst' : self.dl_dst,
+                     'ingressPort' : self.in_port,
+                     'protocol' : self.protocol,
+                     'actions' : ['OUTPUT=%s' % self.output_port]}
+        return json_data
+
 # Generic REST query
-def rest_method(url, rest_type):
-    h = httplib2.Http(".cache")
-    h.add_credentials('admin', 'admin')
-    resp, content = h.request(url, rest_type)
-    return json.loads(content)
+def rest_method(url, rest_type, payload=None):
+    if (rest_type == "GET"):
+        resp = requests.get(url, auth=('admin', 'admin'))
+        print "status:", resp.status_code
+        return resp.json()
+    elif (rest_type == "PUT"):
+        headers = {'content-type': 'application/json'}
+        resp = requests.put(url, auth=('admin', 'admin'), data=json.dumps(payload), headers=headers)
+        print "status:", resp.status_code, resp.text
+    elif (rest_type == "DELETE"):
+        resp = requests.delete(url, auth=('admin', 'admin'))
+        print "status:", resp.status_code
+
 
 ### Host Statistics
 
@@ -118,6 +159,39 @@ def incoming_hosts_protocol(subnet, protocol):
     for entry in data:
         print("%s bytes from host %s" % (entry['byteCount'], entry['hostIP']))
 
+# This is not part of the analytics NB API, but it is a necessary step
+# if you want to monitor protocols
+def add_protocol_flows():
+    protocols = [1, 6, 17] # ICMP, TCP, UDP
+    flows = get_flows()
+    i = 0
+    for flow in flows:
+        i += 1
+        name = "flow" + str(i)
+        flow.set_priority(2)
+        flow.set_protocol(1)
+        add_flow(flow, name)
+
+#### Flow control methods
+
+def get_flows():
+    url = "http://localhost:8080/controller/nb/v2/statistics/default/flow"
+    data = rest_method(url, "GET")
+    flows = []
+    for item in data['flowStatistics']:
+        n = item['node']
+        for item in item['flowStatistic']:
+            f = Flow(n, item['flow'])
+            flows.append(f)
+    return flows
+
+def add_flow(flow, flow_name):
+    print "adding flow %s" % flow_name
+    url = "http://localhost:8080/controller/nb/v2/flowprogrammer/default/node/OF/%s/staticFlow/%s" % (flow.node_id, flow_name)
+    rest_method(url, "PUT", flow.get_json(flow_name))
+
+#### End flow control methods
+
 def run_interactive_mode():
 
     print "Usage: [host | link | subnet] [src dst | link-name | src_sub dst_sub] {protocol}"
@@ -175,7 +249,11 @@ def main():
     affinity_control.add_affinity_group("testAG2", ips=["10.0.0.3", "10.0.0.4"])
     affinity_control.add_affinity_link("testAL", "testAG1", "testAG2")
 
+    raw_input("press enter ")
+    add_protocol_flows()
+
     run_interactive_mode()
 
 if __name__ == "__main__":
     main()
+
