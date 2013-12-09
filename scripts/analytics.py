@@ -54,93 +54,69 @@ class Flow:
 def rest_method(url, rest_type, payload=None):
     if (rest_type == "GET"):
         resp = requests.get(url, auth=('admin', 'admin'))
-        print "status:", resp.status_code
         return resp.json()
     elif (rest_type == "PUT"):
         headers = {'content-type': 'application/json'}
         resp = requests.put(url, auth=('admin', 'admin'), data=json.dumps(payload), headers=headers)
-        print "status:", resp.status_code, resp.text
     elif (rest_type == "DELETE"):
         resp = requests.delete(url, auth=('admin', 'admin'))
-        print "status:", resp.status_code
-
 
 ### Host Statistics
 
 def stats_hosts(src, dst):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s" % (src, dst)
     data = rest_method(url, "GET")
-    print("%s bytes between %s and %s" % (data["byteCount"], src, dst))
-    print("%s bit/s between %s and %s" % (data["bitRate"], src, dst))
+    print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
 
 def stats_hosts_protocol(src, dst, protocol):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s/%d" % (src, dst, protocol)
     data = rest_method(url, "GET")
-    print("%s bytes between %s and %s for protocol %d" % (data["byteCount"], src, dst, protocol))
-    print("%s bit/s between %s and %s on protocol %d" % (data["bitRate"], src, dst, protocol))
+    print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
 
 def all_stats_hosts(src, dst):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/hoststats/%s/%s/all" % (src, dst)
-    data = rest_method(url, "GET")['stats']
+    data = rest_method(url, "GET")["stats"]
     for entry in data:
-        print("%s bytes from protocol %s" % (entry['stat']['byteCount'], entry['protocol']))
-        print("%s bit/s from protocol %s" % (entry['stat']['bitRate'], entry['protocol']))
+        stat = entry["stat"]
+        print("protocol %s: %s bytes (%s packets) over %s seconds (%s bit/s)" % (entry["protocol"], stat["byteCount"], stat["packetCount"], stat["duration"], stat["bitRate"]))
 
 ### Affinity link statistics
 
 def stats_link(al):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s" % al
     data = rest_method(url, "GET")
-    print("%s bytes on link %s" % (data['byteCount'], al))
-    print("%s bit/s on link %s" % (data['bitRate'], al))
+    print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
 
 def stats_link_protocol(al, protocol):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s/%s" % (al, protocol)
     data = rest_method(url, "GET")
-    print("%s bytes on link %s for protocol %s" % (data['byteCount'], al, protocol))
-    print("%s bit/s on link %s for protocol %s" % (data['bitRate'], al, protocol))
+    print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
 
 def all_stats_link(al):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s/all" % al
     data = rest_method(url, "GET")['stats']
     for entry in data:
-        print("%s bytes from protocol %s" % (entry['stat']['byteCount'], entry['protocol']))
-        print("%s bit/s from protocol %s" % (entry['stat']['bitRate'], entry['protocol']))
+        stat = entry["stat"]
+        print("protocol %s: %s bytes (%s packets) over %s seconds (%s bit/s)" % (entry["protocol"], stat["byteCount"], stat["packetCount"], stat["duration"], stat["bitRate"]))
 
 ### Subnet statistics
 
 def stats_subnet(src_sub, dst_sub):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/%s/%s" % (src_sub, dst_sub)
     data = rest_method(url, "GET")
-    if (src_sub == "null/null"):
-        print("%s bytes into %s" % (data['byteCount'], dst_sub))
-        print("%s bit/s into %s" % (data['bitRate'], dst_sub))
-    elif (dst_sub == "null/null"):
-        print("%s bytes out of %s" % (data['byteCount'], src_sub))
-        print("%s bit/s out of %s" % (data['bitRate'], src_sub))
-    else:
-        print("%s bytes between %s and %s" % (data['byteCount'], src_sub, dst_sub))
-        print("%s bit/s between %s and %s" % (data['bitRate'], src_sub, dst_sub))
+    print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
 
 def stats_subnet_protocol(src_sub, dst_sub, protocol):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/%s/%s/%s" % (src_sub, dst_sub, protocol)
     data = rest_method(url, "GET")
-    if (src_sub == "null/null"):
-        print("%s bytes into %s from protocol %s" % (data['byteCount'], dst_sub, protocol))
-        print("%s bit/s into %s from protocol %s" % (data['bitRate'], dst_sub, protocol))
-    elif (dst_sub == "null/null"):
-        print("%s bytes out of %s from protocol %s" % (data['byteCount'], src_sub, protocol))
-        print("%s bit/s out of %s from protocol %s" % (data['bitRate'], src_sub, protocol))
-    else:
-        print("%s bytes between %s and %s from protocol %s" % (data['byteCount'], src_sub, dst_sub, protocol))
-        print("%s bit/s between %s and %s from protocol %s" % (data['bitRate'], src_sub, dst_sub, protocol))
+    print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
 
 def all_stats_subnet(src_sub, dst_sub):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/%s/%s/all" % (src_sub, dst_sub)
     data = rest_method(url, "GET")['stats']
     for entry in data:
-        print("%s bytes from protocol %s" % (entry['stat']['byteCount'], entry['protocol']))
-        print("%s bit/s from protocol %s" % (entry['stat']['bitRate'], entry['protocol']))
+        stat = entry["stat"]
+        print("protocol %s: %s bytes (%s packets) over %s seconds (%s bit/s)" % (entry["protocol"], stat["byteCount"], stat["packetCount"], stat["duration"], stat["bitRate"]))
 
 def incoming_hosts(subnet):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/subnetstats/incoming/%s" % subnet
@@ -186,7 +162,6 @@ def get_flows():
     return flows
 
 def add_flow(flow, flow_name):
-    print "adding flow %s" % flow_name
     url = "http://localhost:8080/controller/nb/v2/flowprogrammer/default/node/OF/%s/staticFlow/%s" % (flow.node_id, flow_name)
     rest_method(url, "PUT", flow.get_json(flow_name))
 

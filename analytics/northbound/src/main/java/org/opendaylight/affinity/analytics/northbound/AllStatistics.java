@@ -28,12 +28,14 @@ public class AllStatistics {
     private AllStatistics() {
     }
 
-    public AllStatistics(Map<Byte, Long> byteCounts, Map<Byte, Double> bitRates) {
+    public AllStatistics(Map<Byte, Long> byteCounts, Map<Byte, Long> packetCounts, Map<Byte, Double> durations, Map<Byte, Double> bitRates) {
         this.stats = new ArrayList<ProtocolStatistics>();
         for (Byte protocol : byteCounts.keySet()) {
             long byteCount = byteCounts.get(protocol);
+            long packetCount = packetCounts.get(protocol);
+            double duration = durations.get(protocol);
             double bitRate = bitRates.get(protocol);
-            this.stats.add(new ProtocolStatistics(protocol, new Statistics(byteCount, bitRate)));
+            this.stats.add(new ProtocolStatistics(protocol, new Statistics(byteCount, packetCount, duration, bitRate)));
         }
     }
 

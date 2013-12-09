@@ -19,6 +19,10 @@ public class Statistics {
     @XmlElement
     private long byteCount;
     @XmlElement
+    private long packetCount;
+    @XmlElement
+    private double duration;
+    @XmlElement
     private double bitRate;
 
     // To satisfy JAXB
@@ -26,9 +30,11 @@ public class Statistics {
     private Statistics() {
     }
 
-    public Statistics(long byteCount, double bitRate) {
+    public Statistics(long byteCount, long packetCount, double duration, double bitRate) {
         super();
         this.byteCount = byteCount;
+        this.packetCount = packetCount;
+        this.duration = duration;
         this.bitRate = bitRate;
     }
 
@@ -38,6 +44,22 @@ public class Statistics {
 
     public void setByteCount(long byteCount) {
         this.byteCount = byteCount;
+    }
+
+    public long getPacketCount() {
+        return this.packetCount;
+    }
+
+    public void setPacketCount(long packetCount) {
+        this.packetCount = packetCount;
+    }
+
+    public double getDuration() {
+        return this.duration;
+    }
+
+    public void setDuration(double duration) {
+        this.duration = duration;
     }
 
     public double getBitRate() {

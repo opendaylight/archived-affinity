@@ -121,9 +121,11 @@ public class AnalyticsNorthbound {
         Host srcHost = handleHostAvailability(containerName, srcNetworkAddr);
         Host dstHost = handleHostAvailability(containerName, dstNetworkAddr);
         long byteCount = analyticsManager.getByteCount(srcHost, dstHost);
+        long packetCount = analyticsManager.getPacketCount(srcHost, dstHost);
+        double duration = analyticsManager.getDuration(srcHost, dstHost);
         double bitRate = analyticsManager.getBitRate(srcHost, dstHost);
 
-        return new Statistics(byteCount, bitRate);
+        return new Statistics(byteCount, packetCount, duration, bitRate);
     }
 
     /**
@@ -157,9 +159,11 @@ public class AnalyticsNorthbound {
         Host srcHost = handleHostAvailability(containerName, srcIP);
         Host dstHost = handleHostAvailability(containerName, dstIP);
         long byteCount = analyticsManager.getByteCount(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
+        long packetCount = analyticsManager.getPacketCount(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
+        double duration = analyticsManager.getDuration(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
         double bitRate = analyticsManager.getBitRate(srcHost, dstHost, IPProtocols.getProtocolNumberByte(protocol));
 
-        return new Statistics(byteCount, bitRate);
+        return new Statistics(byteCount, packetCount, duration, bitRate);
     }
 
     /**
@@ -191,8 +195,10 @@ public class AnalyticsNorthbound {
         Host srcHost = handleHostAvailability(containerName, srcIP);
         Host dstHost = handleHostAvailability(containerName, dstIP);
         Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(srcHost, dstHost);
+        Map<Byte, Long> packetCounts = analyticsManager.getAllPacketCounts(srcHost, dstHost);
+        Map<Byte, Double> durations = analyticsManager.getAllDurations(srcHost, dstHost);
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcHost, dstHost);
-        return new AllStatistics(byteCounts, bitRates);
+        return new AllStatistics(byteCounts, packetCounts, durations, bitRates);
     }
 
     /**
@@ -221,9 +227,11 @@ public class AnalyticsNorthbound {
 
         AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
         long byteCount = analyticsManager.getByteCount(al);
+        long packetCount = analyticsManager.getPacketCount(al);
+        double duration = analyticsManager.getDuration(al);
         double bitRate = analyticsManager.getBitRate(al);
 
-        return new Statistics(byteCount, bitRate);
+        return new Statistics(byteCount, packetCount, duration, bitRate);
     }
 
     /**
@@ -254,9 +262,11 @@ public class AnalyticsNorthbound {
 
         AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
         long byteCount = analyticsManager.getByteCount(al, IPProtocols.getProtocolNumberByte(protocol));
+        long packetCount = analyticsManager.getPacketCount(al, IPProtocols.getProtocolNumberByte(protocol));
+        double duration = analyticsManager.getDuration(al, IPProtocols.getProtocolNumberByte(protocol));
         double bitRate = analyticsManager.getBitRate(al, IPProtocols.getProtocolNumberByte(protocol));
 
-        return new Statistics(byteCount, bitRate);
+        return new Statistics(byteCount, packetCount, duration, bitRate);
     }
 
     /**
@@ -285,8 +295,10 @@ public class AnalyticsNorthbound {
 
         AffinityLink al = handleAffinityLinkAvailability(containerName, affinityLinkName);
         Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(al);
+        Map<Byte, Long> packetCounts = analyticsManager.getAllPacketCounts(al);
+        Map<Byte, Double> durations = analyticsManager.getAllDurations(al);
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(al);
-        return new AllStatistics(byteCounts, bitRates);
+        return new AllStatistics(byteCounts, packetCounts, durations, bitRates);
     }
 
     /**
@@ -327,9 +339,11 @@ public class AnalyticsNorthbound {
         if (dstString.equals("null/null"))
             dstString = null;
         long byteCount = analyticsManager.getByteCount(srcString, dstString);
+        long packetCount = analyticsManager.getPacketCount(srcString, dstString);
+        double duration = analyticsManager.getDuration(srcString, dstString);
         double bitRate = analyticsManager.getBitRate(srcString, dstString);
 
-        return new Statistics(byteCount, bitRate);
+        return new Statistics(byteCount, packetCount, duration, bitRate);
     }
 
     /**
@@ -372,10 +386,13 @@ public class AnalyticsNorthbound {
         if (dstString.equals("null/null"))
             dstString = null;
         long byteCount = analyticsManager.getByteCount(srcString, dstString, IPProtocols.getProtocolNumberByte(protocol));
+        long packetCount = analyticsManager.getByteCount(srcString, dstString, IPProtocols.getProtocolNumberByte(protocol));
+        double duration = analyticsManager.getDuration(srcString, dstString, IPProtocols.getProtocolNumberByte(protocol));
         double bitRate = analyticsManager.getBitRate(srcString, dstString, IPProtocols.getProtocolNumberByte(protocol));
 
-        return new Statistics(byteCount, bitRate);
+        return new Statistics(byteCount, packetCount, duration, bitRate);
     }
+
     /**
      * @param containerName: Name of the Container
      * @param srcIP: Source IP prefix
@@ -415,8 +432,10 @@ public class AnalyticsNorthbound {
             dstString = null;
 
         Map<Byte, Long> byteCounts = analyticsManager.getAllByteCounts(srcString, dstString);
+        Map<Byte, Long> packetCounts = analyticsManager.getAllPacketCounts(srcString, dstString);
+        Map<Byte, Double> durations = analyticsManager.getAllDurations(srcString, dstString);
         Map<Byte, Double> bitRates = analyticsManager.getAllBitRates(srcString, dstString);
-        return new AllStatistics(byteCounts, bitRates);
+        return new AllStatistics(byteCounts, packetCounts, durations, bitRates);
     }
 
     /**
