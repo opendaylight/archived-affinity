@@ -22,10 +22,12 @@ import org.opendaylight.controller.sal.utils.IPProtocols;
 public class HostStats {
 
     private Map<Byte, Long> byteCounts;
+    private Map<Byte, Long> packetCounts;
     private Map<Byte, Double> durations;
 
     public HostStats() {
         this.byteCounts = new HashMap<Byte, Long>();
+        this.packetCounts = new HashMap<Byte, Long>();
         this.durations = new HashMap<Byte, Double>();
     }
 
@@ -50,11 +52,22 @@ public class HostStats {
         return byteCount;
     }
 
-    // Returns the map of byte counts
-    public Map<Byte, Long> getAllByteCounts() {
-        return this.byteCounts;
+    // Returns the total packet count across all protocols
+    public long getPacketCount() {
+        long totalPacketCount = 0;
+        for (Byte protocol : this.packetCounts.keySet())
+            totalPacketCount += this.packetCounts.get(protocol);
+        return totalPacketCount;
     }
 
+    // Returns the packet count for a particular protocol
+    public long getPacketCount(Byte protocol) {
+        Long packetCount = this.packetCounts.get(protocol);
+        if (packetCount == null)
+            packetCount = (long) 0;
+        return packetCount;
+    }
+    
     // Returns the maximum duration across all protocols
     public double getDuration() {
         if (this.durations.isEmpty())
@@ -95,7 +108,7 @@ public class HostStats {
         return (byteCount * 8)/duration;
     }
 
-    // Sets byte count and duration given a flow
+    // Sets byte count, packet count, and duration given a flow
     public void setStatsFromFlow(FlowOnNode flow) {
         MatchField protocolField = flow.getFlow().getMatch().getField(MatchType.NW_PROTO);
         Byte protocolNumber;
@@ -107,8 +120,10 @@ public class HostStats {
         // Prevent stats from getting overwritten by zero-byte flows.
         Long currentByteCount = this.byteCounts.get(protocolNumber);
         Long thisByteCount = flow.getByteCount();
+        Long thisPacketCount = flow.getPacketCount();
         if (thisByteCount > 0 && (currentByteCount == null || currentByteCount <= thisByteCount)) {
             this.byteCounts.put(protocolNumber, thisByteCount);
+            this.packetCounts.put(protocolNumber, thisPacketCount);
             this.durations.put(protocolNumber, flow.getDurationSeconds() + .000000001 * flow.getDurationNanoseconds());
         }
     }

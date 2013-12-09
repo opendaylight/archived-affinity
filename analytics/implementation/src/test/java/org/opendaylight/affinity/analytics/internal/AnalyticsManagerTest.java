@@ -292,6 +292,7 @@ public class AnalyticsManagerTest extends TestCase {
             f.setMatch(match);
             FlowOnNode fon = new FlowOnNode(f);
             fon.setByteCount(200);
+            fon.setPacketCount(6);
             fon.setDurationSeconds(1);
             fon.setDurationNanoseconds(100000000);
             flowStatsListn1.add(fon);
@@ -306,6 +307,7 @@ public class AnalyticsManagerTest extends TestCase {
             f.setMatch(match);
             fon = new FlowOnNode(f);
             fon.setByteCount(64);
+            fon.setPacketCount(5);
             fon.setDurationSeconds(1);
             fon.setDurationNanoseconds(0);
             flowStatsListn1.add(fon);
@@ -320,6 +322,7 @@ public class AnalyticsManagerTest extends TestCase {
             f.setMatch(match);
             fon = new FlowOnNode(f);
             fon.setByteCount(76);
+            fon.setPacketCount(4);
             fon.setDurationSeconds(2);
             fon.setDurationNanoseconds(0);
             flowStatsListn1.add(fon);
@@ -334,6 +337,7 @@ public class AnalyticsManagerTest extends TestCase {
             f.setMatch(match);
             fon = new FlowOnNode(f);
             fon.setByteCount(300);
+            fon.setPacketCount(3);
             fon.setDurationSeconds(1);
             fon.setDurationNanoseconds(200000000);
             flowStatsListn2.add(fon);
@@ -348,6 +352,7 @@ public class AnalyticsManagerTest extends TestCase {
             f.setMatch(match);
             fon = new FlowOnNode(f);
             fon.setByteCount(27);
+            fon.setPacketCount(4);
             fon.setDurationSeconds(1);
             fon.setDurationNanoseconds(0);
             flowStatsListn1.add(fon);
@@ -362,6 +367,7 @@ public class AnalyticsManagerTest extends TestCase {
             f.setMatch(match);
             fon = new FlowOnNode(f);
             fon.setByteCount(234);
+            fon.setPacketCount(2);
             fon.setDurationSeconds(2);
             fon.setDurationNanoseconds(0);
             flowStatsListn2.add(fon);
@@ -376,6 +382,7 @@ public class AnalyticsManagerTest extends TestCase {
             f.setMatch(match);
             fon = new FlowOnNode(f);
             fon.setByteCount(54);
+            fon.setPacketCount(1);
             fon.setDurationSeconds(3);
             fon.setDurationNanoseconds(100000000);
             flowStatsListn2.add(fon);
@@ -385,100 +392,124 @@ public class AnalyticsManagerTest extends TestCase {
 
             // Host pairs - basic stats
             Assert.assertTrue(am.getByteCount(hnc1, hnc3) == 200 + 64);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc3) == 6 + 5);
             Assert.assertTrue(am.getDuration(hnc1, hnc3) == 1.1);
             Assert.assertTrue(am.getBitRate(hnc1, hnc3) == ((200 + 64) * 8.0) / 1.1);
             Assert.assertTrue(am.getByteCount(hnc1, hnc4) == 76);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc4) == 4);
             Assert.assertTrue(am.getDuration(hnc1, hnc4) == 2.0);
             Assert.assertTrue(am.getBitRate(hnc1, hnc4) == (76 * 8.0) / 2.0);
             Assert.assertTrue(am.getByteCount(hnc2, hnc4) == 300);
+            Assert.assertTrue(am.getPacketCount(hnc2, hnc4) == 3);
             Assert.assertTrue(am.getDuration(hnc2, hnc4) == 1.2);
             Assert.assertTrue(am.getBitRate(hnc2, hnc4) == (300 * 8.0) / 1.2);
             Assert.assertTrue(am.getByteCount(hnc1, hnc5) == 27);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc5) == 4);
             Assert.assertTrue(am.getDuration(hnc1, hnc5) == 1.0);
             Assert.assertTrue(am.getBitRate(hnc1, hnc5) == (27 * 8.0) / 1.0);
             Assert.assertTrue(am.getByteCount(hnc2, hnc5) == 234 + 54);
+            Assert.assertTrue(am.getPacketCount(hnc2, hnc5) == 2 + 1);
             Assert.assertTrue(am.getDuration(hnc2, hnc5) == 3.1);
             Assert.assertTrue(am.getBitRate(hnc2, hnc5) == ((234 + 54) * 8.0) / 3.1);
 
             // Host pairs - per-protocol stats
             Assert.assertTrue(am.getByteCount(hnc1, hnc3, IPProtocols.ICMP.byteValue()) == 64);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc3, IPProtocols.ICMP.byteValue()) == 5);
             Assert.assertTrue(am.getDuration(hnc1, hnc3, IPProtocols.ICMP.byteValue()) == 1.0);
             Assert.assertTrue(am.getBitRate(hnc1, hnc3, IPProtocols.ICMP.byteValue()) == (64 * 8.0) / 1.0);
             Assert.assertTrue(am.getByteCount(hnc1, hnc3, IPProtocols.UDP.byteValue()) == 200);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc3, IPProtocols.UDP.byteValue()) == 6);
             Assert.assertTrue(am.getDuration(hnc1, hnc3, IPProtocols.UDP.byteValue()) == 1.1);
             Assert.assertTrue(am.getBitRate(hnc1, hnc3, IPProtocols.UDP.byteValue()) == (200 * 8.0) / 1.1);
             Assert.assertTrue(am.getByteCount(hnc1, hnc3, IPProtocols.TCP.byteValue()) == 0);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc3, IPProtocols.TCP.byteValue()) == 0);
             Assert.assertTrue(am.getDuration(hnc1, hnc3, IPProtocols.TCP.byteValue()) == 0.0);
             Assert.assertTrue(am.getBitRate(hnc1, hnc3, IPProtocols.TCP.byteValue()) == 0.0);
             Assert.assertTrue(am.getByteCount(hnc1, hnc4, IPProtocols.TCP.byteValue()) == 76);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc4, IPProtocols.TCP.byteValue()) == 4);
             Assert.assertTrue(am.getDuration(hnc1, hnc4, IPProtocols.TCP.byteValue()) == 2.0);
             Assert.assertTrue(am.getBitRate(hnc1, hnc4, IPProtocols.TCP.byteValue()) == (76 * 8.0) / 2.0);
             Assert.assertTrue(am.getByteCount(hnc2, hnc4, IPProtocols.TCP.byteValue()) == 300);
+            Assert.assertTrue(am.getPacketCount(hnc2, hnc4, IPProtocols.TCP.byteValue()) == 3);
             Assert.assertTrue(am.getDuration(hnc2, hnc4, IPProtocols.TCP.byteValue()) == 1.2);
             Assert.assertTrue(am.getBitRate(hnc2, hnc4, IPProtocols.TCP.byteValue()) == (300 * 8.0) / 1.2);
             Assert.assertTrue(am.getByteCount(hnc1, hnc5, IPProtocols.UDP.byteValue()) == 27);
+            Assert.assertTrue(am.getPacketCount(hnc1, hnc5, IPProtocols.UDP.byteValue()) == 4);
             Assert.assertTrue(am.getDuration(hnc1, hnc5, IPProtocols.UDP.byteValue()) == 1.0);
             Assert.assertTrue(am.getBitRate(hnc1, hnc5, IPProtocols.UDP.byteValue()) == (27 * 8.0) / 1.0);
             Assert.assertTrue(am.getByteCount(hnc2, hnc5, IPProtocols.ICMP.byteValue()) == 54);
+            Assert.assertTrue(am.getPacketCount(hnc2, hnc5, IPProtocols.ICMP.byteValue()) == 1);
             Assert.assertTrue(am.getDuration(hnc2, hnc5, IPProtocols.ICMP.byteValue()) == 3.1);
             Assert.assertTrue(am.getBitRate(hnc2, hnc5, IPProtocols.ICMP.byteValue()) == (54 * 8.0) / 3.1);
             Assert.assertTrue(am.getByteCount(hnc2, hnc5, IPProtocols.TCP.byteValue()) == 234);
+            Assert.assertTrue(am.getPacketCount(hnc2, hnc5, IPProtocols.TCP.byteValue()) == 2);
             Assert.assertTrue(am.getDuration(hnc2, hnc5, IPProtocols.TCP.byteValue()) == 2.0);
             Assert.assertTrue(am.getBitRate(hnc2, hnc5, IPProtocols.TCP.byteValue()) == (234 * 8.0) / 2.0);
 
             // Host pairs - all stats
-            Map<Byte, Long> byteCounts = am.getAllByteCounts(hnc1, hnc3);
-            Map<Byte, Double> bitRates = am.getAllBitRates(hnc1, hnc3);
-            Assert.assertTrue(byteCounts.get(IPProtocols.ICMP.byteValue()) == am.getByteCount(hnc1, hnc3, IPProtocols.ICMP.byteValue()));
-            Assert.assertTrue(byteCounts.get(IPProtocols.UDP.byteValue()) == am.getByteCount(hnc1, hnc3, IPProtocols.UDP.byteValue()));
-            Assert.assertTrue(byteCounts.get(IPProtocols.TCP.byteValue()) == null);
-            Assert.assertTrue(bitRates.get(IPProtocols.ICMP.byteValue()) == am.getBitRate(hnc1, hnc3, IPProtocols.ICMP.byteValue()));
-            Assert.assertTrue(bitRates.get(IPProtocols.UDP.byteValue()) == am.getBitRate(hnc1, hnc3, IPProtocols.UDP.byteValue()));
-            Assert.assertTrue(bitRates.get(IPProtocols.TCP.byteValue()) == null);
-            byteCounts = am.getAllByteCounts(hnc1, hnc4);
-            bitRates = am.getAllBitRates(hnc1, hnc4);
-            Assert.assertTrue(byteCounts.get(IPProtocols.TCP.byteValue()) == am.getByteCount(hnc1, hnc4, IPProtocols.TCP.byteValue()));
-            Assert.assertTrue(bitRates.get(IPProtocols.TCP.byteValue()) == am.getBitRate(hnc1, hnc4, IPProtocols.TCP.byteValue()));
-            byteCounts = am.getAllByteCounts(hnc2, hnc4);
-            bitRates = am.getAllBitRates(hnc2, hnc4);
-            Assert.assertTrue(byteCounts.get(IPProtocols.TCP.byteValue()) == am.getByteCount(hnc2, hnc4, IPProtocols.TCP.byteValue()));
-            Assert.assertTrue(bitRates.get(IPProtocols.TCP.byteValue()) == am.getBitRate(hnc2, hnc4, IPProtocols.TCP.byteValue()));
-            byteCounts = am.getAllByteCounts(hnc1, hnc5);
-            bitRates = am.getAllBitRates(hnc1, hnc5);
-            Assert.assertTrue(byteCounts.get(IPProtocols.UDP.byteValue()) == am.getByteCount(hnc1, hnc5, IPProtocols.UDP.byteValue()));
-            Assert.assertTrue(bitRates.get(IPProtocols.UDP.byteValue()) == am.getBitRate(hnc1, hnc5, IPProtocols.UDP.byteValue()));
-            byteCounts = am.getAllByteCounts(hnc2, hnc5);
-            bitRates = am.getAllBitRates(hnc2, hnc5);
-            Assert.assertTrue(byteCounts.get(IPProtocols.ICMP.byteValue()) == am.getByteCount(hnc2, hnc5, IPProtocols.ICMP.byteValue()));
-            Assert.assertTrue(byteCounts.get(IPProtocols.TCP.byteValue()) == am.getByteCount(hnc2, hnc5, IPProtocols.TCP.byteValue()));
-            Assert.assertTrue(bitRates.get(IPProtocols.ICMP.byteValue()) == am.getBitRate(hnc2, hnc5, IPProtocols.ICMP.byteValue()));
-            Assert.assertTrue(bitRates.get(IPProtocols.TCP.byteValue()) == am.getBitRate(hnc2, hnc5, IPProtocols.TCP.byteValue()));
+            Set<Byte> allProtocols = new HashSet<Byte>(Arrays.asList(IPProtocols.ICMP.byteValue(), IPProtocols.UDP.byteValue(), IPProtocols.TCP.byteValue()));
+            for (Host h1 : allHosts) {
+                for (Host h2 : allHosts) {
+                    Map<Byte, Long> byteCounts = am.getAllByteCounts(h1, h2);
+                    Map<Byte, Long> packetCounts = am.getAllPacketCounts(h1, h2);
+                    Map<Byte, Double> durations = am.getAllDurations(h1, h2);
+                    Map<Byte, Double> bitRates = am.getAllBitRates(h1, h2);
+                    for (Byte protocol : allProtocols) {
+                        if (byteCounts.get(protocol) == null) {
+                            Assert.assertTrue(am.getByteCount(h1, h2, protocol) == 0);
+                            Assert.assertTrue(am.getPacketCount(h1, h2, protocol) == 0);
+                            Assert.assertTrue(am.getDuration(h1, h2, protocol) == 0.0);
+                            Assert.assertTrue(am.getBitRate(h1, h2, protocol) == 0.0);
+                        }
+                        else {
+                            Assert.assertTrue(byteCounts.get(protocol) == am.getByteCount(h1, h2, protocol));
+                            Assert.assertTrue(packetCounts.get(protocol) == am.getPacketCount(h1, h2, protocol));
+                            Assert.assertTrue(durations.get(protocol) == am.getDuration(h1, h2, protocol));
+                            Assert.assertTrue(bitRates.get(protocol) == am.getBitRate(h1, h2, protocol));
+                        }
+                    }
+                }
+            }
 
             // Host groups - basic stats
             Set<Host> srcHosts = new HashSet<Host>(Arrays.asList(hnc1, hnc2));
             Set<Host> dstHosts = new HashSet<Host>(Arrays.asList(hnc3, hnc4));
             Assert.assertTrue(am.getByteCount(srcHosts, dstHosts, null) == 64 + 200 + 76 + 300);
+            Assert.assertTrue(am.getPacketCount(srcHosts, dstHosts, null) == 6 + 5 + 4 + 3);
             Assert.assertTrue(am.getDuration(srcHosts, dstHosts, null) == 2.0);
             Assert.assertTrue(am.getBitRate(srcHosts, dstHosts, null) == ((64 + 200 + 76 + 300) * 8.0) / 2.0);
 
             // Host groups - per-protocol stats
             Assert.assertTrue(am.getByteCount(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()) == 64);
+            Assert.assertTrue(am.getPacketCount(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()) == 5);
             Assert.assertTrue(am.getDuration(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()) == 1.0);
             Assert.assertTrue(am.getBitRate(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()) == (64 * 8.0) / 1.0);
             Assert.assertTrue(am.getByteCount(srcHosts, dstHosts, IPProtocols.TCP.byteValue()) == 76 + 300);
+            Assert.assertTrue(am.getPacketCount(srcHosts, dstHosts, IPProtocols.TCP.byteValue()) == 4 + 3);
             Assert.assertTrue(am.getDuration(srcHosts, dstHosts, IPProtocols.TCP.byteValue()) == 2.0);
             Assert.assertTrue(am.getBitRate(srcHosts, dstHosts, IPProtocols.TCP.byteValue()) == ((76 + 300) * 8.0) / 2.0);
             Assert.assertTrue(am.getByteCount(srcHosts, dstHosts, IPProtocols.UDP.byteValue()) == 200);
+            Assert.assertTrue(am.getPacketCount(srcHosts, dstHosts, IPProtocols.UDP.byteValue()) == 6);
             Assert.assertTrue(am.getDuration(srcHosts, dstHosts, IPProtocols.UDP.byteValue()) == 1.1);
             Assert.assertTrue(am.getBitRate(srcHosts, dstHosts, IPProtocols.UDP.byteValue()) == (200 * 8.0) / 1.1);
 
             // Host groups - all stats
-            byteCounts = am.getAllByteCounts(srcHosts, dstHosts);
-            bitRates = am.getAllBitRates(srcHosts, dstHosts);
+            Map<Byte, Long> byteCounts = am.getAllByteCounts(srcHosts, dstHosts);
+            Map<Byte, Long> packetCounts = am.getAllPacketCounts(srcHosts, dstHosts);
+            Map<Byte, Double> durations = am.getAllDurations(srcHosts, dstHosts);
+            Map<Byte, Double> bitRates = am.getAllBitRates(srcHosts, dstHosts);
             Assert.assertTrue(byteCounts.get(IPProtocols.ICMP.byteValue()) == am.getByteCount(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()));
             Assert.assertTrue(byteCounts.get(IPProtocols.UDP.byteValue()) == am.getByteCount(srcHosts, dstHosts, IPProtocols.UDP.byteValue()));
             Assert.assertTrue(byteCounts.get(IPProtocols.TCP.byteValue()) == am.getByteCount(srcHosts, dstHosts, IPProtocols.TCP.byteValue()));
             Assert.assertTrue(byteCounts.get(IPProtocols.ANY.byteValue()) == null);
+            Assert.assertTrue(packetCounts.get(IPProtocols.ICMP.byteValue()) == am.getPacketCount(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()));
+            Assert.assertTrue(packetCounts.get(IPProtocols.UDP.byteValue()) == am.getPacketCount(srcHosts, dstHosts, IPProtocols.UDP.byteValue()));
+            Assert.assertTrue(packetCounts.get(IPProtocols.TCP.byteValue()) == am.getPacketCount(srcHosts, dstHosts, IPProtocols.TCP.byteValue()));
+            Assert.assertTrue(packetCounts.get(IPProtocols.ANY.byteValue()) == null);
+            Assert.assertTrue(durations.get(IPProtocols.ICMP.byteValue()) == am.getDuration(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()));
+            Assert.assertTrue(durations.get(IPProtocols.UDP.byteValue()) == am.getDuration(srcHosts, dstHosts, IPProtocols.UDP.byteValue()));
+            Assert.assertTrue(durations.get(IPProtocols.TCP.byteValue()) == am.getDuration(srcHosts, dstHosts, IPProtocols.TCP.byteValue()));
+            Assert.assertTrue(durations.get(IPProtocols.ANY.byteValue()) == null);
             Assert.assertTrue(bitRates.get(IPProtocols.ICMP.byteValue()) == am.getBitRate(srcHosts, dstHosts, IPProtocols.ICMP.byteValue()));
             Assert.assertTrue(bitRates.get(IPProtocols.UDP.byteValue()) == am.getBitRate(srcHosts, dstHosts, IPProtocols.UDP.byteValue()));
             Assert.assertTrue(bitRates.get(IPProtocols.TCP.byteValue()) == am.getBitRate(srcHosts, dstHosts, IPProtocols.TCP.byteValue()));
@@ -487,13 +518,16 @@ public class AnalyticsManagerTest extends TestCase {
             // Correct flow over-writing
             fon = new FlowOnNode(f); // 10.0.0.2 -> 10.0.0.5, ICMP
             fon.setByteCount(300);
+            fon.setPacketCount(7);
             fon.setDurationSeconds(4);
             fon.setDurationNanoseconds(100000000);
             flowStatsListn2.add(fon);
             am.nodeFlowStatisticsUpdated(n2, flowStatsListn2, allHosts);
             Assert.assertTrue(am.getByteCount(hnc2, hnc5) == 300 + 234);
+            Assert.assertTrue(am.getPacketCount(hnc2, hnc5) == 2 + 7);
             Assert.assertTrue(am.getBitRate(hnc2, hnc5) == ((300 + 234) * 8.0) / 4.1);
             Assert.assertTrue(am.getByteCount(hnc2, hnc5, IPProtocols.ICMP.byteValue()) == 300);
+            Assert.assertTrue(am.getPacketCount(hnc2, hnc5, IPProtocols.ICMP.byteValue()) == 7);
         } catch (ConstructionException e) {
             Assert.assertTrue(false);
         } catch (UnknownHostException e) {
