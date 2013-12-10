@@ -100,32 +100,14 @@ public class Activator extends ComponentActivatorAbstractBase {
             // Now lets add a service dependency to make sure the
             // provider of service exists
             /* L2agent dependency causes the service to fail activation. tbd. */
-            c.add(createContainerServiceDependency(containerName)
-                  .setService(IfL2Agent.class)
-                  .setCallbacks("setL2Agent", "unsetL2Agent")
-                  .setRequired(true));
-            c.add(createContainerServiceDependency(containerName).setService(
-                    NFchainAgent.class).setCallbacks(
-                    "setNFchainAgent", "unsetNFchainAgent")
-                    .setRequired(true));
-            c.add(createContainerServiceDependency(containerName)
-                  .setService(IFlowProgrammerService.class)
-                  .setCallbacks("setFlowProgrammerService", "unsetFlowProgrammerService")
-                  .setRequired(true));
             c.add(createContainerServiceDependency(containerName).setService(
                     IClusterContainerServices.class).setCallbacks(
                     "setClusterContainerService",
                     "unsetClusterContainerService").setRequired(true));
+
+            // hosttracker is used to return the HostNodeConnector corresponding to an affinity ID. 
             c.add(createContainerServiceDependency(containerName).setService(IfIptoHost.class)
                   .setCallbacks("setHostTracker", "unsetHostTracker").setRequired(true));
-            c.add(createContainerServiceDependency(containerName)
-                    .setService(ISwitchManager.class)
-                    .setCallbacks("setSwitchManager", "unsetSwitchManager")
-                    .setRequired(true));
-            c.add(createContainerServiceDependency(containerName).setService(
-                    IAffinityManagerAware.class).setCallbacks(
-                    "setAffinityManagerAware", "unsetAffinityManagerAware")
-                    .setRequired(false));
         }
     }
 }

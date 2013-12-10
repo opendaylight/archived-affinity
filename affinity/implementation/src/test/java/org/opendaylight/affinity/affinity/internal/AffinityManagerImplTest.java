@@ -118,12 +118,12 @@ public class AffinityManagerImplTest {
 	/* Test the get methods. */
 
 	/* Get all members as hosts */
-	System.out.println("Affinity group (as Hosts) = " + ag1.getName());
-	List<Host> hostlist = affinitymgr.getAllElementsByHost(ag1);
+        //	System.out.println("Affinity group (as Hosts) = " + ag1.getName());
+        //	List<Host> hostlist = affinitymgr.getAllElementsByHost(ag1);
 	
-	for (Host h : hostlist) {
-	    System.out.println("host = " + h.getNetworkAddressAsString());
-	}
+        //	for (Host h : hostlist) {
+        //	    System.out.println("host = " + h.getNetworkAddressAsString());
+        //}
 	
 	/* Get all members as affinity identifiers */
 	System.out.println("Affinity group (as Affinity Identifiers) = " + ag1.getName());

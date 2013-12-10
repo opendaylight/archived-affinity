@@ -34,6 +34,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import org.opendaylight.affinity.affinity.AffinityAttribute;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
@@ -46,17 +47,24 @@ public class AffinityLink implements Cloneable, Serializable {
     AffinityGroup fromGroup;
     @XmlElement
     AffinityGroup toGroup;
+
+    // Keep at most one affinity attribute per type. 
+    private HashMap<AffinityAttributeType, AffinityAttribute> attrlist;
+    
+    // xxx 
     @XmlElement 
     String affinityAttribute;
     @XmlElement 
     String affinityWaypoint;
 
     public AffinityLink() {
+        attrlist = new HashMap<AffinityAttributeType, AffinityAttribute>();
     }
     public AffinityLink(String name, AffinityGroup fromGroup, AffinityGroup toGroup) {
 	this.name = name;
 	this.fromGroup = fromGroup;
 	this.toGroup = toGroup;
+        attrlist = new HashMap<AffinityAttributeType, AffinityAttribute>();
     }
     public String getName() {
 	return this.name;
@@ -70,16 +78,42 @@ public class AffinityLink implements Cloneable, Serializable {
     public void setToGroup(AffinityGroup toGroup) {
 	this.toGroup = toGroup;
     }
-    public void setAttribute(String attribute) {
-	this.affinityAttribute = attribute;
+    public void addAttribute(AffinityAttribute attr) {
+        if (attr != null) {
+            System.out.println("Printing affinity attribute: " + attr.type);
+            attrlist.put(attr.type, attr);
+        }
+    }
+    public HashMap<AffinityAttributeType, AffinityAttribute> getAttributeList() {
+	return this.attrlist;
     }
 
     /* Set the waypoint address, if the attribute is "redirect" */
-    public void setWaypoint(String wpaddr) {
-	this.affinityWaypoint = wpaddr;
+    public void setAttribute(String attribute) {
+	this.affinityAttribute = attribute;
     }
-    public String getWaypoint() {
-	return this.affinityWaypoint;
+    
+    // Create a service chain of one waypoint. 
+    public void setWaypoint(String wpaddr) {
+        SetPathRedirect redirect = new SetPathRedirect();
+        redirect.addWaypoint(NetUtils.parseInetAddress(wpaddr));
+        
+        /* Add this service chain to this affinity link. */
+        addAttribute((AffinityAttribute) redirect);
+    }
+
+    public AffinityAttribute getWaypoint() {
+	return attrlist.get(AffinityAttributeType.SET_PATH_REDIRECT);
+    }
+    
+    public boolean isDeny() {
+        return attrlist.containsKey(AffinityAttributeType.SET_DENY);
+    }
+
+    // Drop flows matching this affinity link
+    public void setDeny() {
+        SetDeny deny = new SetDeny();
+        addAttribute(deny);
     }
     public String getAttribute() {
 	return this.affinityAttribute;

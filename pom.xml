@@ -46,11 +46,11 @@
     <testvm.argLine>-Xmx1024m -XX:MaxPermSize=256m</testvm.argLine>
     <url.version>1.5.0</url.version>
     <virgo.version>3.6.0.RELEASE</virgo.version>
+    <hosttracker.version>0.5.1-SNAPSHOT</hosttracker.version>
   </properties>
 
     <modules>
       <module>affinity/api</module> 
-      <module>affinity/yang</module>  
       <module>affinity/implementation</module>
       <module>affinity/integrationtest</module>
       <module>affinity/northbound</module>
@@ -58,8 +58,8 @@
       <module>analytics/implementation</module>
       <module>analytics/integrationtest</module>
       <module>analytics/northbound</module>
-      <module>l2agent</module>
-      <module>nfchainagent</module>
+      <module>flatl2</module> 
+      <module>flatl2/northbound</module> 
     </modules>
 
     <repositories>

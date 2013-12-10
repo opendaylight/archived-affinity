@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.Set;
 import java.util.Collection;
@@ -27,8 +28,7 @@ import org.opendaylight.controller.sal.flowprogrammer.Flow;
 import org.opendaylight.affinity.affinity.AffinityLink;
 
 /**
- * Primary purpose of this interface is to provide methods for
- * applications to set affinity configuration.
+ * Interface to class for maintaining affinity configuration.
  */
 public interface IAffinityManager {
 
@@ -53,13 +53,18 @@ public interface IAffinityManager {
     public List<Entry<Host, Host>> getAllFlowsByHost(AffinityLink al);
     public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlowsByAffinityIdentifier(AffinityLink al);
 
+    /** 
+     * Returns a map of groupname, derived from affinity link name, to
+     * the list of flow objects corresponding to that link. This
+     * should be a consistent snapshot of all configured objects.
+     */
+    public HashMap<String, List<Flow>>getAllFlowGroups();
 
-    /* Program the nf service chain for this affinity link. */
-    /* Methods to add and enable network service chains. */
-    public Status addNfchain(AffinityLink al);
-    public Status enableRedirect(AffinityLink al) throws Exception;
-    public Status disableRedirect(AffinityLink al) throws Exception;
+    // For each flowgroup, there is a list of attributes. This api
+    // call fetches this as a hashmap. Key of the outer hashmap is the
+    // name of the affinity link (aka flowgroup). Key for the inner
+    // hashmap is the affinity attribute type.
+    public HashMap<String, HashMap<AffinityAttributeType,AffinityAttribute>>getAllAttributes();
 
-    //    public Status addFlowRulesForRedirect(AffinityLink al) throws Exception;
-    //    public Status pushFlowRule(InetAddress from, InetAddress to, byte [] mac);
+    public List<Flow> getFlowlist(AffinityLink al);
 }

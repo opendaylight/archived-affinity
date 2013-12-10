@@ -45,7 +45,8 @@
               org.opendaylight.controller.sal.packet,
               org.opendaylight.controller.sal.inventory,
               org.opendaylight.controller.sal.flowprogrammer,
-              !org.codehaus.enunciate.jaxrs
+              org.codehaus.enunciate.jaxrs,
+              org.slf4j
             </Import-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>

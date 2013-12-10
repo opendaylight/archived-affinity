@@ -8,23 +8,6 @@
 
 package org.opendaylight.affinity.affinity.internal;
 
-
-import org.opendaylight.yang.gen.v1.affinity.rev130925.AffinityService;
-import org.opendaylight.yang.gen.v1.affinity.rev130925.HostEndpoint;
-import org.opendaylight.yang.gen.v1.affinity.rev130925.host_endpoint.L2address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
-
-import org.opendaylight.yang.gen.v1.affinity.rev130925.CreategroupInput;
-import org.opendaylight.yang.gen.v1.affinity.rev130925.AddendpointInput;
-
-import java.util.concurrent.Future;
-import org.opendaylight.controller.sal.common.util.Futures;
-import org.opendaylight.controller.sal.common.util.Rpcs;
-
-import org.opendaylight.yangtools.yang.common.RpcError;
-import org.opendaylight.yangtools.yang.common.RpcResult;
-
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -67,9 +50,7 @@ import org.opendaylight.controller.clustering.services.ICacheUpdateAware;
 import org.opendaylight.controller.clustering.services.IClusterContainerServices;
 import org.opendaylight.controller.clustering.services.IClusterServices;
 import org.opendaylight.controller.configuration.IConfigurationContainerAware;
-//import org.opendaylight.controller.forwardingrulesmanager.FlowEntry;
-//import org.opendaylight.controller.forwardingrulesmanager.IForwardingRulesManager;
-import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
+import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.sal.flowprogrammer.Flow;
 import org.opendaylight.controller.sal.utils.IPProtocols;
 
@@ -98,7 +79,6 @@ import org.opendaylight.controller.sal.utils.ObjectReader;
 import org.opendaylight.controller.sal.utils.ObjectWriter;
 import org.opendaylight.controller.sal.utils.NetUtils;
 
-import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.sal.utils.Status;
 import org.opendaylight.controller.sal.utils.StatusCode;
 
@@ -106,16 +86,10 @@ import org.opendaylight.controller.sal.utils.ServiceHelper;
 import org.opendaylight.affinity.affinity.AffinityGroup;
 import org.opendaylight.affinity.affinity.AffinityLink;
 import org.opendaylight.affinity.affinity.AffinityIdentifier;
+import org.opendaylight.affinity.affinity.AffinityAttributeType;
+import org.opendaylight.affinity.affinity.AffinityAttribute;
 import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.IAffinityManagerAware;
-
-import org.opendaylight.controller.hosttracker.IfIptoHost;
-import org.opendaylight.controller.hosttracker.IfNewHostNotify;
-import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
-import org.opendaylight.controller.switchmanager.ISwitchManager;
-import org.opendaylight.affinity.l2agent.IfL2Agent;
-import org.opendaylight.affinity.nfchainagent.NFchainAgent;
-import org.opendaylight.affinity.nfchainagent.NFchainconfig;
 import org.opendaylight.affinity.affinity.InetAddressMask;
 
 import org.slf4j.Logger;
@@ -124,22 +98,17 @@ import org.slf4j.LoggerFactory;
 /**
  * Affinity configuration.
  */
-public class AffinityManagerImpl implements IAffinityManager, AffinityService, IfNewHostNotify,
+public class AffinityManagerImpl implements IAffinityManager, 
                                             IConfigurationContainerAware, IObjectReader, ICacheUpdateAware<Long, String> {
     private static final Logger log = LoggerFactory.getLogger(AffinityManagerImpl.class);
 
     private static String ROOT = GlobalConstants.STARTUPHOME.toString();
     private static final String SAVE = "Save";
+
+    // write all objects to a single file.
     private String affinityLinkFileName = null;
     private String affinityGroupFileName = null;
-    //    private IForwardingRulesManager ruleManager;
-    private IFlowProgrammerService programmer = null;
-    private NFchainAgent nfchainagent = null;
     
-    private ISwitchManager switchManager = null;
-    private IfL2Agent l2agent = null;
-    private IfIptoHost hostTracker = null;
-
     private ConcurrentMap<String, AffinityGroup> affinityGroupList;
     private ConcurrentMap<String, AffinityLink> affinityLinkList;
     private ConcurrentMap<Long, String> configSaveEvent;
@@ -148,13 +117,13 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
     private final Set<IAffinityManagerAware> affinityManagerAware = Collections
             .synchronizedSet(new HashSet<IAffinityManagerAware>());
 
-    private byte[] MAC;
     private static boolean hostRefresh = true;
     private int hostRetryCount = 5;
     private IClusterContainerServices clusterContainerService = null;
     private String containerName = GlobalConstants.DEFAULT.toString();
     private boolean isDefaultContainer = true;
     private static final int REPLACE_RETRY = 1;
+    private IfIptoHost hostTracker;
 
     private static short REDIRECT_IPSWITCH_PRIORITY = 3;
 
@@ -258,89 +227,6 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
     }
 
 
-    void setHostTracker(IfIptoHost h) {
-        log.info("Setting hosttracker {}", h);
-        this.hostTracker = h;
-    }
-
-    void unsetHostTracker(IfIptoHost h) {
-        if (this.hostTracker.equals(h)) {
-            this.hostTracker = null;
-        }
-    }
-    /*    public void setForwardingRulesManager(
-            IForwardingRulesManager forwardingRulesManager) {
-        log.debug("Setting ForwardingRulesManager");
-        this.ruleManager = forwardingRulesManager;
-    }
-
-    public void unsetForwardingRulesManager(
-            IForwardingRulesManager forwardingRulesManager) {
-        if (this.ruleManager == forwardingRulesManager) {
-            this.ruleManager = null;
-        }
-    }
-    */
-    public void setFlowProgrammerService(IFlowProgrammerService s)
-    {
-        this.programmer = s;
-    }
-
-    public void unsetFlowProgrammerService(IFlowProgrammerService s) {
-        if (this.programmer == s) {
-            this.programmer = null;
-        }
-    }
-
-    void setNFchainAgent(NFchainAgent s)
-    {
-        log.info("Setting nfchainagent {}", s);
-        this.nfchainagent = s;
-    }
-
-    void unsetNFchainAgent(NFchainAgent s) {
-        if (this.nfchainagent == s) {
-            this.nfchainagent = null;
-        }
-    }
-
-    void setL2Agent(IfL2Agent s)
-    {
-        log.info("Setting l2agent {}", s);
-        this.l2agent = s;
-    }
-
-    void unsetL2Agent(IfL2Agent s) {
-        if (this.l2agent == s) {
-            this.l2agent = null;
-        }
-    }
-
-    void setSwitchManager(ISwitchManager s)
-    {
-        this.switchManager = s;
-    }
-
-    void unsetSwitchManager(ISwitchManager s) {
-        if (this.switchManager == s) {
-            this.switchManager = null;
-        }
-    }
-
-    /*
-    public void setForwardingRulesManager(
-            IForwardingRulesManager forwardingRulesManager) {
-        this.ruleManager = forwardingRulesManager;
-    }
-
-    public void unsetForwardingRulesManager(
-            IForwardingRulesManager forwardingRulesManager) {
-        if (this.ruleManager == forwardingRulesManager) {
-            this.ruleManager = null;
-        }
-    }
-    */
-    
     public Status addAffinityLink(AffinityLink al) {
 	boolean putNewLink = false;
 
@@ -366,14 +252,6 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
 
         return new Status(StatusCode.SUCCESS);
     }
-
-    /*    public byte [] InetAddressToMAC(InetAddress inetAddr) {
-        //        HostNodeConnector 
-        log.debug("Find {} -> {} using hostTracker {}", inetAddr, host, hostTracker);
-        byte [] dst_mac = host.getDataLayerAddressBytes();
-        return dst_mac;
-    }
-    */
 
     public Status removeAffinityLink(String name) {
 	affinityLinkList.remove(name);
@@ -478,13 +356,11 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
     public ArrayList<AffinityIdentifier> getAllElementsByAffinityIdentifier(AffinityGroup ag) {
 	return ag.getAllElements();
     }
- 
     @Override 
     public List<Host> getAllElementsByHost(AffinityGroup ag) {
 	List<Host> hostList= new ArrayList<Host>();
 
 	for (AffinityIdentifier h : ag.getAllElements()) {
-	    /* TBD: Do not assume this to be an InetAddress. */ 
 	    h.print();
 	    if (hostTracker != null) {
 		Host host1 = hostTracker.hostFind((InetAddress) h.get());
@@ -514,7 +390,6 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
 	}
 	return hostPairList;
     }
-
     @Override 
     public List<Entry<AffinityIdentifier, AffinityIdentifier>> getAllFlowsByAffinityIdentifier(AffinityLink al) {
 	List<Entry<AffinityIdentifier, AffinityIdentifier>> hostPairList= new ArrayList<Entry<AffinityIdentifier, AffinityIdentifier>>();
@@ -531,24 +406,6 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
 	}
 	return hostPairList;
     }
-
-    private void notifyHostUpdate(HostNodeConnector host, boolean added) {
-        if (host == null) {
-            return;
-        }
-        log.info("Host update received (new = {}).", added);
-    }
-
-    @Override
-    public void notifyHTClient(HostNodeConnector host) {
-        notifyHostUpdate(host, true);
-    }
-
-    @Override
-    public void notifyHTClientHostRemoved(HostNodeConnector host) {
-        notifyHostUpdate(host, false);
-    }
-
 
     @Override
     public Status saveConfiguration() {
@@ -650,16 +507,27 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
         log.debug("Cluster Service set for affinity mgr");
         this.clusterContainerService = s;
     }
-
+    
     void unsetClusterContainerService(IClusterContainerServices s) {
         if (this.clusterContainerService == s) {
             log.debug("Cluster Service removed for affinity mgr!");
             this.clusterContainerService = null;
         }
     }
-    
+
+    void setHostTracker(IfIptoHost h) {
+        log.info("Setting hosttracker {}", h);
+        this.hostTracker = h;
+    }
+
+    void unsetHostTracker(IfIptoHost h) {
+        if (this.hostTracker.equals(h)) {
+            this.hostTracker = null;
+        }
+    }
+
     /* Add a nfchain config for this affinity link. */
-    List<Flow> getFlowlist(AffinityLink al) {
+    public List<Flow> getFlowlist(AffinityLink al) {
         InetAddress from = null, to = null;
 
         log.info("get flowlist affinity link = {}", al.getName());
@@ -706,59 +574,26 @@ public class AffinityManagerImpl implements IAffinityManager, AffinityService, I
         }
 	return flowlist;
     }
-
-    /* From affinity link, create a nfc config. Pass this nfc config to nfchainagent. */
-    public Status addNfchain(AffinityLink al) {
-        List<Flow> flowlist = getFlowlist(al);
-        InetAddress waypoint = NetUtils.parseInetAddress(al.getWaypoint());
-        NFchainconfig nfcc = new NFchainconfig(al.getName(), flowlist, waypoint);
-        String key = al.getName();
-        nfchainagent.addNfchain(key, nfcc);
-        log.info("Added nfchain {}", al.getName());
-        return new Status(StatusCode.SUCCESS);
-    }
-
-    public Status enableRedirect(AffinityLink al) throws Exception {
-        String nfccname = al.getName();
-        return nfchainagent.enable(nfccname);
-    }
- 
-   public Status disableRedirect(AffinityLink al) throws Exception {
-        String nfccname = al.getName();
-        return nfchainagent.disable(nfccname);
-    }
-
-   public Status removeNfchain(AffinityLink al) throws Exception {
-        String nfccname = al.getName();
-        return nfchainagent.removeNfchain(nfccname);
-    }
-
-
-   /* public methods for the yang service. */
-   public Future<RpcResult<Void>> creategroup(CreategroupInput input) {
-       AffinityGroup ag1 = new AffinityGroup(input.getName());
-       
-       /* Correctly translate between status fields. */
-       Status ret = addAffinityGroup(ag1);
-       RpcResult<Void> result = Rpcs.<Void> getRpcResult(true, null, Collections.<RpcError> emptySet());
-       return Futures.immediateFuture(result);
-   }
     
-   public Future<RpcResult<Void>> addendpoint(AddendpointInput input) {
-       AffinityGroup ag = getAffinityGroup(input.getGroupname());
-       RpcResult<Void> result;
+    public HashMap<String, List<Flow>>getAllFlowGroups() {
+        HashMap<String, List<Flow>> flowgroups = new HashMap<String, List<Flow>>();
+        for (AffinityLink al: getAllAffinityLinks()) {
+            List<Flow> flowlist = getFlowlist(al);
+            flowgroups.put(al.getName(), flowlist);
+        }
+        return flowgroups;
+    }
 
-       if (ag != null) {
-           HostEndpoint endpoint = input.getEndpoint();
-           L2address l2address = endpoint.getL2address();
-           Ipv4Prefix l3address = endpoint.getL3address();
-           
-           /*   ag.addL2address(); */
-           ag.addInetMask(l3address.toString());
-           result = Rpcs.<Void> getRpcResult(true, null, Collections.<RpcError> emptySet());
-       } else {
-           result = Rpcs.<Void> getRpcResult(false, null, Collections.<RpcError> emptySet());
-       }
-       return Futures.immediateFuture(result);
-   }
+    public HashMap<String, HashMap<AffinityAttributeType,AffinityAttribute>>getAllAttributes() {
+        HashMap<String, HashMap<AffinityAttributeType, AffinityAttribute>>attributes = 
+            new HashMap<String, HashMap<AffinityAttributeType, AffinityAttribute>>();
+
+        
+        for (AffinityLink al: getAllAffinityLinks()) {
+            HashMap<AffinityAttributeType, AffinityAttribute> pergroupattrs = al.getAttributeList();
+            attributes.put(al.getName(), pergroupattrs);
+        }
+        return attributes;
+    }
+    
 }
