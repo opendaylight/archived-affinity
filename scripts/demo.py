@@ -19,6 +19,8 @@ from affinity_control import AffinityControl
 from subnet import SubnetControl
 from stats import Stats
 
+import analytics
+
 '''
 The instructions for running this demo are located at:
 https://wiki.opendaylight.org/view/Project_Proposals:Affinity_Metadata_Service#Current_Status
@@ -59,6 +61,7 @@ class WaypointMonitor(Thread):
     def set_large_flow_threshold(self, s):
         self.stat.set_large_flow_threshold(s)
         print "Set threshold for large flows to %d bytes" % s
+        print("-------------------------")
 
     def run(self):
         global sigint
@@ -66,7 +69,12 @@ class WaypointMonitor(Thread):
         while not sigint:
             _, is_big = self.stat.refresh()
             if is_big and not did_waypoint:
-                print "Large flow detected (%d bytes)" % self.stat.get_bytes()
+                print "Large flow detected (%d bytes, %d packets, %3.3f bit/s)" % (self.stat.get_bytes(), self.stat.get_packets(), self.stat.get_bit_rate())
+                print "   ICMP: %d bytes, %d packets" % (self.stat.get_bytes(1), self.stat.get_packets(1))
+                print "   UDP: %d bytes, %d packets" % (self.stat.get_bytes(17), self.stat.get_packets(17))
+                print "   TCP: %d bytes, %d packets" % (self.stat.get_bytes(6), self.stat.get_packets(6))
+                print "   other: %d bytes, %d packets" % (self.stat.get_bytes(-1), self.stat.get_packets(-1))
+                print("-------------------------")
                 ac = AffinityControl()
                 # First AG: Sources sending data into this subnet
                 src_ag_name = "sources"
@@ -97,6 +105,14 @@ def main():
     # Default subnet is required for the host tracker to work.
     subnet_control = SubnetControl()
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
+
+    raw_input("[Press enter when mininet is ready] ")
+    print("-------------------------")
+
+    # Add per-protocol flows so we can monitor stats that way
+    x = analytics.add_protocol_flows()
+    if (not x):
+        print "Unable to add per-protocol flows"
 
     m = WaypointMonitor(Stats.TYPE_SUBNET, subnet="10.0.0.0/31")
     m.set_waypoint("10.0.0.2")

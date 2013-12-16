@@ -211,7 +211,9 @@ public class L2Agent implements IListenDataPacket, IfL2Agent {
     @Override
     public NodeConnector lookup_output_port(Node node, byte [] dstMAC) {
         long dstMAC_val = BitBufferHelper.toNumber(dstMAC);
-        NodeConnector nc = this.mac_to_ports.get(node).get(dstMAC_val);
+        NodeConnector nc = null;
+        if (this.mac_to_ports.get(node) != null)
+            nc = this.mac_to_ports.get(node).get(dstMAC_val);
         logger.debug("lookup_output_port: Node = {}, dst mac = {}, Nodeconnector = {}", node, dstMAC, nc);
         return nc;
     }
