@@ -49,6 +49,7 @@ public class AffinityLink implements Cloneable, Serializable {
     AffinityGroup toGroup;
 
     // Keep at most one affinity attribute per type. 
+    @XmlElement
     private HashMap<AffinityAttributeType, AffinityAttribute> attrlist;
     
     // xxx 
@@ -102,6 +103,11 @@ public class AffinityLink implements Cloneable, Serializable {
         addAttribute((AffinityAttribute) redirect);
     }
 
+    // Unset the waypoint address.
+    public void unsetWaypoint() {        
+        attrlist.remove(AffinityAttributeType.SET_PATH_REDIRECT);
+    }
+
     public AffinityAttribute getWaypoint() {
 	return attrlist.get(AffinityAttributeType.SET_PATH_REDIRECT);
     }
@@ -110,10 +116,15 @@ public class AffinityLink implements Cloneable, Serializable {
         return attrlist.containsKey(AffinityAttributeType.SET_DENY);
     }
 
-    // Drop flows matching this affinity link
+    // Mark this with "deny"
     public void setDeny() {
         SetDeny deny = new SetDeny();
         addAttribute(deny);
+    }
+
+    // Remove "deny" marking if it exists
+    public void unsetDeny() {
+        attrlist.remove(AffinityAttributeType.SET_DENY);
     }
     public String getAttribute() {
 	return this.affinityAttribute;
@@ -123,6 +134,17 @@ public class AffinityLink implements Cloneable, Serializable {
     }
     public AffinityGroup getToGroup() {
 	return this.toGroup;
+    }
+    @Override
+    public String toString() {
+        String output = this.name;
+
+        if (attrlist != null) {
+            for (AffinityAttribute a: attrlist.values()) {
+                output = output + "attr: " + a.toString() + "; ";
+            }
+        }
+        return output;
     }
 }
 

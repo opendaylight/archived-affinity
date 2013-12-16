@@ -61,7 +61,7 @@ public class SetPathRedirect extends AffinityAttribute {
     public String toString() {
         String string = type + "[";
         for (InetAddress address: waypointList) {
-            string = string + address.toString();
+            string = string + " -> " + address.toString();
         }
         string = string +  "]";
         return string;

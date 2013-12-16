@@ -58,6 +58,7 @@
       <module>analytics/implementation</module>
       <module>analytics/integrationtest</module>
       <module>analytics/northbound</module>
+      <module>l2agent</module> 
       <module>flatl2</module> 
       <module>flatl2/northbound</module> 
     </modules>

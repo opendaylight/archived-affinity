@@ -94,10 +94,12 @@ class WaypointMonitor(Thread):
                 link_name = "inflows"
                 ac.add_affinity_link(link_name, src_ag_name, dst_ag_name)
                 ac.add_waypoint(link_name, self.waypoint_address)
-                ac.enable_waypoint(link_name)
+#                ac.enable_waypoint(link_name)
+                ac.enable_affinity()
                 did_waypoint = True
-                raw_input("[Press Enter to disable waypoint redirection] ")
-                ac.disable_waypoint(link_name)
+                raw_input("[Press Enter to disable affinity rules] ")
+                ac.disable_affinity()
+#                ac.disable_waypoint(link_name)
             time.sleep(1)
 
 def main():

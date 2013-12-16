@@ -23,11 +23,9 @@ import org.opendaylight.affinity.affinity.IAffinityManagerAware;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.opendaylight.affinity.l2agent.IfL2Agent;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.IfNewHostNotify;
-import org.opendaylight.affinity.l2agent.IfL2Agent;
-import org.opendaylight.affinity.nfchainagent.NFchainAgent;
-import org.opendaylight.controller.sal.flowprogrammer.IFlowProgrammerService;
 
 /**
  * AffinityManager Bundle Activator
@@ -94,12 +92,17 @@ public class Activator extends ComponentActivatorAbstractBase {
             c.setInterface(new String[] {
                     IAffinityManager.class.getName(),
                     ICacheUpdateAware.class.getName(),
-                    IfNewHostNotify.class.getName(),
                     IConfigurationContainerAware.class.getName() }, props);
 
             // Now lets add a service dependency to make sure the
             // provider of service exists
             /* L2agent dependency causes the service to fail activation. tbd. */
+            
+            c.add(createContainerServiceDependency(containerName)
+                  .setService(IfL2Agent.class)
+                  .setCallbacks("setL2Agent", "unsetL2Agent")
+                  .setRequired(true));
+            
             c.add(createContainerServiceDependency(containerName).setService(
                     IClusterContainerServices.class).setCallbacks(
                     "setClusterContainerService",

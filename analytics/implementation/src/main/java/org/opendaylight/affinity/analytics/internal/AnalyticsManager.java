@@ -66,9 +66,11 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
     }
 
     void start() {
+        log.info("Analytics manager started.!!!");
     }
 
     void started(){
+        log.info("Analytics manager started.!!!");
     }
 
     void stop() {

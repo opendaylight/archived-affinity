@@ -526,7 +526,6 @@ public class AffinityManagerImpl implements IAffinityManager,
         }
     }
 
-    /* Add a nfchain config for this affinity link. */
     public List<Flow> getFlowlist(AffinityLink al) {
         InetAddress from = null, to = null;
 
@@ -581,6 +580,9 @@ public class AffinityManagerImpl implements IAffinityManager,
             List<Flow> flowlist = getFlowlist(al);
             flowgroups.put(al.getName(), flowlist);
         }
+        for (String a: flowgroups.keySet()) {
+            log.info("Adding {} to flowgroups (# flows={})", a, flowgroups.get(a).size());
+        }
         return flowgroups;
     }
 
@@ -592,6 +594,7 @@ public class AffinityManagerImpl implements IAffinityManager,
         for (AffinityLink al: getAllAffinityLinks()) {
             HashMap<AffinityAttributeType, AffinityAttribute> pergroupattrs = al.getAttributeList();
             attributes.put(al.getName(), pergroupattrs);
+            log.info("Adding {} to attributes (# attributes={})", al.getName(), pergroupattrs.values().size());
         }
         return attributes;
     }

@@ -237,6 +237,49 @@ public class AffinityNorthbound {
 
 
     /**
+     * Returns details of an affinity link.
+     *
+     * @param containerName
+     *            Name of the Container. The Container name for the base
+     *            controller is "default".
+     * @param affinityLinkName
+     *            Name of the affinity link being retrieved.
+     * @return affinity link details.
+     */
+    @Path("/{containerName}/link/{affinityLinkName}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AffinityLinkNorthbound.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The containerName is not found"),
+            @ResponseCode(code = 415, condition = "Affinity name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AffinityLinkNorthbound getAffinityLinkDetails(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+        if (!NorthboundUtils.isAuthorized(
+                getUserName(), containerName, Privilege.READ, this)) {
+            throw new UnauthorizedException(
+                    "User is not authorized to perform this operation on container "
+                            + containerName);
+        }
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+
+        log.info("Get affinity link details" + affinityLinkName);
+        AffinityLink al = affinityManager.getAffinityLink(affinityLinkName);
+        if (al == null) {
+            throw new ResourceNotFoundException(RestMessages.SERVICEUNAVAILABLE.toString());
+        } else {
+            return new AffinityLinkNorthbound(al);
+        }
+    }
+
+    /**
      * Add path redirect details to an affinity link. 
      *
      * @param containerName
@@ -275,6 +318,49 @@ public class AffinityNorthbound {
 
         AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
         al1.setWaypoint(waypointIP);        
+        log.info("Affinity link is now: {} ", al1.toString());
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+
+    /**
+     * Add path redirect details to an affinity link. 
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being added
+     * @param wayPoint
+     *            IP address string of a waypoint server or VM
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/link/{affinityLinkName}/unsetwaypoint")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response setLinkWaypoint(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Unset waypoint setting (link)" + affinityLinkName);
+
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        al1.unsetWaypoint();
         return Response.status(Response.Status.CREATED).build();
     }
 
@@ -315,6 +401,46 @@ public class AffinityNorthbound {
 
         AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
         al1.setDeny();        
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+
+
+    /**
+     * Remove the "deny" attribute if it exists.
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being marked. 
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/link/{affinityLinkName}/permit/")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response unsetLinkDeny(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+        
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Unset deny (link)" + affinityLinkName);
+
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        al1.unsetDeny();
         return Response.status(Response.Status.CREATED).build();
     }
 

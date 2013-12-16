@@ -17,6 +17,7 @@ class AffinityControl:
         self.http = httplib2.Http(".cache")
         self.http.add_credentials("admin", "admin")
         self.url_prefix = "http://localhost:8080/affinity/nb/v2/affinity/default/"
+        self.flatl2url_prefix = "http://localhost:8080/affinity/nb/v2/flatl2/default/"
 
     # Add affinity group
     def add_affinity_group(self, group_name, **kwargs):
@@ -74,3 +75,19 @@ class AffinityControl:
             print "Waypoint could not be disabled for link %s" % link_name
             return
         print "Waypoint disabled for link %s" % link_name
+
+    # Enable all affinity rules
+    def enable_affinity(self):
+        resp, content = self.http.request(self.flatl2url_prefix + "enableaffinity", "PUT")
+        if (resp.status != 201):
+            print "Affinity rules could not be enabled."
+            return
+        print "Affinity rules enabled"
+
+    # Disable all affinity rules
+    def disable_affinity(self):
+        resp, content = self.http.request(self.flatl2url_prefix + "disableaffinity", "PUT")
+        if (resp.status != 201):
+            print "Affinity rules could not be disabled" 
+            return
+        print "Affinity rules disabled"

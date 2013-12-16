@@ -61,7 +61,7 @@ public interface IAffinityManager {
     public HashMap<String, List<Flow>>getAllFlowGroups();
 
     // For each flowgroup, there is a list of attributes. This api
-    // call fetches this as a hashmap. Key of the outer hashmap is the
+    // call fetches this list as a hashmap. Key of the outer hashmap is the
     // name of the affinity link (aka flowgroup). Key for the inner
     // hashmap is the affinity attribute type.
     public HashMap<String, HashMap<AffinityAttributeType,AffinityAttribute>>getAllAttributes();
