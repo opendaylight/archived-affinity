@@ -40,4 +40,4 @@ def get_all_nodes():
     return nodes
 
 get_flow_stats()
-#get_all_nodes()
+get_all_nodes()

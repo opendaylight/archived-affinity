@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.net.UnknownHostException;
+import java.io.Serializable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +14,7 @@ import org.slf4j.LoggerFactory;
 /**
  * This class defines an Inet address mask object.
  */
-public class InetAddressMask {
+public class InetAddressMask implements Cloneable, Serializable {
     private String name;
     
     InetAddress networkAddress;

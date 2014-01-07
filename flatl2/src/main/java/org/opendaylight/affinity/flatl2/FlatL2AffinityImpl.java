@@ -279,6 +279,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
     // Called via northbound API -- push all affinities. 
     public boolean enableAllAffinityLinks() {
         this.nodelist = switchManager.getNodes();
+        log.info("Enable all affinity links.");
         if (this.nodelist == null) {
             log.debug("No nodes in network.");
             return true;

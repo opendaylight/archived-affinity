@@ -178,6 +178,28 @@
           </dependency>
         </dependencies>
       </plugin>
+<!--      <plugin>
+        <groupId>org.codehaus.enunciate</groupId>
+        <artifactId>maven-enunciate-plugin</artifactId>
+        <version>${enunciate.version}</version>
+        <executions>
+          <execution>
+            <configuration>
+              <configFile>enunciate.xml</configFile>
+            </configuration>
+            <goals>
+              <goal>docs</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.opendaylight.controller</groupId>
+            <artifactId>commons.logback_settings</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+          </dependency>
+        </dependencies>
+      </plugin> -->
     </plugins>
   </build>
     <reporting>
@@ -199,4 +221,18 @@
             </plugin>
         </plugins>
     </reporting>
+
+    <profiles>
+    <profile>
+      <id>docs</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <modules>
+        <module>analytics/northbound</module>
+        <module>affinity/northbound</module>
+        <module>flatl2/northbound</module>
+      </modules>
+    </profile>
+    </profiles>
 </project>

@@ -118,7 +118,7 @@ def main():
 
     m = WaypointMonitor(Stats.TYPE_SUBNET, subnet="10.0.0.0/31")
     m.set_waypoint("10.0.0.2")
-    m.set_large_flow_threshold(2000) # 2000 bytes
+    m.set_large_flow_threshold(500) # 2000 bytes
     m.start()
 
     # Register signal-handler to catch SIG_INT

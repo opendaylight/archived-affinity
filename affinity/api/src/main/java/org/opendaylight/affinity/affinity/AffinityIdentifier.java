@@ -1,10 +1,12 @@
 package org.opendaylight.affinity.affinity;
+import java.io.Serializable;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /* Affinity identifier */
-public class AffinityIdentifier<T> {
+public class AffinityIdentifier<T> implements Serializable, Cloneable {
+    private static final long serialVersionUID = 1L;
     private T value;
     private String name;
 
