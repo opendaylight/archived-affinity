@@ -47,8 +47,8 @@ class Stats:
             self.stats = analytics.stats_link(self.al, False)
             self.protocol_stats = analytics.all_stats_link(self.al, False)
         elif (self.stat_type == Stats.TYPE_SUBNET):
-            self.stats = analytics.stats_subnet("null/null", self.subnet, False)
-            self.protocol_stats = analytics.all_stats_subnet("null/null", self.subnet, False)
+            self.stats = analytics.stats_subnet("null/null", self.subnet, True)
+            self.protocol_stats = analytics.all_stats_subnet("null/null", self.subnet, True)
         try:
             is_fast = self.handle_rate_ewma()
             is_big = self.check_large_flow()

@@ -52,12 +52,6 @@ public class AffinityLink implements Cloneable, Serializable {
     @XmlElement
     private HashMap<AffinityAttributeType, AffinityAttribute> attrlist;
     
-    // xxx 
-    @XmlElement 
-    String affinityAttribute;
-    @XmlElement 
-    String affinityWaypoint;
-
     public AffinityLink() {
         attrlist = new HashMap<AffinityAttributeType, AffinityAttribute>();
     }
@@ -81,20 +75,14 @@ public class AffinityLink implements Cloneable, Serializable {
     }
     public void addAttribute(AffinityAttribute attr) {
         if (attr != null) {
-            System.out.println("Printing affinity attribute: " + attr.type);
             attrlist.put(attr.type, attr);
         }
     }
     public HashMap<AffinityAttributeType, AffinityAttribute> getAttributeList() {
 	return this.attrlist;
     }
-
-    /* Set the waypoint address, if the attribute is "redirect" */
-    public void setAttribute(String attribute) {
-	this.affinityAttribute = attribute;
-    }
     
-    // Create a service chain of one waypoint. 
+    /* Set the waypoint address, if the attribute is "redirect" */
     public void setWaypoint(String wpaddr) {
         SetPathRedirect redirect = new SetPathRedirect();
         redirect.addWaypoint(NetUtils.parseInetAddress(wpaddr));
@@ -103,13 +91,53 @@ public class AffinityLink implements Cloneable, Serializable {
         addAttribute((AffinityAttribute) redirect);
     }
 
-    // Unset the waypoint address.
-    public void unsetWaypoint() {        
+    /* Get the waypoint address */
+    public AffinityAttribute getWaypoint() {
+	return attrlist.get(AffinityAttributeType.SET_PATH_REDIRECT);
+    }
+    
+    // Unset the waypoint attribute.
+    public void unsetWaypoint() {
         attrlist.remove(AffinityAttributeType.SET_PATH_REDIRECT);
     }
 
-    public AffinityAttribute getWaypoint() {
-	return attrlist.get(AffinityAttributeType.SET_PATH_REDIRECT);
+    // Add tap attribute. 
+    public void addTap(String ipaddr) {
+        // Check if a tap attribute is already available on this link. 
+        // If not, create one and add IP address to it. 
+        AffinityAttributeType aatype = AffinityAttributeType.SET_TAP;
+        SetTap tap = (SetTap) attrlist.get(aatype);
+
+        if (tap == null) {
+            tap = new SetTap();
+        }
+        // add a tap server
+        tap.addTap(NetUtils.parseInetAddress(ipaddr));
+        
+        /* Add this tap set to the affinity link. */
+        addAttribute((AffinityAttribute) tap);
+    }
+
+    // Add tap configuration. 
+    public void removeTap(String ipaddr) {
+        // Check if a tap attribute is already available on this link. 
+        AffinityAttributeType aatype = AffinityAttributeType.SET_TAP;
+        SetTap tap = (SetTap) attrlist.get(aatype);
+        
+        // tap attribute exists. Remove IP address from its list of IP adresses. 
+        if (tap != null) {
+            tap.removeTap(NetUtils.parseInetAddress(ipaddr));
+        }
+    }
+
+    /* tbd requires nb method. */
+    public List<InetAddress> getTapList() {
+        // Check if a tap attribute is already available on this link. 
+        SetTap tap = (SetTap) attrlist.get(AffinityAttributeType.SET_TAP);
+        if (tap != null) {
+            return tap.getTapList();
+        }
+        return null;
     }
     
     public boolean isDeny() {
@@ -126,9 +154,16 @@ public class AffinityLink implements Cloneable, Serializable {
     public void unsetDeny() {
         attrlist.remove(AffinityAttributeType.SET_DENY);
     }
-    public String getAttribute() {
-	return this.affinityAttribute;
+
+    // Mark this with "isolate"
+    public void setIsolate() {
+        SetPathIsolate iso = new SetPathIsolate();
+        addAttribute(iso);
     }
+    public void unsetIsolate() {
+        attrlist.remove(AffinityAttributeType.SET_PATH_ISOLATE);
+    }
+
     public AffinityGroup getFromGroup() {
 	return this.fromGroup;
     }

@@ -125,7 +125,7 @@ public class AffinityManagerImpl implements IAffinityManager,
     private static final int REPLACE_RETRY = 1;
     private IfIptoHost hostTracker;
 
-    private static short REDIRECT_IPSWITCH_PRIORITY = 3;
+    private static short AFFINITY_RULE_PRIORITY = 3;
 
     public enum ReasonCode {
         SUCCESS("Success"), FAILURE("Failure"), INVALID_CONF(
@@ -361,7 +361,7 @@ public class AffinityManagerImpl implements IAffinityManager,
 	List<Host> hostList= new ArrayList<Host>();
 
 	for (AffinityIdentifier h : ag.getAllElements()) {
-	    h.print();
+            log.debug("host = {}", h);
 	    if (hostTracker != null) {
 		Host host1 = hostTracker.hostFind((InetAddress) h.get());
 		hostList.add(host1);
@@ -568,7 +568,7 @@ public class AffinityManagerImpl implements IAffinityManager,
             /* Set other fields. */
             match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
             Flow flow = new Flow(match, null);
-            flow.setPriority(REDIRECT_IPSWITCH_PRIORITY);
+            flow.setPriority(AFFINITY_RULE_PRIORITY);
             flowlist.add(flow);
         }
 	return flowlist;

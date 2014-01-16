@@ -94,12 +94,17 @@ public class AffinityGroup implements Cloneable, Serializable {
     public Integer size() {
 	return (elements.size());
     }
-    public void print() {
-	System.out.println("Printing affinity group " + this.name);
+
+    @Override
+    public String toString() {
+        String output = this.name;
+
 	for (AffinityIdentifier value : elements.values()) {
-	    value.print();
+	    output = output + ", " + value;
 	}
+        return output;
     }
+
     public String getName() {
 	return name;
     }

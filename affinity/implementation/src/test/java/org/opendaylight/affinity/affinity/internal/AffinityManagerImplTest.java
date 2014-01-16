@@ -43,7 +43,7 @@ public class AffinityManagerImplTest {
 	Status ret2 = ag1.add("10.0.0.20");
 	Assert.assertTrue(ret2.isSuccess());
 
-	ag1.print();
+	System.out.println(ag1.toString());
 
 	// Add an invalid element. 
 	Status ret3 = ag1.add("10");
@@ -60,19 +60,16 @@ public class AffinityManagerImplTest {
 	al1.setFromGroup(ag1);
 	al1.setToGroup(ag2);
 	al1.setName("link1");
-	al1.setAttribute("isolate");
 
 	// Add a self loop for ag2.
 	AffinityLink al2 = new AffinityLink("link2", ag2, ag2);
 	al2.setFromGroup(ag2);
 	al2.setToGroup(ag2);
 	al2.setName("link2");
-	al2.setAttribute("hopcount");
 
-	System.out.println("Affinity group size is " + ag1.size());
+	System.out.println("Affinity group " + ag1.toString() + ", elements=" + ag1.size());
         Assert.assertTrue(ag1.size() == 2);
-	ag1.print();
-
+        
         Status result;
 	result = affinitymgr.addAffinityGroup(ag1);
         Assert.assertTrue(result.isSuccess());
@@ -97,7 +94,6 @@ public class AffinityManagerImplTest {
 	al3.setFromGroup(ag3);
 	al3.setToGroup(ag4);
 	al3.setName("link3");
-	al3.setAttribute("redirect");
         al3.setWaypoint("20.0.0.11");
         
 	result = affinitymgr.addAffinityGroup(ag3);
@@ -128,9 +124,11 @@ public class AffinityManagerImplTest {
 	/* Get all members as affinity identifiers */
 	System.out.println("Affinity group (as Affinity Identifiers) = " + ag1.getName());
 	ArrayList<AffinityIdentifier> affylist = affinitymgr.getAllElementsByAffinityIdentifier(ag1);
-	
+
+        String idList = null;
 	for (AffinityIdentifier i : affylist) {
-	    i.print();
+            idList = idList + i.toString();
+	    System.out.println(idList);
 	}
 
 	/* Get all id pairs for an affinity link */

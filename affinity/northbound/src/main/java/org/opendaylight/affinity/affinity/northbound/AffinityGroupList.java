@@ -20,7 +20,7 @@ import org.opendaylight.affinity.affinity.AffinityGroup;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class AffinityGroupList {
-        @XmlElement (name="affinity")
+        @XmlElement 
         List<AffinityGroup> affinityGroupList;
 
         public AffinityGroupList() {

@@ -280,6 +280,91 @@ public class AffinityNorthbound {
     }
 
     /**
+     * Add tap server details to an affinity link. 
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being added
+     * @param path
+     *            IP address string of a waypoint server or VM
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/link/{affinityLinkName}/settap/{tapIP}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response setLinkTapServer(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName,
+            @PathParam("tapIP") String tapIP) {
+
+        log.info("Set tap address (link)" + affinityLinkName + " (tap ip) " + tapIP);
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        al1.addTap(tapIP);
+        log.info("Affinity link is now: {} ", al1.toString());
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+    /**
+     * Add path redirect details to an affinity link. 
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being added
+     * @param tap
+     *            IP address string of a waypoint server or VM
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/link/{affinityLinkName}/unsettap/{tapIP}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response unsetLinkTapServer(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName,
+            @PathParam("tapIP") String tapIP) {
+        
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Unset tap setting (link) {}, tapIP = {}", affinityLinkName, tapIP);
+
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        al1.removeTap(tapIP);
+        log.info("Affinity link is now: {} ", al1.toString());
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+    /**
      * Add path redirect details to an affinity link. 
      *
      * @param containerName
@@ -343,7 +428,7 @@ public class AffinityNorthbound {
             @ResponseCode(code = 200, condition = "Operation successful"),
             @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
             @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
-    public Response setLinkWaypoint(
+    public Response unsetLinkWaypoint(
             @PathParam("containerName") String containerName,
             @PathParam("affinityLinkName") String affinityLinkName) {
 
@@ -364,6 +449,86 @@ public class AffinityNorthbound {
         return Response.status(Response.Status.CREATED).build();
     }
 
+
+
+    /**
+     * Add path isolation attribute to a link.
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being added
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/link/{affinityLinkName}/setisolate")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response setLinkIsolate(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Set isolate (link)" + affinityLinkName);
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        al1.setIsolate();
+        log.info("Affinity link is now: {} ", al1.toString());
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+
+    /**
+     * Remove isolation attribute from link. 
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityLinkName
+     *            Name of the new affinity link being added
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/link/{affinityLinkName}/unsetisolate")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response unsetIsolate(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        log.info("Unset isolate (link)" + affinityLinkName);
+
+        AffinityLink al1 = affinityManager.getAffinityLink(affinityLinkName);
+        al1.unsetIsolate();
+        return Response.status(Response.Status.CREATED).build();
+    }
 
     /**
      * Mark this affinity link with "deny". 

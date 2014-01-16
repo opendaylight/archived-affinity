@@ -22,9 +22,6 @@ public class AffinityIdentifier<T> implements Serializable, Cloneable {
     public String getName(String name) {
 	return (this.name);
     }
-    public void print() {
-	System.out.println(name);
-    }
     public String toString() {
 	return "AffinityIdentifier [name= " + this.name + " value= " + value.toString() + "]";
     }

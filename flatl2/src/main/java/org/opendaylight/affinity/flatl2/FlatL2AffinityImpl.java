@@ -93,6 +93,7 @@ import org.opendaylight.affinity.affinity.AffinityAttributeType;
 import org.opendaylight.affinity.affinity.AffinityAttribute;
 import org.opendaylight.affinity.affinity.SetDeny;
 import org.opendaylight.affinity.affinity.SetPathRedirect;
+import org.opendaylight.affinity.affinity.SetTap;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
 import org.opendaylight.affinity.l2agent.L2Agent;
 
@@ -310,15 +311,15 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             log.info("flatl2: {} (#flows={})", groupName, flowgroups.get(groupName).size());
             log.info("flatl2: {} (#attribs={})", groupName, attribs.get(groupName).size());
             for (Flow f: flowlist) {
-                List<Action> actions = calcForwardingActions(node, attribs.get(groupName));
-                // Update flow with actions. 
-                log.info("Adding actions {} to flow {}", actions, f);
-                f.setActions(actions);
                 // Set the flow name based on end points for this flow. 
                 String flowName = null;
                 InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
                 InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
                 flowName = "[" + groupName + ":" + srcIp + ":" + dstIp + "]";
+                List<Action> actions = calcForwardingActions(node, srcIp, dstIp, attribs.get(groupName));
+                // Update flow with actions. 
+                log.info("Adding actions {} to flow {}", actions, f);
+                f.setActions(actions);
                 // Make a flowEntry object. groupName is the policy name, from the affinity link name. Same for all flows in this bundle. 
                 FlowEntry fEntry = new FlowEntry(groupName, flowName, f, node);
                 log.info("Install flow entry {} on node {}", fEntry.toString(), node.toString());
@@ -332,7 +333,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
      * (switch) and the list of configured actions.
      */
 
-    public List<Action> calcForwardingActions(Node node, HashMap<AffinityAttributeType, AffinityAttribute> attribs) {
+    public List<Action> calcForwardingActions(Node node, InetAddress src, InetAddress dst, HashMap<AffinityAttributeType, AffinityAttribute> attribs) {
         List<Action> fwdactions = new ArrayList<Action>();
 
         AffinityAttributeType aatype;
@@ -362,31 +363,59 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
                 // Lookup output port on this node for this destination. 
 
                 // Using L2agent
-                Output output = getRedirectPortL2Agent(node, wp);
+                Output output = getOutputPortL2Agent(node, wp);
                 fwdactions.add(output);
                 // Using simpleforwarding.
-                // Output output = getRedirectPort(node, wp);
+                // Output output = getOutputPort(node, wp);
                 // Controller controller = new Controller();
                 // fwdactions.add(controller);
             }
         }
 
-        // tbd. Apply tap. 
+        // Apply tap 
+        aatype = AffinityAttributeType.SET_TAP;
+
+        SetTap tap = (SetTap) attribs.get(aatype);
+
+        if (tap != null) {
+            log.info("Applying tap affinity.");
+            List<InetAddress> taplist = tap.getTapList();
+            if (taplist != null) {
+                // Only one waypoint server in list. 
+                for (InetAddress tapip: taplist) {
+                    log.info("tap information = {}", tapip);
+                    // Lookup output port on this node for this destination. 
+                    
+                    // Using L2agent
+                    Output output1 = getOutputPortL2Agent(node, tapip);
+                    Output output2 = getOutputPortL2Agent(node, dst);
+                    
+                    fwdactions.add(output1);
+                    fwdactions.add(output2);
+                    
+                    // Using simpleforwarding.
+                    // Output output = getOutputPort(node, wp);
+                    // Controller controller = new Controller();
+                    // fwdactions.add(controller);
+                }
+            }
+        }
+
         return fwdactions;
     }
 
     /** 
-     * Using L2agent, get the redirect port toward this wp (waypoint)
-     * from this node (switch).
+     * Using L2agent, get the output port toward this IP from this
+     * node (switch).
      */
-    public Output getRedirectPortL2Agent(Node node, InetAddress wp) {
+    public Output getOutputPortL2Agent(Node node, InetAddress ip) {
         Output op = null;
 
         if (l2agent != null) {
             /* Look up the output port leading to the waypoint. */
-            HostNodeConnector wphost = (HostNodeConnector) hostTracker.hostFind(wp);
-            log.info("redirect port on node {} toward wphost {}", node, wphost);
-            NodeConnector dst_connector = l2agent.lookup_output_port(node, wphost.getDataLayerAddressBytes());
+            HostNodeConnector host = (HostNodeConnector) hostTracker.hostFind(ip);
+            log.info("output port on node {} toward host {}", node, host);
+            NodeConnector dst_connector = l2agent.lookup_output_port(node, host.getDataLayerAddressBytes());
             if (dst_connector != null) {
                 op = new Output(dst_connector);
             }
@@ -396,7 +425,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         return op;
     }
 
-    public Output getRedirectPort(Node node, InetAddress wp) {
+    public Output getOutputPort(Node node, InetAddress wp) {
         IHostId id = HostIdFactory.create(wp, null);
         HostNodeConnector hnConnector = this.hostTracker.hostFind(id);
         Node destNode = hnConnector.getnodeconnectorNode();

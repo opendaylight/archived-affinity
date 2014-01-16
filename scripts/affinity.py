@@ -77,7 +77,7 @@ def get_all_affinity_groups():
 
 # Tbd
 def get_all_affinity_links(): 
-    print "get all affinity groups"
+    print "get all affinity links"
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/affinity-links'
     rest_method(get_url, "GET")
 
@@ -103,6 +103,24 @@ def unset_waypoint_address():
 def set_deny(setflag='deny'):
     al = 'inflows'
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/' + setflag + '/'
+    rest_method(put_url, "PUT")
+
+# Add a tap to ipaddress.
+def set_tap(ipaddr):
+    al = 'inflows'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/settap/' + ipaddr
+    rest_method(put_url, "PUT")
+
+# Add a tap to ipaddress.
+def unset_tap(ipaddr):
+    al = 'inflows'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/unsettap/' + ipaddr
+    rest_method(put_url, "PUT")
+
+# Set path isolate. 
+def set_path_isolate():
+    al = 'inflows'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/setisolate/'
     rest_method(put_url, "PUT")
 
 #def enable_waypoint():
@@ -134,14 +152,28 @@ def main():
     get_all_affinity_groups()
     list_all_hosts()
 
-    # Set affinity attributes and make sure they are associated with the affinity link. 
-    set_waypoint_address()
-    set_deny('deny')
-    set_deny('permit')
-    get_affinity_link('inflows')
+    return
 
+# Set affinity attributes and make sure they are associated with the affinity link. 
+def set_attr(): 
+#    set_waypoint_address()
+#    set_deny('deny')
+#    set_deny('permit')
+#    set_tap('10.0.0.6')
+#    unset_tap('10.0.0.6')
+    
+    # Test tap affinity.
+    set_tap('10.0.0.4')
+    get_affinity_link('inflows')
     enable_affinity()
-    disable_affinity()
+    unset_tap('10.0.0.4')
+    
+    set_path_isolate()
+    
+    get_affinity_link('inflows')
+    enable_affinity()
+    
+#    disable_affinity()
 
 #    enable_waypoint()
 #    disable_waypoint()

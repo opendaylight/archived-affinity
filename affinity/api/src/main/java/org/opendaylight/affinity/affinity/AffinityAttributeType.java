@@ -5,6 +5,8 @@ package org.opendaylight.affinity.affinity;
  */
 public enum AffinityAttributeType {
     SET_DENY("deny"),
+    SET_TAP("set_tap"),
+    SET_PATH_ISOLATE("set_path_isolate"),
     SET_PATH_REDIRECT("set_path_redirect");
 
     String id;
