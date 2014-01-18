@@ -58,10 +58,6 @@ def get_affinity_link(linkname):
     for key in affyLinkCfg:
         print "%10s : %s" % (key, affyLinkCfg[key])
 
-    
-
-#     
-
 def client_ws_example():
     # Create two affinity groups
     print "create web servers group"
@@ -154,7 +150,6 @@ def set_attr():
     set_waypoint_address('inflows', '10.0.0.2')
     set_tap('inflows', '10.0.0.6')
     set_tap('inflows', '10.0.0.4')
-
     get_affinity_link('inflows')
     
     # Change a few affinity attributes and get the new link configuration. 

@@ -95,7 +95,7 @@ public class AffinityLink implements Cloneable, Serializable {
     }
 
     /* Get the waypoint address */
-    @JsonIgnore
+    @XmlElement(name="waypoint")
     public AffinityAttribute getWaypoint() {
 	return attrlist.get(AffinityAttributeType.SET_PATH_REDIRECT);
     }
@@ -135,7 +135,7 @@ public class AffinityLink implements Cloneable, Serializable {
     }
 
     /* tbd requires nb method. */
-    @JsonIgnore
+    @XmlElement(name="tapList")
     public List<InetAddress> getTapList() {
         // Check if a tap attribute is already available on this link. 
         SetTap tap = (SetTap) attrlist.get(AffinityAttributeType.SET_TAP);
@@ -145,6 +145,7 @@ public class AffinityLink implements Cloneable, Serializable {
         return null;
     }
     
+    @XmlElement(name="deny")
     public boolean isDeny() {
         return attrlist.containsKey(AffinityAttributeType.SET_DENY);
     }
@@ -160,6 +161,11 @@ public class AffinityLink implements Cloneable, Serializable {
         attrlist.remove(AffinityAttributeType.SET_DENY);
     }
 
+    @XmlElement(name="isolate")
+    public boolean isIsolate() {
+        return attrlist.containsKey(AffinityAttributeType.SET_PATH_ISOLATE);
+    }
+
     // Mark this with "isolate"
     public void setIsolate() {
         SetPathIsolate iso = new SetPathIsolate();
@@ -169,9 +175,11 @@ public class AffinityLink implements Cloneable, Serializable {
         attrlist.remove(AffinityAttributeType.SET_PATH_ISOLATE);
     }
 
+    @XmlElement(name="fromGroup")
     public AffinityGroup getFromGroup() {
 	return this.fromGroup;
     }
+    @XmlElement(name="toGroup")
     public AffinityGroup getToGroup() {
 	return this.toGroup;
     }
