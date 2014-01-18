@@ -249,13 +249,13 @@ public class AffinityNorthbound {
     @Path("/{containerName}/link/{affinityLinkName}")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(AffinityLinkNorthbound.class)
+    @TypeHint(AffinityLink.class)
     @StatusCodes({
             @ResponseCode(code = 200, condition = "Operation successful"),
             @ResponseCode(code = 404, condition = "The containerName is not found"),
             @ResponseCode(code = 415, condition = "Affinity name is not found"),
             @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public AffinityLinkNorthbound getAffinityLinkDetails(
+    public AffinityLink getAffinityLinkDetails(
             @PathParam("containerName") String containerName,
             @PathParam("affinityLinkName") String affinityLinkName) {
         if (!NorthboundUtils.isAuthorized(
@@ -274,9 +274,8 @@ public class AffinityNorthbound {
         AffinityLink al = affinityManager.getAffinityLink(affinityLinkName);
         if (al == null) {
             throw new ResourceNotFoundException(RestMessages.SERVICEUNAVAILABLE.toString());
-        } else {
-            return new AffinityLinkNorthbound(al);
-        }
+        } 
+        return al;
     }
 
     /**
@@ -727,12 +726,12 @@ public class AffinityNorthbound {
     @Path("/{containerName}/affinity-links")
     @GET
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    @TypeHint(AffinityLinkList.class)
+    @TypeHint(AffinityLinks.class)
     @StatusCodes({ @ResponseCode(code = 200, condition = "Operation successful"),
     @ResponseCode(code = 401, condition = "User not authorized to perform this operation"),
     @ResponseCode(code = 404, condition = "The containerName is not found"),
     @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
-    public AffinityLinkList getAllAffinityLinks(@PathParam("containerName") String containerName) {
+    public AffinityLinks getAllAffinityLinks(@PathParam("containerName") String containerName) {
 
         //        if (!isValidContainer(containerName)) {
         //            throw new ResourceNotFoundException("Container " + containerName + " does not exist.");
@@ -749,7 +748,7 @@ public class AffinityNorthbound {
                                                   + RestMessages.SERVICEUNAVAILABLE.toString());
         }
         log.info("list all links");
-        return new AffinityLinkList(affinityManager.getAllAffinityLinks());
+        return new AffinityLinks(affinityManager.getAllAffinityLinks());
     }
 
     /**

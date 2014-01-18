@@ -1,5 +1,10 @@
 package org.opendaylight.affinity.affinity;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.io.Serializable;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -14,14 +19,19 @@ import org.slf4j.LoggerFactory;
 /**
  * This class defines an Inet address mask object.
  */
+
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.NONE)
 public class InetAddressMask implements Cloneable, Serializable {
-    private String name;
     
+    @XmlAttribute
+    private String name;
+    @XmlElement
     InetAddress networkAddress;
+    @XmlAttribute
     Short mask;
 
     public InetAddressMask() {
-
     }
     /* String addrmask is in the a.b.c.d/m format. */
     public InetAddressMask(String addrmask) {

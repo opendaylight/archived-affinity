@@ -20,18 +20,18 @@ import org.opendaylight.affinity.affinity.AffinityGroup;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class AffinityGroupList {
-        @XmlElement 
-        List<AffinityGroup> affinityGroupList;
-
-        public AffinityGroupList() {
-        }
-        public AffinityGroupList (List<AffinityGroup> aff) {
-            this.affinityGroupList = aff;
-        }
-        public List<AffinityGroup> getAffinityList() {
-                return affinityGroupList;
-        }
-        public void setAffinityList(List<AffinityGroup> aff) {
-                this.affinityGroupList = aff;
-        }
+    @XmlElement 
+    List<AffinityGroup> affinityGroupList;
+    
+    public AffinityGroupList() {
+    }
+    public AffinityGroupList (List<AffinityGroup> aff) {
+        this.affinityGroupList = aff;
+    }
+    public List<AffinityGroup> getAffinityList() {
+        return affinityGroupList;
+    }
+    public void setAffinityList(List<AffinityGroup> aff) {
+        this.affinityGroupList = aff;
+    }
 }

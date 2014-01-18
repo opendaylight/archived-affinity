@@ -20,7 +20,7 @@
     <exam.version>3.0.0</exam.version>
     <failsafe.version>2.15</failsafe.version>
     <geminiweb.version>2.2.0.RELEASE</geminiweb.version>
-    <jackson.version>1.9.8</jackson.version>
+    <jackson.version>2.3.0</jackson.version>
     <jersey.version>1.17</jersey.version>
     <junit.version>4.10</junit.version>
     <logback.version>1.0.9</logback.version>
@@ -90,21 +90,31 @@
       </repository>
     </repositories>
 
-  <pluginRepositories>
-       <pluginRepository>
-           <id>opendaylight-release</id>
-           <name>opendaylight-release</name>
-           <url>http://nexus.opendaylight.org/content/repositories/opendaylight.release/</url>
-       </pluginRepository>
-       <pluginRepository>
-           <id>opendaylight-snapshot</id>
-           <name>opendaylight-snapshot</name>
-           <url>http://nexus.opendaylight.org/content/repositories/opendaylight.snapshot/</url>
-       </pluginRepository>
-  </pluginRepositories>
-
-
-
+    <pluginRepositories>
+      <pluginRepository>
+        <id>opendaylight-mirror</id>
+        <name>opendaylight-mirror</name>
+        <url>${nexusproxy}/groups/public/</url>
+        <snapshots>
+          <enabled>false</enabled>
+        </snapshots>
+        <releases>
+          <enabled>true</enabled>
+          <updatePolicy>never</updatePolicy>
+        </releases>
+      </pluginRepository>
+      <pluginRepository>
+        <id>opendaylight-release</id>
+        <name>opendaylight-release</name>
+        <url>http://nexus.opendaylight.org/content/repositories/opendaylight.release/</url>
+      </pluginRepository>
+      <pluginRepository>
+        <id>opendaylight-snapshot</id>
+        <name>opendaylight-snapshot</name>
+        <url>http://nexus.opendaylight.org/content/repositories/opendaylight.snapshot/</url>
+      </pluginRepository>
+    </pluginRepositories>
+    
   <distributionManagement>
     <!-- OpenDayLight Released artifact -->
     <repository>
@@ -176,6 +186,43 @@
             <artifactId>maven-scm-provider-svn-commons</artifactId>
             <version>1.7</version>
           </dependency>
+
+          <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+          </dependency>
+          
+          <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+          </dependency>
+          
+          <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+          </dependency>
+          
+          <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-base</artifactId>
+            <version>${jackson.version}</version>
+          </dependency>
+          
+          <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <version>${jackson.version}</version>
+          </dependency>
+          
+          <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-jaxb-annotations</artifactId>
+            <version>${jackson.version}</version>
+          </dependency>
+
         </dependencies>
       </plugin>
 <!--      <plugin>

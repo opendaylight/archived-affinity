@@ -21,7 +21,6 @@ def rest_method(url, verb):
 
 
 def list_all_hosts(): 
-
     print "list active hosts"
     put_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active'
     content = rest_method(put_url, "GET")
@@ -36,39 +35,6 @@ def list_all_hosts():
     hostCfg = json.loads(content)
     for host in hostCfg['hostConfig']:
         print host
-    
-
-def waypoint_init():
-    # Create two affinity groups
-
-    print "create web servers group"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/group/webservers'
-    rest_method(put_url, "PUT")
-
-    print "create external addresses"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/group/clients'
-    rest_method(put_url, "PUT")
-
-    print "create link inflows"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/inflows/from/clients/to/webservers'
-    rest_method(put_url, "PUT")
-
-#    print "add ip to webservers"
-#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/10.0.0.1'
-#    rest_method(put_url, "PUT")
-
-    print "add subnet to webservers"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/addsubnet/ipprefix/10.0.0.1/mask/31'
-    rest_method(put_url, "PUT")
-
-#    print "add ip to webservers"
-#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/10.0.0.2'
-#    rest_method(put_url, "PUT")
-
-    print "add ip to external"    
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/clients/add/ip/10.0.0.3'
-    rest_method(put_url, "PUT")
-
 
 def get_all_affinity_groups(): 
     print "get all affinity groups"
@@ -87,16 +53,43 @@ def get_affinity_group(groupname):
 
 def get_affinity_link(linkname):
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + linkname
-    rest_method(get_url, "GET")
+    content = rest_method(get_url, "GET")
+    affyLinkCfg = json.loads(content)
+    for key in affyLinkCfg:
+        print "%10s : %s" % (key, affyLinkCfg[key])
 
-def set_waypoint_address():
-    wp = "10.0.0.2"
-    al = 'inflows'
+    
+
+#     
+
+def client_ws_example():
+    # Create two affinity groups
+    print "create web servers group"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/group/webservers'
+    rest_method(put_url, "PUT")
+
+    print "create external addresses"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/group/clients'
+    rest_method(put_url, "PUT")
+
+    print "create link inflows"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/inflows/from/clients/to/webservers'
+    rest_method(put_url, "PUT")
+
+    print "add subnet to webservers"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/addsubnet/ipprefix/10.0.0.1/mask/31'
+    rest_method(put_url, "PUT")
+
+    print "add ip to external"    
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/clients/add/ip/10.0.0.3'
+    rest_method(put_url, "PUT")
+
+# Only one waypoint supported. 
+def set_waypoint_address(al, wp):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/setwaypoint/' + wp
     rest_method(put_url, "PUT")
 
-def unset_waypoint_address():
-    al = 'inflows'
+def unset_waypoint_address(al):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/unsetwaypoint'
     rest_method(put_url, "PUT")
 
@@ -106,14 +99,12 @@ def set_deny(setflag='deny'):
     rest_method(put_url, "PUT")
 
 # Add a tap to ipaddress.
-def set_tap(ipaddr):
-    al = 'inflows'
+def set_tap(al, ipaddr):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/settap/' + ipaddr
     rest_method(put_url, "PUT")
 
 # Add a tap to ipaddress.
-def unset_tap(ipaddr):
-    al = 'inflows'
+def unset_tap(al, ipaddr):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/unsettap/' + ipaddr
     rest_method(put_url, "PUT")
 
@@ -123,14 +114,7 @@ def set_path_isolate():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/setisolate/'
     rest_method(put_url, "PUT")
 
-#def enable_waypoint():
-#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/inflows/enable/' 
-#    rest_method(put_url, "PUT")
-
-#def disable_waypoint():
-#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/inflows/disable/'
-#    rest_method(put_url, "PUT")
-
+# Re-program the network using OF southbound. 
 def enable_affinity():
     put_url = 'http://localhost:8080/affinity/nb/v2/flatl2/default/enableaffinity/'
     rest_method(put_url, "PUT")
@@ -139,45 +123,51 @@ def disable_affinity():
     put_url = 'http://localhost:8080/affinity/nb/v2/flatl2/default/disableaffinity/'
     rest_method(put_url, "PUT")
 
-# Add waypoint IP to an affinity link.
 def main():
     global h
 
-    waypoint_init()
+    # Create two affinity groups and a link between them. 
+    # Assign attributes. 
+    client_ws_example()
 
     get_affinity_group('webservers')
     get_affinity_group('clients')
     get_affinity_link('inflows')
 
+    print "get_all_affinity_groups..."
     get_all_affinity_groups()
-    list_all_hosts()
+    print "get_all_affinity_links..."
+    get_all_affinity_links()
 
+    set_attr()
+    list_all_hosts()
     return
 
 # Set affinity attributes and make sure they are associated with the affinity link. 
 def set_attr(): 
-#    set_waypoint_address()
-#    set_deny('deny')
-#    set_deny('permit')
-#    set_tap('10.0.0.6')
-#    unset_tap('10.0.0.6')
-    
-    # Test tap affinity.
-    set_tap('10.0.0.4')
+    # Set deny. 
+    set_deny('deny')
     get_affinity_link('inflows')
-    enable_affinity()
-    unset_tap('10.0.0.4')
-    
-    set_path_isolate()
-    
+
+    # Set waypoint and tap. 
+    set_deny('permit')
+    set_waypoint_address('inflows', '10.0.0.2')
+    set_tap('inflows', '10.0.0.6')
+    set_tap('inflows', '10.0.0.4')
+
     get_affinity_link('inflows')
-    enable_affinity()
     
-#    disable_affinity()
+    # Change a few affinity attributes and get the new link configuration. 
+    unset_tap('inflows', '10.0.0.6')    
+    print "get_affinity_link..."
+    get_affinity_link('inflows')
 
-#    enable_waypoint()
-#    disable_waypoint()
-
+    enable_affinity() # Tap to '10.0.0.4'.
+    unset_tap('inflows', '10.0.0.4')
+    set_path_isolate()    
+    get_affinity_link('inflows')
+    enable_affinity() # No action for isolate. Restore normal forwarding. 
+    
 #if __name__ == "__main__":
 #    main()
 

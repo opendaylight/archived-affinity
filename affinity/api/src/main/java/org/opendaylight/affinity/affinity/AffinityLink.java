@@ -34,6 +34,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.opendaylight.affinity.affinity.AffinityAttribute;
 
 @XmlRootElement
@@ -78,6 +80,7 @@ public class AffinityLink implements Cloneable, Serializable {
             attrlist.put(attr.type, attr);
         }
     }
+    @JsonIgnore
     public HashMap<AffinityAttributeType, AffinityAttribute> getAttributeList() {
 	return this.attrlist;
     }
@@ -92,6 +95,7 @@ public class AffinityLink implements Cloneable, Serializable {
     }
 
     /* Get the waypoint address */
+    @JsonIgnore
     public AffinityAttribute getWaypoint() {
 	return attrlist.get(AffinityAttributeType.SET_PATH_REDIRECT);
     }
@@ -131,6 +135,7 @@ public class AffinityLink implements Cloneable, Serializable {
     }
 
     /* tbd requires nb method. */
+    @JsonIgnore
     public List<InetAddress> getTapList() {
         // Check if a tap attribute is already available on this link. 
         SetTap tap = (SetTap) attrlist.get(AffinityAttributeType.SET_TAP);

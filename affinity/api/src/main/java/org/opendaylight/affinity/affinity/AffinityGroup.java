@@ -37,6 +37,8 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class AffinityGroup implements Cloneable, Serializable {
@@ -44,6 +46,7 @@ public class AffinityGroup implements Cloneable, Serializable {
 
     @XmlAttribute
     private String name;
+
     @XmlElement
     private final Map<String, AffinityIdentifier> elements;
 
@@ -111,9 +114,12 @@ public class AffinityGroup implements Cloneable, Serializable {
 
     // TODO: This should not exist.  It's a replacement for a more
     // robust "is host h a member of this affinity group".
+    @XmlElement(name="endpoints")
     public Set<String> getIPs() {
         return elements.keySet();
     }
+
+    @JsonIgnore
     public ArrayList<AffinityIdentifier> getAllElements() {
         ArrayList<AffinityIdentifier> retvalues = new ArrayList<AffinityIdentifier>(elements.values());
 	return retvalues;
