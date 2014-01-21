@@ -69,6 +69,7 @@ public class AffinityNorthbound {
         return username;
     }
 
+
     private IAffinityManager getIfAffinityManagerService(String containerName) {
         log.debug("In getIfAffinityManager");
 
@@ -183,6 +184,48 @@ public class AffinityNorthbound {
             throw new ResourceNotFoundException(RestMessages.SERVICEUNAVAILABLE.toString());
         } else {
             return ag;
+        }
+    }
+
+
+    /**
+     * Return AG endpoints as hosts. 
+     *
+     * @param containerName
+     *            Name of the Container. The Container name for the base
+     *            controller is "default".
+     * @param affinityGroupName
+     *            Name of the affinity group being retrieved.
+     * @return affinity group as a Hosts object.
+     */
+    @Path("/{containerName}/hosts/{affinityGroupName}")
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(AffinityGroupHosts.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The containerName is not found"),
+            @ResponseCode(code = 415, condition = "Affinity name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller Services are unavailable") })
+    public AffinityGroupHosts getAffinityGroupHosts(@PathParam("containerName") String containerName,
+                                       @PathParam("affinityGroupName") String affinityGroupName) {
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.READ, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        
+        log.info("Get affinity group details" + affinityGroupName);
+        AffinityGroupHosts hosts = new AffinityGroupHosts(affinityGroupName, affinityManager.getAffinityGroupHosts(affinityGroupName));
+        
+        if (hosts == null) {
+            throw new ResourceNotFoundException(RestMessages.SERVICEUNAVAILABLE.toString());
+        } else {
+            return hosts;
         }
     }
 

@@ -36,6 +36,7 @@ public interface IAffinityManager {
     public Status removeAffinityGroup(String name);
     
     public AffinityGroup getAffinityGroup(String name);
+    public List<Host> getAffinityGroupHosts(String groupName);
     public List<AffinityGroup> getAllAffinityGroups();
 
     public Status addAffinityLink(AffinityLink al);

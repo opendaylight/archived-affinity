@@ -28,10 +28,10 @@ public class AffinityGroupList {
     public AffinityGroupList (List<AffinityGroup> aff) {
         this.affinityGroupList = aff;
     }
-    public List<AffinityGroup> getAffinityList() {
+    public List<AffinityGroup> getAffinityGroupList() {
         return affinityGroupList;
     }
-    public void setAffinityList(List<AffinityGroup> aff) {
+    public void setAffinityGroupList(List<AffinityGroup> aff) {
         this.affinityGroupList = aff;
     }
 }

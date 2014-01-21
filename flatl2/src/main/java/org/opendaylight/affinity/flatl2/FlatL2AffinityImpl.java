@@ -121,9 +121,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
     HashMap<String, HashMap<AffinityAttributeType, AffinityAttribute>> attribs;
 
     Set<Node> nodelist;
-
-    private static short REDIRECT_IPSWITCH_PRIORITY = 3;
-
+    
     public enum ReasonCode {
         SUCCESS("Success"), FAILURE("Failure"), INVALID_CONF(
                 "Invalid Configuration"), EXIST("Entry Already Exist"), CONFLICT(

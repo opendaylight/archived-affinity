@@ -318,6 +318,13 @@ public class AffinityManagerImpl implements IAffinityManager,
     }
 
     @Override
+    public List<Host> getAffinityGroupHosts(String groupName) {
+        log.debug("getAffinityGroupHosts" + groupName);
+        AffinityGroup ag = affinityGroupList.get(groupName);        
+        return getAllElementsByHost(ag);
+    }
+
+    @Override
     public List<AffinityGroup> getAllAffinityGroups() {
         return new ArrayList<AffinityGroup>(affinityGroupList.values());
     }

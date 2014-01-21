@@ -30,7 +30,7 @@ def list_all_hosts():
     print "list inactive hosts"
     get_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/inactive'
     rest_method(get_url, "GET")
-    content = rest_method(put_url, "GET")
+    content = rest_method(get_url, "GET")
     hostCfg = json.loads(content)
     for host in hostCfg['hostConfig']:
         print host
@@ -38,7 +38,8 @@ def list_all_hosts():
 def get_all_affinity_groups(): 
     print "get all affinity groups"
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/affinity-groups'
-    rest_method(get_url, "GET")
+    content = rest_method(get_url, "GET")
+    print content
 
 # Tbd
 def get_all_affinity_links(): 
@@ -53,6 +54,11 @@ def get_all_affinity_links():
 def get_affinity_group(groupname): 
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/' + groupname
     rest_method(get_url, "GET")
+
+def get_affinity_hosts(groupname): 
+    get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/hosts/' + groupname
+    content = rest_method(get_url, "GET")
+    print content
 
 def get_affinity_link(linkname):
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + linkname
