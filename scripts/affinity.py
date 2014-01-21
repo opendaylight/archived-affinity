@@ -14,23 +14,22 @@ def rest_method(url, verb):
     print "REST call " + url
     resp, content = h.request(url, verb)
 
-    print content
+#    print content
     print "return code %d" % (resp.status)
-    print "done"
     return content
 
 
 def list_all_hosts(): 
     print "list active hosts"
-    put_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active'
-    content = rest_method(put_url, "GET")
+    get_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active'
+    content = rest_method(get_url, "GET")
     hostCfg = json.loads(content)
     for host in hostCfg['hostConfig']:
         print host
 
     print "list inactive hosts"
-    put_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/inactive'
-    rest_method(put_url, "GET")
+    get_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/inactive'
+    rest_method(get_url, "GET")
     content = rest_method(put_url, "GET")
     hostCfg = json.loads(content)
     for host in hostCfg['hostConfig']:
@@ -45,7 +44,11 @@ def get_all_affinity_groups():
 def get_all_affinity_links(): 
     print "get all affinity links"
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/affinity-links'
-    rest_method(get_url, "GET")
+    content = rest_method(get_url, "GET")
+    affylinks = json.loads(content)
+    for link in affylinks['affinityLinks']: 
+        print "Affinity link: %s" % link
+        get_affinity_link(link['name'])
 
 def get_affinity_group(groupname): 
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/' + groupname
@@ -55,7 +58,7 @@ def get_affinity_link(linkname):
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + linkname
     content = rest_method(get_url, "GET")
     affyLinkCfg = json.loads(content)
-    for key in affyLinkCfg:
+    for key in sorted(affyLinkCfg):
         print "%10s : %s" % (key, affyLinkCfg[key])
 
 def client_ws_example():

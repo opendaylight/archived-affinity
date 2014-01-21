@@ -91,3 +91,4 @@ class AffinityControl:
             print "Affinity rules could not be disabled" 
             return
         print "Affinity rules disabled"
+
