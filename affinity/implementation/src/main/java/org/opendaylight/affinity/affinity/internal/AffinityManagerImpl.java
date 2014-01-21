@@ -11,6 +11,7 @@ package org.opendaylight.affinity.affinity.internal;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.lang.Exception;
 import java.net.UnknownHostException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -367,13 +368,17 @@ public class AffinityManagerImpl implements IAffinityManager,
     public List<Host> getAllElementsByHost(AffinityGroup ag) {
 	List<Host> hostList= new ArrayList<Host>();
 
-	for (AffinityIdentifier h : ag.getAllElements()) {
-            log.debug("host = {}", h);
-	    if (hostTracker != null) {
-		Host host1 = hostTracker.hostFind((InetAddress) h.get());
-		hostList.add(host1);
-	    }
-	}
+        try {
+            for (AffinityIdentifier h : ag.getAllElements()) {
+                log.debug("host = {}", h);
+                if (hostTracker != null) {
+                    Host host1 = hostTracker.hostFind((InetAddress) h.get());
+                    hostList.add(host1);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error converting affinity elements to host objects.");
+        }
 	return hostList;
     }
 
