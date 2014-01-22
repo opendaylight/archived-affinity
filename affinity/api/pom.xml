@@ -37,6 +37,9 @@
               org.opendaylight.affinity.affinity
             </Export-Package>
             <Import-Package>
+              com.sun.jersey.spi.container.servlet,
+              javax.ws.rs,
+              javax.ws.rs.core,
               javax.xml.bind.annotation,
               org.opendaylight.controller.clustering.services,
               org.opendaylight.controller.configuration,
@@ -89,17 +92,17 @@
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>clustering.services</artifactId>
-      <version>0.4.0-SNAPSHOT</version>
+      <version>0.5.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>configuration</artifactId>
-      <version>0.4.0-SNAPSHOT</version>
+      <version>0.4.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>sal</artifactId>
-      <version>0.5.0-SNAPSHOT</version>
+      <version>0.7.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.enunciate</groupId>
@@ -111,6 +114,11 @@
       <artifactId>jackson-annotations</artifactId>
       <version>${jackson.version}</version>
     </dependency>
-    
+    <dependency>
+      <groupId>org.opendaylight.controller.thirdparty</groupId>
+      <artifactId>com.sun.jersey.jersey-servlet</artifactId>
+      <version>1.18-SNAPSHOT</version>
+    </dependency>
+ 
   </dependencies>
 </project>
