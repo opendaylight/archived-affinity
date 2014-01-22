@@ -119,13 +119,6 @@ public class AffinityGroup implements Cloneable, Serializable {
         return elements.keySet();
     }
 
-    // TODO: This should not exist.  It's a replacement for a more
-    // robust "is host h a member of this affinity group".
-    @XmlElement(name="endpoints")
-    public Set<String> getMacs() {
-        return elements.keySet();
-    }
-
     @JsonIgnore
     public ArrayList<AffinityIdentifier> getAllElements() {
         ArrayList<AffinityIdentifier> retvalues = new ArrayList<AffinityIdentifier>(elements.values());
