@@ -92,6 +92,7 @@ import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.AffinityAttributeType;
 import org.opendaylight.affinity.affinity.AffinityAttribute;
 import org.opendaylight.affinity.affinity.SetDeny;
+import org.opendaylight.affinity.affinity.SetPathIsolate;
 import org.opendaylight.affinity.affinity.SetPathRedirect;
 import org.opendaylight.affinity.affinity.SetTap;
 import org.opendaylight.affinity.l2agent.IfL2Agent;
@@ -344,6 +345,13 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             Action dropaction = new Drop();
             fwdactions.add(dropaction);
             return fwdactions;
+        }
+
+        // Apply isolate (no-op now), and continue to add other affinity types to the forwarding actions list.
+        aatype = AffinityAttributeType.SET_PATH_ISOLATE;
+
+        if (attribs.get(aatype) != null) {
+            log.info("Found a path isolate setting.");
         }
 
         // Apply redirect 

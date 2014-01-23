@@ -52,6 +52,14 @@ class AffinityControl:
             return
         print "AffinityLink %s added between %s and %s" % (link_name, src_group, dst_group)
 
+    # Add isolate to the link.
+    def add_isolate(self, link_name):
+        resp, content = self.http.request(self.url_prefix + "link/%s/setisolate/%s" % (link_name), "PUT")
+        if (resp.status != 201):
+            print "Isolate could not be set for link %s" % (link_name)
+            return
+        print "Isolate successfully set for link %s" % (link_name)
+
     # Add waypoint
     def add_waypoint(self, link_name, ip):
         resp, content = self.http.request(self.url_prefix + "link/%s/setwaypoint/%s" % (link_name, ip), "PUT")

@@ -94,6 +94,7 @@ class WaypointMonitor(Thread):
                 link_name = "inflows"
                 ac.add_affinity_link(link_name, src_ag_name, dst_ag_name)
                 ac.add_waypoint(link_name, self.waypoint_address)
+                ac.add_isolate(link_name)
 #                ac.enable_waypoint(link_name)
                 ac.enable_affinity()
                 did_waypoint = True
