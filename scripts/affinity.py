@@ -89,6 +89,12 @@ def client_ws_example():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/clients/add/ip/10.0.0.3'
     rest_method(put_url, "PUT")
 
+def repeat_add_link(): 
+    print "create link inflows"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/inflows/from/clients/to/webservers'
+    rest_method(put_url, "PUT")
+
+
 # Only one waypoint supported. 
 def set_waypoint_address(al, wp):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/setwaypoint/' + wp
@@ -134,6 +140,7 @@ def main():
     # Create two affinity groups and a link between them. 
     # Assign attributes. 
     client_ws_example()
+    repeat_add_link()
 
     get_affinity_group('webservers')
     get_affinity_group('clients')

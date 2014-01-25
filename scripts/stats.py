@@ -25,8 +25,23 @@ class Stats:
 
         self.stats = {}
         self.protocol_stats = {}
+        self.last_value = {}
+        self.last_transfer = {}
+        
+        # Initialize last value read
+        self.last_value["None"] = 0
+        self.last_transfer["None"] = 0
+
+        protocols = [1, 6, 17] # ICMP, TCP, UDP
+        for protocol in protocols: 
+            self.last_value[protocol] = 0
+            self.last_transfer[protocol] = 0
+        
         self.rate_ewma = None
-        self.large_flow_threshold = 5 * 10**6 # in bytes
+        self.flow_high_threshold = 5 * 10**6 # in bytes
+        self.flow_low_threshold = 5 * 10**3 # in bytes
+
+        self.flow_bytes = 0 # Last value of bytes transferred for this flow. 
 
     def __str__(self):
         if (self.stat_type == Stats.TYPE_HOST):
@@ -50,14 +65,18 @@ class Stats:
             self.stats = analytics.stats_subnet("null/null", self.subnet, True)
             self.protocol_stats = analytics.all_stats_subnet("null/null", self.subnet, True)
         try:
+            self.reset_bytes()
             is_fast = self.handle_rate_ewma()
             is_big = self.check_large_flow()
-            return [is_fast, is_big]
+            is_small = self.check_small_flow()
+            return [is_fast, is_big, is_small]
         except:
-            return [False, False]
+            return [False, False, False]
 
-    def set_large_flow_threshold(self, s):
-        self.large_flow_threshold = s;
+            
+    def set_flow_thresholds(self, high, low):
+        self.flow_high_threshold = high;
+        self.flow_low_threshold = low;
 
     # Return all hosts that transferred a particular percentage of data into this entity.  Right now only supports subnets.
     def get_large_incoming_hosts(self):
@@ -96,7 +115,12 @@ class Stats:
 
     # Returns true if this is a large flow
     def check_large_flow(self):
-        if (self.get_bytes() > self.large_flow_threshold):
+        if (self.get_bytes() > self.flow_high_threshold):
+            return True
+        return False
+
+    def check_small_flow(self):
+        if (self.get_bytes() < self.flow_low_threshold):
             return True
         return False
 
@@ -104,12 +128,33 @@ class Stats:
     def get_bytes(self, protocol=None):
         try:
             if (protocol == None):
-                bytes = long(self.stats["byteCount"])
+                bytes = long(self.last_transfer["None"]) 
             else:
-                bytes = long(self.protocol_stats[protocol]["byteCount"])
+                bytes = long(self.last_transfer[protocol]) 
         except Exception as e:
             bytes = 0
+            print "get_bytes exception"
         return bytes
+
+    # Bytes
+    def reset_bytes(self, protocol=None):
+        try:
+            if (protocol == None):
+                bytes = long(self.stats["byteCount"]) 
+                lv = self.last_value["None"]
+                self.last_value["None"] = bytes
+                self.last_transfer["None"] = (bytes - lv)
+            else:
+                bytes = long(self.protocol_stats[protocol]["byteCount"]) 
+                lv = self.last_value[protocol]
+                self.last_value[protocol] = bytes
+                self.last_transfer[protocol] = (bytes - lv)
+        except Exception as e:
+            bytes = 0
+            lv = 0
+            print "reset_bytes exception"
+        print "*** lv = %d, bytes = %d" % (lv, bytes)
+        return (bytes - lv)
 
     # Packets
     def get_packets(self, protocol=None):
