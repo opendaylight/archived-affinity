@@ -89,11 +89,24 @@ def client_ws_example():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/clients/add/ip/10.0.0.3'
     rest_method(put_url, "PUT")
 
+def drop_ws_objects(): 
+
+    print "remove inflows link"
+    put_url = "http://localhost:8080/affinity/nb/v2/affinity/default/delete/link/inflows"
+    rest_method(put_url, "PUT")
+    
+    print "remove web servers group"
+    put_url = "http://localhost:8080/affinity/nb/v2/affinity/default/delete/group/webservers"
+    rest_method(put_url, "PUT")
+
+    print "remove clients group"
+    put_url = "http://localhost:8080/affinity/nb/v2/affinity/default/delete/group/clients"
+    rest_method(put_url, "PUT")
+
 def repeat_add_link(): 
     print "create link inflows"
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/inflows/from/clients/to/webservers'
     rest_method(put_url, "PUT")
-
 
 # Only one waypoint supported. 
 def set_waypoint_address(al, wp):

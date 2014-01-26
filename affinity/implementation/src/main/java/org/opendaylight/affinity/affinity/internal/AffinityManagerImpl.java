@@ -309,6 +309,7 @@ public class AffinityManagerImpl implements IAffinityManager,
     @Override
     public Status removeAffinityGroup(String name) {
 	affinityGroupList.remove(name);
+        log.info("affinityGroup has {} elements", affinityGroupList.size());
 	return new Status(StatusCode.SUCCESS);
     }
 

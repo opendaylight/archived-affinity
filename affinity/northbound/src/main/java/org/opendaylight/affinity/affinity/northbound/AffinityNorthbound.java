@@ -144,6 +144,73 @@ public class AffinityNorthbound {
         return Response.status(Response.Status.CREATED).build();
     }
 
+
+
+    /**
+     *  Remove affinity group from the configuration database
+     *
+     * @param containerName
+     *            Name of the Container
+     * @param affinityGroupName
+     *            Name of the new affinity group being added
+     * @return Response as dictated by the HTTP Response Status code
+     */
+
+    @Path("/{containerName}/delete/group/{affinityGroupName}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response deleteAffinityGroup(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityGroupName") String affinityGroupName) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+        log.info("remove an affinity group = {}, containerName = {}",  affinityGroupName, containerName);
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+
+        Status ret = affinityManager.removeAffinityGroup(affinityGroupName);
+        
+        return Response.ok().build();
+    }
+
+
+    @Path("/{containerName}/delete/link/{affinityLinkName}")
+    @PUT
+    @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+    @TypeHint(Response.class)
+    @StatusCodes({
+            @ResponseCode(code = 200, condition = "Operation successful"),
+            @ResponseCode(code = 404, condition = "The Container Name or nodeId or configuration name is not found"),
+            @ResponseCode(code = 503, condition = "One or more of Controller services are unavailable") })
+    public Response deleteAffinityLink(
+            @PathParam("containerName") String containerName,
+            @PathParam("affinityLinkName") String affinityLinkName) {
+
+        if (!NorthboundUtils.isAuthorized(getUserName(), containerName, Privilege.WRITE, this)) {
+            throw new UnauthorizedException("User is not authorized to perform this operation on container "
+                                            + containerName);
+        }
+        log.info("remove an affinity link = {}, containerName = {}",  affinityLinkName, containerName);
+        IAffinityManager affinityManager = getIfAffinityManagerService(containerName);
+        if (affinityManager == null) {
+            throw new ServiceUnavailableException("Affinity Manager "
+                                                  + RestMessages.SERVICEUNAVAILABLE.toString());
+        }
+        Status ret = affinityManager.removeAffinityLink(affinityLinkName);        
+        return Response.ok().build();
+    }
+
     /**
      * Returns details of an affinity group.
      *
