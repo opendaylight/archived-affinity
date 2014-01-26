@@ -58,27 +58,23 @@ class WaypointMonitor(Thread):
         self.waypoint_address = waypoint_ip
         print "Registered waypoint for %s.  Any large flows will be redirected to %s." % (self.stat, waypoint_ip)
 
-    def set_flow_thresholds(self, high, low):
-        self.stat.set_flow_thresholds(high, low)
-        print "Set threshold for large flows to %d, %d bytes" % (high,  low)
+    def set_large_flow_threshold(self, s):
+        self.stat.set_large_flow_threshold(s)
+        print "Set threshold for large flows to %d bytes" % s
         print("-------------------------")
 
     def run(self):
         global sigint
         did_waypoint = False
         while not sigint:
-            print "**** Stat refresh ****"
-            _, is_big, is_small = self.stat.refresh()
-            print "is_big is ", is_big
-            print "is_small is ", is_small
-
+            _, is_big = self.stat.refresh()
             if is_big and not did_waypoint:
                 print "Large flow detected (%d bytes, %d packets, %3.3f bit/s)" % (self.stat.get_bytes(), self.stat.get_packets(), self.stat.get_bit_rate())
-#                print "   ICMP: %d bytes, %d packets" % (self.stat.get_bytes(1), self.stat.get_packets(1))
-#                print "   UDP: %d bytes, %d packets" % (self.stat.get_bytes(17), self.stat.get_packets(17))
-#                print "   TCP: %d bytes, %d packets" % (self.stat.get_bytes(6), self.stat.get_packets(6))
-#                print "   other (tbd): %d bytes, %d packets" % (self.stat.get_bytes(-1), self.stat.get_packets(-1))
-#                print("-------------------------")
+                print "   ICMP: %d bytes, %d packets" % (self.stat.get_bytes(1), self.stat.get_packets(1))
+                print "   UDP: %d bytes, %d packets" % (self.stat.get_bytes(17), self.stat.get_packets(17))
+                print "   TCP: %d bytes, %d packets" % (self.stat.get_bytes(6), self.stat.get_packets(6))
+                print "   other: %d bytes, %d packets" % (self.stat.get_bytes(-1), self.stat.get_packets(-1))
+                print("-------------------------")
                 ac = AffinityControl()
                 # First AG: Sources sending data into this subnet
                 src_ag_name = "sources"
@@ -102,17 +98,10 @@ class WaypointMonitor(Thread):
 #                ac.enable_waypoint(link_name)
                 ac.enable_affinity()
                 did_waypoint = True
-                time.sleep(30)
-            # Below low water mark. 
-            elif (is_small and did_waypoint): 
-                print "Disable affinity configuration."
-                ac = AffinityControl()
-                link_name = "inflows"
-                ac.disable_affinity() # Clear all openflow rules
-                ac.disable_waypoint(link_name) # Clear waypoint configuration
-                ac.disable_isolate(link_name)  # Clear isolate configuration
-                did_waypoint = False # Reset, so that we can detect again.
-            time.sleep(5)
+                raw_input("[Press Enter to disable affinity rules] ")
+                ac.disable_affinity()
+#                ac.disable_waypoint(link_name)
+            time.sleep(1)
 
 def main():
 
@@ -130,7 +119,7 @@ def main():
 
     m = WaypointMonitor(Stats.TYPE_SUBNET, subnet="10.0.0.0/31")
     m.set_waypoint("10.0.0.2")
-    m.set_flow_thresholds(200, 50) # 2000 bytes
+    m.set_large_flow_threshold(2000) # 2000 bytes
     m.start()
 
     # Register signal-handler to catch SIG_INT

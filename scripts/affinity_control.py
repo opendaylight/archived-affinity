@@ -78,19 +78,11 @@ class AffinityControl:
 
     # Disable waypoint
     def disable_waypoint(self, link_name):
-        resp, content = self.http.request(self.url_prefix + "link/%s/unsetwaypoint" % link_name, "PUT")
+        resp, content = self.http.request(self.url_prefix + "link/%s/disable" % link_name, "PUT")
         if (resp.status != 201):
             print "Waypoint could not be disabled for link %s" % link_name
             return
         print "Waypoint disabled for link %s" % link_name
-
-    # Disable isolate 
-    def disable_isolate(self, link_name):
-        resp, content = self.http.request(self.url_prefix + "link/%s/unsetisolate" % link_name, "PUT")
-        if (resp.status != 201):
-            print "Isolate could not be disabled for link %s" % link_name
-            return
-        print "Isolate disabled for link %s" % link_name
 
     # Enable all affinity rules
     def enable_affinity(self):

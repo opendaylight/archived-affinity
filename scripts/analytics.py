@@ -68,7 +68,6 @@ def stats_hosts(src, dst, do_print=True):
     data = rest_method(url, "GET")
     if (do_print):
         print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
-    print data
     return data
 
 def stats_hosts_protocol(src, dst, protocol, do_print=True):
@@ -76,7 +75,6 @@ def stats_hosts_protocol(src, dst, protocol, do_print=True):
     data = rest_method(url, "GET")
     if (do_print):
         print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
-    print data
     return data
 
 def all_stats_hosts(src, dst, do_print=True):
@@ -91,7 +89,6 @@ def all_stats_hosts(src, dst, do_print=True):
     except:
         data = {}
     finally:
-        print data
         return data
 
 ### Affinity link statistics
@@ -101,7 +98,6 @@ def stats_link(al, do_print=True):
     data = rest_method(url, "GET")
     if (do_print):
         print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
-    print data
     return data
 
 def stats_link_protocol(al, protocol, do_print=True):
@@ -109,7 +105,6 @@ def stats_link_protocol(al, protocol, do_print=True):
     data = rest_method(url, "GET")
     if (do_print):
         print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
-    print data
     return data
 
 def all_stats_link(al, do_print=True):
@@ -124,7 +119,6 @@ def all_stats_link(al, do_print=True):
     except:
         data = {}
     finally:
-        print data
         return data
 
 ### Subnet statistics
@@ -134,7 +128,6 @@ def stats_subnet(src_sub, dst_sub, do_print=True):
     data = rest_method(url, "GET")
     if (do_print):
         print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
-    print data
     return data
 
 def stats_subnet_protocol(src_sub, dst_sub, protocol, do_print=True):
