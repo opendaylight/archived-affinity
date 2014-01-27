@@ -65,11 +65,6 @@
 
     <repositories>
       <!-- To get SVNKit -->
-      <repository>
-	<id>svnkit-snapshots</id>
-	<name>svnkit-snapshots</name>
-	<url>${nexusproxy}/repositories/svnkit-snapshots/</url>
-      </repository>
       <!-- OpenDayLight Released artifact -->
       <repository>
         <id>opendaylight-release</id>
@@ -83,11 +78,6 @@
         <url>${nexusproxy}/repositories/opendaylight.snapshot/</url>
       </repository>
       <!-- PAX Management -->
-      <repository>
-        <id>ops4j-releases</id>
-        <name>ops4j-releases</name>
-        <url>${nexusproxy}/repositories/ops4j-releases/</url>
-      </repository>
     </repositories>
 
     <pluginRepositories>

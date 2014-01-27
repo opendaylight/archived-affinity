@@ -43,11 +43,6 @@
     </repositories>
 
     <pluginRepositories>
-        <pluginRepository>
-            <id>central2</id>
-            <name>central2</name>
-            <url>${nexusproxy}/repositories/central2/</url>
-        </pluginRepository>
        <pluginRepository>
             <id>opendaylight-release</id>
             <url>${nexusproxy}/repositories/opendaylight.release/</url>
