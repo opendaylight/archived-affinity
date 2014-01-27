@@ -16,7 +16,7 @@
   <packaging>bundle</packaging>
 
   <properties>
-    <yang.version>0.5.9-SNAPSHOT</yang.version>
+    <yang.version>0.6.1-SNAPSHOT</yang.version>
   </properties>
 
   <repositories>
@@ -101,7 +101,7 @@
       <plugin>
         <groupId>org.opendaylight.yangtools</groupId>
         <artifactId>yang-maven-plugin</artifactId>
-        <version>0.5.9-SNAPSHOT</version>
+        <version>0.6.1-SNAPSHOT</version>
         <executions>
           <execution>
             <goals>
