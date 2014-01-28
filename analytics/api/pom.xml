@@ -53,12 +53,12 @@
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>sal</artifactId>
-      <version>0.7.0-SNAPSHOT</version>
+      <version>0.7.0</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.yangtools.model</groupId>
       <artifactId>ietf-topology</artifactId>
-      <version>2013.10.21.1-SNAPSHOT</version>
+      <version>2013.10.21.1</version>
     </dependency>
   </dependencies>
 
