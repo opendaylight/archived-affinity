@@ -5,12 +5,12 @@
   <parent>
     <groupId>org.opendaylight.affinity</groupId>
     <artifactId>affinityParent</artifactId>
-    <version>0.4.1</version>
+    <version>0.4.2-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
   <artifactId>l2agent</artifactId>
-  <version>0.4.1</version>
+  <version>0.4.2-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <build>

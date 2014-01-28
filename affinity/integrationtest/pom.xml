@@ -5,13 +5,13 @@
   <parent>
     <groupId>org.opendaylight.affinity</groupId>
     <artifactId>affinityParent</artifactId>
-    <version>0.4.1</version>
+    <version>0.4.2-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
 
   <groupId>org.opendaylight.affinity</groupId>
   <artifactId>affinity.integrationtest</artifactId>
-  <version>0.4.1</version>
+  <version>0.4.2-SNAPSHOT</version>
 
   <dependencies>
     <dependency>
@@ -47,12 +47,12 @@
     <dependency>
       <groupId>org.opendaylight.affinity</groupId>
       <artifactId>affinity</artifactId>
-      <version>0.4.1</version>
+      <version>0.4.2-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.affinity</groupId>
       <artifactId>affinity.implementation</artifactId>
-      <version>0.4.1</version>
+      <version>0.4.2-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
