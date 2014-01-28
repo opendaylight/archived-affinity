@@ -46,7 +46,7 @@
     <testvm.argLine>-Xmx1024m -XX:MaxPermSize=256m</testvm.argLine>
     <url.version>1.5.0</url.version>
     <virgo.version>3.6.0.RELEASE</virgo.version>
-    <hosttracker.version>0.5.1-SNAPSHOT</hosttracker.version>
+    <hosttracker.version>0.5.1</hosttracker.version>
   </properties>
 
     <modules>
