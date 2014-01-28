@@ -136,7 +136,7 @@
       <artifactId>l2agent</artifactId>
       <version>0.4.1-SNAPSHOT</version>
     </dependency>
-<!---
+<!--
     <dependency>
     <groupId>org.opendaylight.affinity</groupId>
     <artifactId>model</artifactId>
