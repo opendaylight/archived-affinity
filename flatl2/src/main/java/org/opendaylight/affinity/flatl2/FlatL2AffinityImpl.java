@@ -80,11 +80,12 @@ import org.opendaylight.controller.sal.utils.ServiceHelper;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.IfNewHostNotify;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
+import org.opendaylight.controller.hosttracker.HostIdFactory;
+import org.opendaylight.controller.hosttracker.IHostId;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.affinity.affinity.InetAddressMask;
 
 import org.opendaylight.controller.hosttracker.HostIdFactory;
-import org.opendaylight.controller.hosttracker.IHostId;
 import org.opendaylight.controller.hosttracker.IfIptoHost;
 import org.opendaylight.controller.hosttracker.hostAware.HostNodeConnector;
 import org.opendaylight.controller.sal.routing.IRouting;
@@ -317,12 +318,14 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
                 flowName = "[" + groupName + ":" + srcIp + ":" + dstIp + "]";
                 List<Action> actions = calcForwardingActions(node, srcIp, dstIp, attribs.get(groupName));
                 // Update flow with actions. 
-                log.info("Adding actions {} to flow {}", actions, f);
-                f.setActions(actions);
-                // Make a flowEntry object. groupName is the policy name, from the affinity link name. Same for all flows in this bundle. 
-                FlowEntry fEntry = new FlowEntry(groupName, flowName, f, node);
-                log.info("Install flow entry {} on node {}", fEntry.toString(), node.toString());
-                installFlowEntry(fEntry);
+                if (actions.size() > 0) {
+                    log.info("Adding actions {} to flow {}", actions, f);
+                    f.setActions(actions);
+                    // Make a flowEntry object. groupName is the policy name, from the affinity link name. Same for all flows in this bundle. 
+                    FlowEntry fEntry = new FlowEntry(groupName, flowName, f, node);
+                    log.info("Install flow entry {} on node {}", fEntry.toString(), node.toString());
+                    installFlowEntry(fEntry);
+                }
             }
         }
         return true; // error checking
@@ -369,8 +372,10 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
                 // Lookup output port on this node for this destination. 
 
                 // Using L2agent
-                Output output = getOutputPortL2Agent(node, wp);
-                fwdactions.add(output);
+                Output output = getOutputPort(node, wp);
+                if (output != null) {
+                    fwdactions.add(output);
+                }
                 // Using simpleforwarding.
                 // Output output = getOutputPort(node, wp);
                 // Controller controller = new Controller();
@@ -387,26 +392,33 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             log.info("Applying tap affinity.");
             List<InetAddress> taplist = tap.getTapList();
             if (taplist != null) {
-                // Only one waypoint server in list. 
+                // Add a new rule with original destination + tap destinations. 
                 for (InetAddress tapip: taplist) {
                     log.info("tap information = {}", tapip);
-                    // Lookup output port on this node for this destination. 
-                    
-                    // Using L2agent
-                    Output output1 = getOutputPortL2Agent(node, tapip);
-                    Output output2 = getOutputPortL2Agent(node, dst);
-                    
-                    fwdactions.add(output1);
-                    fwdactions.add(output2);
-                    
-                    // Using simpleforwarding.
-                    // Output output = getOutputPort(node, wp);
-                    // Controller controller = new Controller();
-                    // fwdactions.add(controller);
+                    Output output1 = getOutputPort(node, tapip);
+                    if (output1 != null) {
+                        fwdactions = merge(fwdactions, output1);
+                    }
                 }
+                Output output2 = getOutputPort(node, dst);
+                if (output2 != null) {
+                    fwdactions = merge(fwdactions, output2);
+                }
+
+                // Using simpleforwarding.
+                // Output output = getOutputPort(node, wp);
+                // Controller controller = new Controller();
+                // fwdactions.add(controller);
             }
         }
 
+        return fwdactions;
+    }
+    
+    public List<Action> merge(List<Action> fwdactions, Action a) {
+        if (!fwdactions.contains(a)) {
+            fwdactions.add(a);
+        }
         return fwdactions;
     }
 
@@ -420,38 +432,121 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         if (l2agent != null) {
             /* Look up the output port leading to the waypoint. */
             HostNodeConnector host = (HostNodeConnector) hostTracker.hostFind(ip);
-            log.info("output port on node {} toward host {}", node, host);
-            NodeConnector dst_connector = l2agent.lookup_output_port(node, host.getDataLayerAddressBytes());
-            if (dst_connector != null) {
-                op = new Output(dst_connector);
+            if (host != null) {
+                log.info("output port on node {} toward host {}", node, host);
+                NodeConnector dst_connector = l2agent.lookup_output_port(node, host.getDataLayerAddressBytes());
+                if (dst_connector != null) {
+                    op = new Output(dst_connector);
+                }
             }
         } else {
             log.info("l2agent is not set!!!");
         }
+
+        // host node connector may be null, if this address is static
+        // and not known to the l2agent which relies on learning.
+        if (op == null && isHostInactive(ip)) {
+            // Use routing.
+            op = getOutputPort(node, ip);
+        }
         return op;
     }
 
-    public Output getOutputPort(Node node, InetAddress wp) {
-        IHostId id = HostIdFactory.create(wp, null);
-        HostNodeConnector hnConnector = this.hostTracker.hostFind(id);
-        Node destNode = hnConnector.getnodeconnectorNode();
-        
-        log.debug("from node: {}", node.toString());
-        log.debug("dest node: {}", destNode.toString());
-
-        // Get path between both the nodes                                                                                                           
-        NodeConnector forwardPort = null;
-        if (node.getNodeIDString().equals(destNode.getNodeIDString())) {
-            forwardPort = hnConnector.getnodeConnector();
-            log.info("Both source and destination are connected to same switch nodes. output port is {}",
-                        forwardPort);
-        } else {
-            Path route = this.routing.getRoute(node, destNode);
-            log.info("Path between source and destination switch nodes : {}",
-                        route.toString());
-            forwardPort = route.getEdges().get(0).getTailNodeConnector();
+    public boolean isHostActive(InetAddress ipaddr) {
+        Set<HostNodeConnector> activeStaticHosts = hostTracker.getActiveStaticHosts();
+        for (HostNodeConnector h : activeStaticHosts) {
+            InetAddress networkAddress = h.getNetworkAddress();
+            log.info("Checking match {} vs. {}", networkAddress, ipaddr);
+            if (networkAddress == ipaddr) {
+                log.debug("networkaddress found {} = {}", ipaddr, networkAddress);
+                return true;
+            }
         }
-        return(new Output(forwardPort));
+        return false;
+    }
+
+    public boolean isHostKnown(InetAddress ipaddr) {
+        Set<HostNodeConnector> knownHosts = hostTracker.getAllHosts();
+        for (HostNodeConnector h : knownHosts) {
+            InetAddress networkAddress = h.getNetworkAddress();
+            log.info("Checking match {} vs. {}", networkAddress, ipaddr);
+            if (networkAddress.equals(ipaddr)) {
+                log.debug("networkaddress found {} = {}", ipaddr, networkAddress);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isHostInactive(InetAddress ipaddr) {
+        Set<HostNodeConnector> inactiveStaticHosts = hostTracker.getInactiveStaticHosts();
+        for (HostNodeConnector h : inactiveStaticHosts) {
+            InetAddress networkAddress = h.getNetworkAddress();
+            log.info("Checking match {} vs. {}", networkAddress, ipaddr);
+            if (networkAddress.equals(ipaddr)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public HostNodeConnector getInactiveHost(InetAddress ipaddr) {
+        Set<HostNodeConnector> inactiveStaticHosts = hostTracker.getInactiveStaticHosts();
+        for (HostNodeConnector h : inactiveStaticHosts) {
+            InetAddress networkAddress = h.getNetworkAddress();
+            log.info("Checking match {} vs. {}", networkAddress, ipaddr);
+            if (networkAddress.equals(ipaddr)) {
+                return h;
+            }
+        }
+        return null;
+    }
+
+    public HostNodeConnector getHostNodeConnector(InetAddress ipaddr) {
+        /** 
+         * This host may be active, inactive/static or not present in the hosts DB.
+         */
+        HostNodeConnector hnConnector;      
+        hnConnector = null;
+        log.info("Lookup hostTracker for this host");
+        
+        // Check inactive hosts.
+        if (isHostInactive(ipaddr)) {
+            log.info("host is from inactive DB");
+            hnConnector = getInactiveHost(ipaddr);
+        } else if (isHostKnown(ipaddr)) {
+            log.info("host is known to hostTracker, attempt a hostfind");
+            IHostId id = HostIdFactory.create(ipaddr, null);
+            hnConnector = this.hostTracker.hostFind(id);
+        }
+        return hnConnector;
+    }
+
+    public Output getOutputPort(Node node, InetAddress ipaddr) {
+        HostNodeConnector hnConnector;
+        hnConnector = getHostNodeConnector(ipaddr);
+        if (hnConnector != null) {
+            Node destNode = hnConnector.getnodeconnectorNode();
+            
+            log.debug("from node: {}", node.toString());
+            log.debug("dest node: {}", destNode.toString());
+            
+            // Get path between both the nodes                                                                                                           
+            NodeConnector forwardPort = null;
+            if (node.getNodeIDString().equals(destNode.getNodeIDString())) {
+                forwardPort = hnConnector.getnodeConnector();
+                log.info("Both source and destination are connected to same switch nodes. output port is {}",
+                         forwardPort);
+            } else {
+                Path route = this.routing.getRoute(node, destNode);
+                log.info("Path between source and destination switch nodes : {}",
+                         route.toString());
+                forwardPort = route.getEdges().get(0).getTailNodeConnector();
+            }
+            log.info("output port {} on node {} toward host {}", forwardPort, node, hnConnector);
+            return(new Output(forwardPort));
+        } 
+        return null;
     }
 
     /**

@@ -2,7 +2,9 @@
 
 import httplib2
 import json
+import requests
 import sys
+import urllib2
 
 #
 # Configure an affinity link and set its waypoint address. 
@@ -18,11 +20,25 @@ def rest_method(url, verb):
     print "return code %d" % (resp.status)
     return content
 
+# Generic REST query
+def rest_method_2(url, rest_type, payload=None):
+    if (rest_type == "GET"):
+        resp = requests.get(url, auth=('admin', 'admin'))
+        return resp.json()
+    elif (rest_type == "PUT"):
+        headers = {'content-type': 'application/json'}
+        print json.dumps(payload)
+        resp = requests.put(url, auth=('admin', 'admin'), data=json.dumps(payload), headers=headers)
+        print resp.text
+        return resp.status_code
+    elif (rest_type == "DELETE"):
+        resp = requests.delete(url, auth=('admin', 'admin'))
 
 def list_all_hosts(): 
     print "list active hosts"
     get_url = 'http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active'
     content = rest_method(get_url, "GET")
+    print content
     hostCfg = json.loads(content)
     for host in hostCfg['hostConfig']:
         print host
@@ -47,6 +63,7 @@ def get_all_affinity_links():
     get_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/affinity-links'
     content = rest_method(get_url, "GET")
     affylinks = json.loads(content)
+    print affylinks
     for link in affylinks['affinityLinks']: 
         print "Affinity link: %s" % link
         get_affinity_link(link['name'])
@@ -89,6 +106,7 @@ def client_ws_example():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/clients/add/ip/10.0.0.3'
     rest_method(put_url, "PUT")
 
+
 def drop_ws_objects(): 
 
     print "remove inflows link"
@@ -101,6 +119,30 @@ def drop_ws_objects():
 
     print "remove clients group"
     put_url = "http://localhost:8080/affinity/nb/v2/affinity/default/delete/group/clients"
+    rest_method(put_url, "PUT")
+
+def tap_example():
+    # Create two affinity groups
+    print "create group A" 
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/group/a'
+    rest_method(put_url, "PUT")
+
+    print "create group B"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/group/b'
+    rest_method(put_url, "PUT")
+
+    print "create link A -> B"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/a_to_b/from/a/to/b'
+    rest_method(put_url, "PUT")
+
+    print "add ip addresses to A"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/a/add/ip/10.0.0.1'
+    rest_method(put_url, "PUT")
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/a/add/ip/10.0.0.2'
+    rest_method(put_url, "PUT")
+
+    print "add ip addresses to B"    
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/b/add/ip/10.0.0.3'
     rest_method(put_url, "PUT")
 
 def repeat_add_link(): 
@@ -127,7 +169,7 @@ def set_tap(al, ipaddr):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/settap/' + ipaddr
     rest_method(put_url, "PUT")
 
-# Add a tap to ipaddress.
+# Remove all tap servers and the tap affinity attribute. 
 def unset_tap(al, ipaddr):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/unsettap/' + ipaddr
     rest_method(put_url, "PUT")
@@ -147,6 +189,30 @@ def disable_affinity():
     put_url = 'http://localhost:8080/affinity/nb/v2/flatl2/default/disableaffinity/'
     rest_method(put_url, "PUT")
 
+# Set affinity attributes and make sure they are associated with the affinity link. 
+def add_deny():
+    # Set deny. 
+    set_deny('deny')
+    get_affinity_link('inflows')
+    set_deny('permit')
+    get_affinity_link('inflows')
+    
+def add_waypoint(): 
+    set_waypoint_address('inflows', '10.0.0.2')
+
+# Add tap servers. 
+def test_tap(): 
+    tap_example()
+    set_tap('a_to_b', '10.0.0.4')
+    add_static_host_tap('a_to_b', '10.0.0.20')
+    get_affinity_link('a_to_b')
+    enable_affinity() # Tap to '10.0.0.4'.
+
+def add_isolate(): 
+    set_path_isolate()    
+    get_affinity_link('inflows')
+    enable_affinity() # Large flow forwarding
+
 def main():
     global h
 
@@ -164,37 +230,34 @@ def main():
     print "get_all_affinity_links..."
     get_all_affinity_links()
 
-    set_attr()
+    test_tap()
     list_all_hosts()
     return
 
-# Set affinity attributes and make sure they are associated with the affinity link. 
-def set_attr(): 
-    # Set deny. 
-    set_deny('deny')
-    get_affinity_link('inflows')
-
-    # Set waypoint and tap. 
-    set_deny('permit')
-    set_waypoint_address('inflows', '10.0.0.2')
-    set_tap('inflows', '10.0.0.6')
-    set_tap('inflows', '10.0.0.4')
-    get_affinity_link('inflows')
+def add_static_host_tap(al, ipaddr):
+    payload = {'dataLayerAddress':'00:00:00:00:01:01', 
+                 'nodeType':'OF', 
+                 "nodeId":"00:00:00:00:00:00:00:01", 
+                 "nodeConnectorType":"OF", 
+                 "nodeConnectorId":"9", 
+                 "vlan":"1", 
+                 "staticHost":'true', 
+                 "networkAddress":ipaddr}
+    url = "http://localhost:8080/controller/nb/v2/hosttracker/default/address/%s" % (ipaddr)
+    print payload
+    status = rest_method_2(url, "PUT", payload)
+    print "add_static_host: ", status
     
-    # Change a few affinity attributes and get the new link configuration. 
-    unset_tap('inflows', '10.0.0.6')    
-    print "get_affinity_link..."
-    get_affinity_link('inflows')
-
-    enable_affinity() # Tap to '10.0.0.4'.
-    unset_tap('inflows', '10.0.0.4')
-    set_path_isolate()    
-    get_affinity_link('inflows')
-    enable_affinity() # No action for isolate. Restore normal forwarding. 
+    # Add tap to static host.
+    print "add tap to new static host" + ipaddr
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/settap/' + ipaddr
+    rest_method(put_url, "PUT")
     
 #if __name__ == "__main__":
 #    main()
 
+#opener = {}
+#init_urllib()
 h = httplib2.Http(".cache")
 h.add_credentials('admin', 'admin')
 
