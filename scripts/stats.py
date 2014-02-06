@@ -26,7 +26,11 @@ class Stats:
         self.stats = {}
         self.protocol_stats = {}
         self.rate_ewma = None
+        self.prev_t = None
+        self.prev_bytes = None
+
         self.large_flow_threshold = 5 * 10**6 # in bytes
+        self.rate_threshold = 1 * 10**6 # bits/sec
 
     def __str__(self):
         if (self.stat_type == Stats.TYPE_HOST):
@@ -50,7 +54,8 @@ class Stats:
             self.stats = analytics.stats_subnet("null/null", self.subnet, True)
             self.protocol_stats = analytics.all_stats_subnet("null/null", self.subnet, True)
         try:
-            is_fast = self.handle_rate_ewma()
+#            is_fast = self.handle_rate_ewma()
+            is_fast = self.calc_ewma_rate()
             is_big = self.check_large_flow()
             return [is_fast, is_big]
         except:
@@ -79,20 +84,51 @@ class Stats:
 
     # EWMA calculation for bit rate.  Returns true if there is an anomaly.
     def handle_rate_ewma(self):
-        alpha = .25
+        alpha = .75
         anomaly_threshold = 2.0
         new_bitrate = self.get_bit_rate()
+        print "bitrate = %f" % (new_bitrate)
 
         return_val = False
 
         if self.rate_ewma == None:
             self.rate_ewma = new_bitrate
         else:
-            new_rate_ewma = alpha * new_bitrate + (1 - alpha) * self.rate_ewma
-            if (self.rate_ewma > 0 and new_rate_ewma > anomaly_threshold * self.rate_ewma):
-                return_val = True
-            self.rate_ewma = new_rate_ewma
+            self.rate_ewma = alpha * new_bitrate + (1 - alpha) * self.rate_ewma
+
+        if (new_rate_ewma > self.rate_threshold):
+            return_val = True
         return return_val
+
+    def get_ewma_rate(self):
+        alpha = .75
+        return self.rate_ewma
+
+    # EWMA calculation for bit rate.  Returns true if there is an anomaly.
+    def calc_ewma_rate(self):
+        alpha = .75
+
+        return_val = False
+        if (self.prev_t == None or self.prev_bytes == None): 
+            new_bitrate = 0
+        else:
+            new_bitrate = (self.get_bytes() - self.prev_bytes)/(self.get_duration() - self.prev_t)
+            print "Rate is now %f" % (new_bitrate)
+
+        # Calculate ewma rate from instantaneous rate and check if it crosses threshold.
+        if (self.rate_ewma == None): 
+            self.rate_ewma = 0
+        else: 
+            self.rate_ewma = alpha * new_bitrate + (1 - alpha) * self.rate_ewma
+        if (self.rate_ewma > self.rate_threshold): 
+            print "Rate exceeded %f" % (self.rate_ewma)
+            return_val = True
+
+        # Update the time and bytes snapshots
+        self.prev_t = self.get_duration();
+        self.prev_bytes = self.get_bytes()
+        return return_val
+
 
     # Returns true if this is a large flow
     def check_large_flow(self):
@@ -110,6 +146,17 @@ class Stats:
         except Exception as e:
             bytes = 0
         return bytes
+
+    # Duration of longest flow in group
+    def get_duration(self, protocol=None):
+        try:
+            if (protocol == None):
+                seconds = long(self.stats["duration"])
+            else:
+                seconds = long(self.protocol_stats[protocol]["duration"])
+        except Exception as e:
+            seconds = 0
+        return seconds
 
     # Packets
     def get_packets(self, protocol=None):

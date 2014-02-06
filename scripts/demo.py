@@ -63,11 +63,11 @@ class WaypointMonitor(Thread):
         print "Set threshold for large flows to %d bytes" % s
         print("-------------------------")
 
-    def run(self):
+    def run2(self):
         global sigint
         did_waypoint = False
         while not sigint:
-            _, is_big = self.stat.refresh()
+            is_fast, is_big = self.stat.refresh()
             if is_big and not did_waypoint:
                 print "Large flow detected (%d bytes, %d packets, %3.3f bit/s)" % (self.stat.get_bytes(), self.stat.get_packets(), self.stat.get_bit_rate())
                 print "   ICMP: %d bytes, %d packets" % (self.stat.get_bytes(1), self.stat.get_packets(1))
@@ -101,6 +101,51 @@ class WaypointMonitor(Thread):
                 raw_input("[Press Enter to disable affinity rules] ")
                 ac.disable_affinity()
 #                ac.disable_waypoint(link_name)
+            time.sleep(1)
+
+
+
+    def run(self):
+        global sigint
+        did_waypoint = False
+        while not sigint:
+            is_fast, is_big = self.stat.refresh()
+            if is_fast and not did_waypoint:
+                print "Fast flow detected (%3.3f bit/s)" % (self.stat.get_ewma_rate())
+                ac = AffinityControl()
+                # First AG: Sources sending data into this subnet
+                src_ag_name = "sources"
+                # Hosts that transmit > 10% of link capacity
+                src_ips = self.stat.get_large_incoming_hosts()
+                print "LFD src list = ", src_ips
+                print "Discard waypoint address"
+                if (self.waypoint_address in src_ips):
+                    src_ips.remove(self.waypoint_address)
+ 
+                ac.add_affinity_group(src_ag_name, ips=src_ips)
+
+                # Second AG: This entity
+                dst_ag_name = "client"
+                if (self.stat_type == Stats.TYPE_SUBNET):
+                    ac.add_affinity_group(dst_ag_name, subnet=self.stat.subnet)
+                elif (self.stat_type == Stats.TYPE_HOST):
+                    pass
+                else:
+                    print "type", self.stat_type, "not supported for redirection"
+
+                # AL: Between them
+                link_name = "inflows"
+                ac.add_affinity_link(link_name, src_ag_name, dst_ag_name)
+                ac.add_waypoint(link_name, self.waypoint_address)
+                ac.add_isolate(link_name)
+                ac.enable_affinity()
+                did_waypoint = True
+                time.sleep(10)
+            
+            # Flow now gone, disable affinity.
+            elif did_waypoint and not is_fast: 
+                ac.disable_affinity()
+                did_waypoint = False
             time.sleep(1)
 
 def main():
