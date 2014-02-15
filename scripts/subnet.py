@@ -50,3 +50,10 @@ class SubnetControl:
             print "Subnet", subnet, "added"
         else:
             print "Subnet", subnet, "could not be added"
+
+    def list(self):
+        resp, content = self.http.request(self.url_prefix + "subnets", "GET")
+        if (resp.status != 200):
+            print "Error could not get subnets"
+        data = json.loads(content)
+        print data

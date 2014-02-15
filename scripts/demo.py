@@ -152,6 +152,7 @@ def main():
 
     # Default subnet is required for the host tracker to work.
     subnet_control = SubnetControl()
+    subnet_control.list()
     subnet_control.add_subnet("defaultSubnet", "10.0.0.254/8")
 
     raw_input("[Press enter when mininet is ready] ")

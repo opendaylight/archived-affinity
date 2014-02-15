@@ -372,7 +372,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
                 // Lookup output port on this node for this destination. 
 
                 // Using L2agent
-                Output output = getOutputPort(node, wp);
+                Output output = getOutputPortL2Agent(node, wp);
                 if (output != null) {
                     fwdactions.add(output);
                 }
@@ -395,12 +395,12 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
                 // Add a new rule with original destination + tap destinations. 
                 for (InetAddress tapip: taplist) {
                     log.info("tap information = {}", tapip);
-                    Output output1 = getOutputPort(node, tapip);
+                    Output output1 = getOutputPortL2Agent(node, tapip);
                     if (output1 != null) {
                         fwdactions = merge(fwdactions, output1);
                     }
                 }
-                Output output2 = getOutputPort(node, dst);
+                Output output2 = getOutputPortL2Agent(node, dst);
                 if (output2 != null) {
                     fwdactions = merge(fwdactions, output2);
                 }

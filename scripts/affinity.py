@@ -132,18 +132,19 @@ def tap_example():
     rest_method(put_url, "PUT")
 
     print "create link A -> B"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/a_to_b/from/a/to/b'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/a_to_b/from/b/to/a'
     rest_method(put_url, "PUT")
 
     print "add ip addresses to A"
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/a/add/ip/10.0.0.1'
     rest_method(put_url, "PUT")
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/a/add/ip/10.0.0.2'
-    rest_method(put_url, "PUT")
+#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/a/add/ip/10.0.0.2'
+#    rest_method(put_url, "PUT")
 
     print "add ip addresses to B"    
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/b/add/ip/10.0.0.3'
     rest_method(put_url, "PUT")
+
 
 def repeat_add_link(): 
     print "create link inflows"
@@ -201,12 +202,19 @@ def add_waypoint():
     set_waypoint_address('inflows', '10.0.0.2')
 
 # Add tap servers. 
-def test_tap(): 
+def test_tap_1(): 
     tap_example()
     set_tap('a_to_b', '10.0.0.4')
     add_static_host_tap('a_to_b', '10.0.0.20')
     get_affinity_link('a_to_b')
     enable_affinity() # Tap to '10.0.0.4'.
+
+# Add tap servers. 
+def test_tap_2(): 
+    tap_example()
+    set_tap('a_to_b', '10.0.0.2')
+    get_affinity_link('a_to_b')
+    enable_affinity() # Tap to '10.0.0.2'.
 
 def add_isolate(): 
     set_path_isolate()    
@@ -230,7 +238,7 @@ def main():
     print "get_all_affinity_links..."
     get_all_affinity_links()
 
-    test_tap()
+    test_tap_2()
     list_all_hosts()
     return
 

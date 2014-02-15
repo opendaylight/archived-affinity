@@ -60,6 +60,15 @@ class AffinityControl:
             return
         print "Isolate successfully set for link %s" % (link_name)
 
+    # Remove isolate to the link.
+    def remove_isolate(self, link_name):
+        resp, content = self.http.request(self.url_prefix + "link/%s/unsetisolate" % (link_name), "PUT")
+        if (resp.status != 201):
+            print "Isolate could not be removed for link %s" % (link_name)
+            return
+        print "Isolate successfully removed for link %s" % (link_name)
+
+
     # Add waypoint
     def add_waypoint(self, link_name, ip):
         resp, content = self.http.request(self.url_prefix + "link/%s/setwaypoint/%s" % (link_name, ip), "PUT")

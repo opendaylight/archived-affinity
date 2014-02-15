@@ -198,7 +198,10 @@ def add_protocol_flows():
         name = "flow" + str(i)
         flow.set_priority(2)
         flow.set_protocol(1)
-        flow_success = add_flow(flow, name)
+        try: 
+            flow_success = add_flow(flow, name)
+        except Exception as e: 
+            continue;
         if (flow_success != 201):
             success = False
     return success
@@ -212,7 +215,10 @@ def get_flows():
     for item in data['flowStatistics']:
         n = item['node']
         for item in item['flowStatistic']:
-            f = Flow(n, item['flow'])
+            try: 
+                f = Flow(n, item['flow'])
+            except Exception, e: 
+                continue
             flows.append(f)
     return flows
 
