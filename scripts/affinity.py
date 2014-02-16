@@ -132,7 +132,11 @@ def tap_example():
     rest_method(put_url, "PUT")
 
     print "create link A -> B"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/a_to_b/from/b/to/a'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/a_to_b/from/a/to/b'
+    rest_method(put_url, "PUT")
+
+    print "create link B -> A"
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/b_to_a/from/b/to/a'
     rest_method(put_url, "PUT")
 
     print "add ip addresses to A"
@@ -213,7 +217,9 @@ def test_tap_1():
 def test_tap_2(): 
     tap_example()
     set_tap('a_to_b', '10.0.0.2')
+    set_tap('b_to_a', '10.0.0.2')
     get_affinity_link('a_to_b')
+    get_affinity_link('b_to_a')
     enable_affinity() # Tap to '10.0.0.2'.
 
 def add_isolate(): 
