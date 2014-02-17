@@ -97,7 +97,7 @@ def stats_link(al, do_print=True):
     url = "http://localhost:8080/affinity/nb/v2/analytics/default/affinitylinkstats/%s" % al
     data = rest_method(url, "GET")
     if (do_print):
-        print("%s bytes (%s packets) over %s seconds (%s bit/s)" % (data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
+        print("stats_link: %s %s bytes (%s packets) over %s seconds (%s bit/s)" % (url, data["byteCount"], data["packetCount"], data["duration"], data["bitRate"]))
     return data
 
 def stats_link_protocol(al, protocol, do_print=True):

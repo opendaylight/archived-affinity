@@ -371,9 +371,9 @@ public class AffinityManagerImpl implements IAffinityManager,
 
         try {
             for (AffinityIdentifier h : ag.getAllElements()) {
-                log.debug("host = {}", h);
                 if (hostTracker != null) {
                     Host host1 = hostTracker.hostFind((InetAddress) h.get());
+                    //                    log.debug("host = {}", host1);
                     hostList.add(host1);
                 }
             }

@@ -191,13 +191,23 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
      * per-protocol (across all protocols if protocol is null).*/
     protected long getByteCount(Set<Host> srcSet, Set<Host> dstSet, Byte protocol) {
         long byteCount = 0;
+        /**
+        log.info("Printing all sources and destinations.");
+        for (Host h: srcSet) {
+            log.info("src: {}, DL {}, inet {}", h, h.getDataLayerAddress(), h.getNetworkAddress());
+        }
+        for (Host h: dstSet) {
+            log.info("dst: {}, DL {}, inet {}", h, h.getDataLayerAddress(), h.getNetworkAddress());
+        }
+        **/
         for (Host src : srcSet) {
             for (Host dst : dstSet) {
                 if (this.hostsToStats.get(src) != null &&
                     this.hostsToStats.get(src).get(dst) != null) {
-                    if (protocol == null)
+                    if (protocol == null) {
                         byteCount += this.hostsToStats.get(src).get(dst).getByteCount();
-                    else
+                        //                        log.info("Source and destination: {} and {}.", src, dst);
+                    } else
                         byteCount += this.hostsToStats.get(src).get(dst).getByteCount(protocol);
                 }
             }
@@ -302,7 +312,7 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
 
     /* AffinityLink -> Set of source Hosts */
     private Set<Host> getSrcSet(AffinityLink al) {
-        return new HashSet<Host>(this.affinityManager.getAllElementsByHost(al.getToGroup()));
+        return new HashSet<Host>(this.affinityManager.getAllElementsByHost(al.getFromGroup()));
     }
 
     /* AffinityLink -> Set of destination Hosts */

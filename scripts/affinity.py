@@ -98,8 +98,12 @@ def client_ws_example():
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/create/link/inflows/from/clients/to/webservers'
     rest_method(put_url, "PUT")
 
+#    print "add subnet to webservers"
+#    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/addsubnet/ipprefix/10.0.0.1/mask/31'
+#    rest_method(put_url, "PUT")
+
     print "add subnet to webservers"
-    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/addsubnet/ipprefix/10.0.0.1/mask/31'
+    put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/group/webservers/add/ip/10.0.0.1'
     rest_method(put_url, "PUT")
 
     print "add ip to external"    
@@ -267,13 +271,13 @@ def add_static_host_tap(al, ipaddr):
     put_url = 'http://localhost:8080/affinity/nb/v2/affinity/default/link/' + al + '/settap/' + ipaddr
     rest_method(put_url, "PUT")
     
-#if __name__ == "__main__":
-#    main()
 
 #opener = {}
 #init_urllib()
 h = httplib2.Http(".cache")
 h.add_credentials('admin', 'admin')
+#if __name__ == "__main__":
+#    main()
 
 
     
