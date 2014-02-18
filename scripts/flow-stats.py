@@ -28,6 +28,7 @@ def get_flow_stats():
         print "# flows =  %d" % len(flows)
         for f in flows: 
             print f["flow"]["match"], "priority = ", f["flow"]["priority"]
+            print "seconds = ", f["durationSeconds"], "packets = ", f["packetCount"], "bytes = ", f["byteCount"] 
             print "\t Actions:"
             for a in f["flow"]["actions"]:
                 print "\t \t", a 

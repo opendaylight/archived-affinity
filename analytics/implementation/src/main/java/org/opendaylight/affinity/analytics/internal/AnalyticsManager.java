@@ -206,9 +206,11 @@ public class AnalyticsManager implements IReadServiceListener, IAnalyticsManager
                     this.hostsToStats.get(src).get(dst) != null) {
                     if (protocol == null) {
                         byteCount += this.hostsToStats.get(src).get(dst).getByteCount();
-                        //                        log.info("Source and destination: {} and {}.", src, dst);
                     } else
                         byteCount += this.hostsToStats.get(src).get(dst).getByteCount(protocol);
+                }
+                if (src != null && dst != null) {
+                    log.info("Source and destination: {} and {}, byteCount = {}.", src.getNetworkAddress(), dst.getNetworkAddress(), byteCount);
                 }
             }
         }

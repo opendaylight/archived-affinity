@@ -27,8 +27,8 @@ global rate_high
 global prefix
 
 link_name = "inflows"
-rate_low = (100 * 10**3)  # 100 kbps
-rate_high = (1 * 10**6) # 1 Mbps
+rate_high = (100 * 10**6)  # 100 mbps
+rate_low = (10 * 10**6) # 10 mbps
 prefix = "10.0.0.254/8"
 
 # If True, SIG_INT has been captured
@@ -56,12 +56,12 @@ class WaypointMonitor(Thread):
 
     def set_high_threshold(self, s):
         self.stat.set_high_threshold(s)
-        print "Set high threshold for flow rate to %d bps" % s
+        print "Set high threshold for flow rate to %3.3f Mbps" % (int(s) * (1.0/1000000))
         print("-------------------------")
 
     def set_low_threshold(self, s):
         self.stat.set_low_threshold(s)
-        print "Set low threshold for flow rate to %d bps" % s
+        print "Set low threshold for flow rate to %3.3f Mbps" % (int(s) * (1.0/1000000))
         print("-------------------------")
 
     def run(self):
@@ -69,21 +69,20 @@ class WaypointMonitor(Thread):
         high_rate_set = False
         while not sigint:
             is_high, is_low = self.stat.refresh()
-            print "Rate is: %f" % (self.stat.get_ewma_rate())
             if is_high and not high_rate_set:
-                print "Fast flow detected (%3.3f bit/s)" % (self.stat.get_ewma_rate())
                 ac = AffinityControl()
-#                ac.add_waypoint(link_name, self.waypoint_address)
-##                ac.add_isolate(link_name)
-##                ac.enable_affinity()
                 high_rate_set = True
-#                time.sleep(3)            
+#                ac.add_waypoint(link_name, self.waypoint_address)
+                ac.add_isolate(link_name)
+                ac.enable_affinity()
+                print "Adding isolate affinity to link: %s" % (link_name)
+#                time.sleep(3)
             elif is_low and high_rate_set: 
-                print "Flow rate below threshold (%3.3f bit/s)" % (self.stat.get_ewma_rate())
-##               ac.remove_isolate(link_name)
-##               ac.disable_affinity()
                 high_rate_set = False
-            time.sleep(1)
+                ac.remove_isolate(link_name)
+                ac.enable_affinity()
+                print "Adding isolate affinity to link: %s" % (link_name)
+            time.sleep(10)
 
 def main():
 

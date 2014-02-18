@@ -31,7 +31,6 @@ class Stats:
 
         self.large_flow_threshold = 5 * 10**6 # in bytes
         self.rate_threshold = 1 * 10**6 # bits/sec
-        print "Created stats"
 
     def __str__(self):
         if (self.stat_type == Stats.TYPE_HOST):
@@ -122,8 +121,8 @@ class Stats:
         if (self.prev_t == None or self.prev_bytes == None): 
             new_bitrate = 0
         else:
-            new_bitrate = (self.get_bytes() - self.prev_bytes)/(self.get_duration() - self.prev_t)
-            print "Rate is now %f" % (new_bitrate)
+            new_bitrate = 8.0 * (self.get_bytes() - self.prev_bytes)/(self.get_duration() - self.prev_t)
+#            print "Rate is now %f" % (new_bitrate)
 
         # Calculate ewma rate from instantaneous rate and check if it crosses threshold.
         if (self.rate_ewma == None): 
@@ -132,18 +131,16 @@ class Stats:
             self.rate_ewma = alpha * new_bitrate + (1 - alpha) * self.rate_ewma
 
         if (self.rate_ewma > self.rate_high_threshold): 
-            print "Rate exceeded %f" % (self.rate_ewma)
+            print "High rate: %3.3f Mbps" % (self.rate_ewma/1000000.0)
             is_high = True
         
-        if (self.rate_ewma < self.rate_high_threshold): 
-            print "Rate dropped %f" % (self.rate_ewma)
+        if (self.rate_ewma < self.rate_low_threshold): 
+            print "Low rate: %3.3f Mbps" % (self.rate_ewma/1000000.0)
             is_low = True
         
         # Update the time and bytes snapshots
         self.prev_t = self.get_duration()
         self.prev_bytes = self.get_bytes()
-#        print "calc_ewma_rate: [high=%s:low=%s] rate=%f" % (is_high, is_low, self.rate_ewma)
-        print "calc_ewma_rate: rate=%f" % (self.rate_ewma)
         return [is_high, is_low]
 
 
