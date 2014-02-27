@@ -14,7 +14,8 @@ public enum AffinityAttributeType {
     SET_DENY("deny"),
     SET_TAP("set_tap"),
     SET_PATH_ISOLATE("set_path_isolate"),
-    SET_PATH_REDIRECT("set_path_redirect");
+    SET_PATH_REDIRECT("set_path_redirect"),
+    SET_MAX_TPUT_PATH("set_path_max_tput");
 
     String id;
 

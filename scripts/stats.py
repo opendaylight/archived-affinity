@@ -30,7 +30,7 @@ class Stats:
         self.prev_bytes = None
 
         self.large_flow_threshold = 5 * 10**6 # in bytes
-        self.rate_threshold = 1 * 10**6 # bits/sec
+        self.rate_threshold = 1 * 10**5 # bits/sec
 
     def __str__(self):
         if (self.stat_type == Stats.TYPE_HOST):

@@ -93,7 +93,7 @@ class WaypointMonitor(Thread):
                 # AL: Between them
                 link_name = "inflows"
                 ac.add_affinity_link(link_name, src_ag_name, dst_ag_name)
-                ac.add_waypoint(link_name, self.waypoint_address)
+#                ac.add_waypoint(link_name, self.waypoint_address)
                 ac.add_isolate(link_name)
 #                ac.enable_waypoint(link_name)
                 ac.enable_affinity()
@@ -129,14 +129,14 @@ class WaypointMonitor(Thread):
                 if (self.stat_type == Stats.TYPE_SUBNET):
                     ac.add_affinity_group(dst_ag_name, subnet=self.stat.subnet)
                 elif (self.stat_type == Stats.TYPE_HOST):
-                    pass
+                    ac.add_affinity_group(dst_ag_name, ips=self.dst)
                 else:
                     print "type", self.stat_type, "not supported for redirection"
 
                 # AL: Between them
                 link_name = "inflows"
                 ac.add_affinity_link(link_name, src_ag_name, dst_ag_name)
-                ac.add_waypoint(link_name, self.waypoint_address)
+#                ac.add_waypoint(link_name, self.waypoint_address)
                 ac.add_isolate(link_name)
                 ac.enable_affinity()
                 did_waypoint = True
@@ -163,7 +163,7 @@ def main():
     if (not x):
         print "Unable to add per-protocol flows"
 
-    m = WaypointMonitor(Stats.TYPE_SUBNET, subnet="10.0.0.0/31")
+    m = WaypointMonitor(Stats.TYPE_SUBNET, subnet="10.0.0.1/32")
     m.set_waypoint("10.0.0.2")
     m.set_large_flow_threshold(2000) # 2000 bytes
     m.start()

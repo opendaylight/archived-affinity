@@ -213,7 +213,7 @@ def add_waypoint():
 def test_tap_1(): 
     tap_example()
     set_tap('a_to_b', '10.0.0.4')
-    add_static_host_tap('a_to_b', '10.0.0.20')
+#    add_static_host_tap('a_to_b', '10.0.0.20')
     get_affinity_link('a_to_b')
     enable_affinity() # Tap to '10.0.0.4'.
 
@@ -236,19 +236,20 @@ def main():
 
     # Create two affinity groups and a link between them. 
     # Assign attributes. 
-    client_ws_example()
-    repeat_add_link()
+#    client_ws_example()
+#    repeat_add_link()
 
-    get_affinity_group('webservers')
-    get_affinity_group('clients')
-    get_affinity_link('inflows')
+#    get_affinity_group('webservers')
+#    get_affinity_group('clients')
+#    get_affinity_link('inflows')
+
+    test_tap()
 
     print "get_all_affinity_groups..."
     get_all_affinity_groups()
     print "get_all_affinity_links..."
     get_all_affinity_links()
 
-#    test_tap_2()
     list_all_hosts()
     return
 

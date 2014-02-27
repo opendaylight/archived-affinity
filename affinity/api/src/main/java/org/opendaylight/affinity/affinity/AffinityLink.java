@@ -177,6 +177,8 @@ public class AffinityLink implements Cloneable, Serializable {
     public void setIsolate() {
         SetPathIsolate iso = new SetPathIsolate();
         addAttribute(iso);
+        SetMaxTputPath mtp = new SetMaxTputPath();
+        addAttribute(mtp);
     }
     public void unsetIsolate() {
         attrlist.remove(AffinityAttributeType.SET_PATH_ISOLATE);
