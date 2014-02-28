@@ -38,14 +38,14 @@ public class AffinityPath implements Serializable {
     // Default path, leading to the destination. Each element is a sub-path of the total default path. 
     HostNodeConnector src;
     HostNodeConnector dst;
-    List<Path> defaultPath;
+    List<HostPairPath> defaultPath;
     HashMap<HostNodeConnector, Path> tapPaths;
 
     /* Dummy constructor for JAXB */
     public AffinityPath(HostNodeConnector src, HostNodeConnector dst) {
         this.src = src;
         this.dst = dst;
-        this.defaultPath = new ArrayList<Path>();
+        this.defaultPath = new ArrayList<HostPairPath>();
         this.tapPaths = new HashMap<HostNodeConnector, Path>();
     }
 
@@ -55,10 +55,10 @@ public class AffinityPath implements Serializable {
     public HostNodeConnector getDst() {
         return this.dst;
     }
-    public List<Path> getDefaultPath() {
+    public List<HostPairPath> getDefaultPath() {
         return defaultPath;
     }
-    public void setDefaultPath(List<Path> subpaths) {
+    public void setDefaultPath(List<HostPairPath> subpaths) {
         defaultPath = subpaths;
     }
     
@@ -91,8 +91,13 @@ public class AffinityPath implements Serializable {
     @Override
     public String toString() {
         String string = "affinity-path: \n";
-        string = string + "src: " + src.toString() + "\n" + "dst: " + dst.toString() + "\n";
-        string = string + "defPath: " + defaultPath.toString() + "\n";
+        
+        string = string + "src: " + src.toString() + "\n";
+        string = string + "dst: " + dst.toString() + "\n";
+        string = string + "defPath: " + "\n";
+        for (HostPairPath hp: defaultPath) {
+            string = string + hp.toString() + "\n";
+        }
         for (HostNodeConnector k: tapPaths.keySet()) {
             string = string + "tapdst: " + k.toString() + "\n" + "path: " + tapPaths.get(k).toString() + "\n";
         }

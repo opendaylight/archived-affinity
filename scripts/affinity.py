@@ -236,14 +236,14 @@ def main():
 
     # Create two affinity groups and a link between them. 
     # Assign attributes. 
-#    client_ws_example()
-#    repeat_add_link()
+    client_ws_example()
+    repeat_add_link()
 
-#    get_affinity_group('webservers')
-#    get_affinity_group('clients')
-#    get_affinity_link('inflows')
-
-    test_tap()
+    get_affinity_group('webservers')
+    get_affinity_group('clients')
+    get_affinity_link('inflows')
+    add_waypoint()
+#    test_tap()
 
     print "get_all_affinity_groups..."
     get_all_affinity_groups()

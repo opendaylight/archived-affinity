@@ -94,6 +94,7 @@ import org.opendaylight.affinity.affinity.IAffinityManager;
 import org.opendaylight.affinity.affinity.AffinityAttributeType;
 import org.opendaylight.affinity.affinity.AffinityAttribute;
 import org.opendaylight.affinity.affinity.AffinityPath;
+import org.opendaylight.affinity.affinity.HostPairPath;
 import org.opendaylight.affinity.affinity.SetDeny;
 import org.opendaylight.affinity.affinity.SetPathIsolate;
 import org.opendaylight.affinity.affinity.SetPathRedirect;
@@ -416,28 +417,50 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
     public HashMap<Node, List<Action>> calcForwardingActions(AffinityPath ap) {
 
         HashMap<Node, List<Action>> actionMap;
+        // Final set of rules to push into the nodes.
         actionMap = new HashMap<Node, List<Action>>();
         
-        // Add nodes in default path into the hash map.
-        // Default path has subpaths, created by redirects. xxx for now, just get one of these. 
-        Path p = ap.getDefaultPath().get(0);
-        addrules(ap.getDst(), p, actionMap);
+        Node srcNode = ap.getSrc().getnodeconnectorNode();
+        Node destNode = ap.getDst().getnodeconnectorNode();
+        // Process each segment of the default path, where each
+        // segment is created by a redirect/waypoint.
+        for (HostPairPath p: ap.getDefaultPath()) {
+            // If path to the hnc is null. Two cases to consider: 
+            // (a) source and destination are attached to the same node. Use this node in addrules. 
+            // (b) no path between source and destination. Do not call addrules. 
+            actionMap = addrules(p.getSource(), p.getDestination(), p.getPath(), actionMap);
+        }
 
         // Add output ports for each node in the tapPath list. Include
         // the host node connector of the destination server too.
         HashMap<HostNodeConnector, Path> tapPaths = ap.getTapPaths();
         for (HostNodeConnector tapDest: tapPaths.keySet()) {
             Path tp = tapPaths.get(tapDest);
-            actionMap = addrules(tapDest, tp, actionMap);
+            actionMap = addrules(ap.getSrc(), tapDest, tp, actionMap);
         }
         return actionMap;
     }
 
     // Translate the path (edges + nodes) into a set of per-node forwarding actions. 
     // Coalesce them with the existing set of rules for this affinity path. 
-    public HashMap<Node, List<Action>> addrules(HostNodeConnector hnc, Path p, HashMap<Node, List<Action>> actionMap) {
+    public HashMap<Node, List<Action>> addrules(HostNodeConnector srcHnc, HostNodeConnector dstHnc, Path p, 
+                                                HashMap<Node, List<Action>> actionMap) {
         HashMap<Node, List<Action>> rules = actionMap;
-        
+        NodeConnector forwardPort;
+
+        if (srcHnc.getnodeconnectorNode().getNodeIDString().equals(dstHnc.getnodeconnectorNode().getNodeIDString())) {
+            forwardPort = dstHnc.getnodeConnector();
+            log.debug("Both source and destination are connected to same switch nodes. output port is {}",
+                      forwardPort);
+            Node destNode = dstHnc.getnodeconnectorNode();
+            List<Action> actions = rules.get(destNode);
+            rules.put(destNode, merge(actions, new Output(forwardPort)));
+            return rules;
+        } 
+        if (p == null) {
+            log.debug("No edges in path, returning.");
+            return rules;
+        }
         Edge lastedge = null;
         for (Edge e: p.getEdges()) {
             NodeConnector op = e.getTailNodeConnector();
@@ -447,7 +470,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             lastedge = e;
         }
         // Add the edge from the lastnode to the destination host. 
-        NodeConnector dstNC = hnc.getnodeConnector();
+        NodeConnector dstNC = dstHnc.getnodeConnector();
         Node lastnode = lastedge.getHeadNodeConnector().getNode();
         // lastnode is also the same as hnc.getnodeConnectorNode();
         List<Action> actions = rules.get(lastnode);
@@ -643,7 +666,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             maxTputPath = true;
         }
         // Compute the default path, after applying waypoints and add it to the list. 
-        List<Path> subpaths = new ArrayList<Path>();
+        // List<HostPairPath> subpaths = new ArrayList<HostPairPath>();
         HostNodeConnector srcNC, dstNC;
         srcNC = getHostNodeConnector(src);
         dstNC = getHostNodeConnector(dst);
@@ -666,7 +689,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         // No redirects were added, so calculate the defaultPath by
         // looking up the appropriate type of route in the routing
         // service.
-        List<Path> route = new ArrayList<Path>();
+        List<HostPairPath> route = new ArrayList<HostPairPath>();
         if (rdrct == null) {
             Path defPath;
             if (maxTputPath == true) {
@@ -674,7 +697,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             } else {
                 defPath = this.routing.getRoute(srcNode, dstNode);
             }
-            route.add(defPath);
+            route.add(new HostPairPath(srcNC, dstNC, defPath));
         } else {
             log.info("Found a path redirect setting. Calculating subpaths 1, 2");
             List<InetAddress> wplist = rdrct.getWaypointList();
@@ -688,14 +711,18 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
                 Path subpath2;
                 subpath1 = this.routing.getRoute(srcNode, wpNode);
                 subpath2 = this.routing.getRoute(wpNode, dstNode);
-                route.add(subpath1);
-                route.add(subpath2);
+                log.debug("subpath1 is: {}", subpath1);
+                log.debug("subpath2 is: {}", subpath2);
+
+                route.add(new HostPairPath(srcNC, wpNC, subpath1));
+                route.add(new HostPairPath(wpNC, dstNC, subpath2));
             }
         }
         if (route.size() > 0) {
+            log.debug("Adding default path to ap src {}, dst {}, route {}", src, dst, route.get(0));
             ap.setDefaultPath(route);
         }
-            
+        
         // Apply tap, calculate paths to each tap destination and add to AffinityPath.
         aatype = AffinityAttributeType.SET_TAP;
 
