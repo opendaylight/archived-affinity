@@ -70,6 +70,7 @@ import org.opendaylight.controller.sal.action.Action;
 import org.opendaylight.controller.sal.action.Drop;
 import org.opendaylight.controller.sal.action.Output;
 import org.opendaylight.controller.sal.action.Controller;
+import org.opendaylight.controller.sal.action.SetDlDst;
 import org.opendaylight.controller.sal.utils.EtherTypes;
 import org.opendaylight.controller.sal.utils.NetUtils;
 
@@ -106,7 +107,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Affinity rules engine for flat L2 network.
+ * Affinity rules engine for flat L2 network. Currently implements tap
+ * and path redirect (waypoint routing). Uses the AffinityPath as a
+ * container for routes to use for programming flows.
  */
 public class FlatL2AffinityImpl implements IfNewHostNotify {
     private static final Logger log = LoggerFactory.getLogger(FlatL2AffinityImpl.class);
@@ -121,6 +124,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
     private String containerName = GlobalConstants.DEFAULT.toString();
     private boolean isDefaultContainer = true;
     private static final int REPLACE_RETRY = 1;
+    private static short AFFINITY_RULE_PRIORITY = 3;
 
     HashMap<String, List<Flow>> allfgroups;
     HashMap<String, HashMap<AffinityAttributeType, AffinityAttribute>> attribs;
@@ -295,340 +299,42 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         this.allfgroups = am.getAllFlowGroups();
         this.attribs = am.getAllAttributes();
         
-
-        // New implementation using AffintyPath. 
-        HashMap<Flow, AffinityPath> flowpaths = calcAffinityPathsForAllFlows(mergeAffinityAttributesPerFlow());
-        for (Flow f: flowpaths.keySet()) {
-            HashMap<Node, List<Action>> flowActions = calcForwardingActions(flowpaths.get(f));
+        // Calculate affinity path per src-dst pair using the merged set of affinity attributes.         
+        HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>> pfa = mergeAffinityAttributesPerFlow();
+        HashMap<Flow, AffinityPath> flowpaths = new HashMap<Flow, AffinityPath>();
+        
+        for (Flow f: pfa.keySet()) {
             InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
             InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
-            printActionMap(srcIp, dstIp, flowActions);
-            for (Node n: flowActions.keySet()) {
-                programFlows(n, f, flowActions.get(n));
+            AffinityPath ap = calcAffinityPath(srcIp, dstIp, pfa.get(f));
+            flowpaths.put(f, ap);
+        }
+
+        // tap forwarding rules. The match field is the 2-tuple NW_SRC, NW_DST. 
+        for (Flow f: flowpaths.keySet()) {
+            // Re-use the match field for each "flow" in the tapflows
+            // set. tapflows only contains actions.
+            HashMap<Node, List<Action>> tapflows = calcTapForwardingActions(flowpaths.get(f));
+            log.debug("Adding tap forwarding actions.");
+            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
+            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
+            printTaprules(srcIp, dstIp, tapflows);
+            for (Node n: tapflows.keySet()) {
+                programTapFlows(n, f, tapflows.get(n));
             }
         }
 
-        /** Old implementation that does per-node programming. Demo-only.
-        for (Node node: this.nodelist) {
-            programFlowGroupsOnNode(this.allfgroups, this.attribs, node);
+        // redirect forwarding rules.  The match field is the 2-tuple NW_SRC, NW_DST, DL_SRC, DL_DST. 
+        for (Flow f: flowpaths.keySet()) {
+            HashMap<Node, List<Flow>> flowmap = calcRedirectForwardingActions(flowpaths.get(f));
+            log.debug("Adding redirect forwarding actions.");
+            printRedirectRules(flowmap);
+            for (Node n: flowmap.keySet()) {
+                programRedirectFlows(n, flowmap.get(n));
+            }
         }
-        */
         return true;
     }
-
-    public void programFlows(Node n, Flow f, List<Action> actions) {
-        
-        // Update flow with actions. 
-        if (actions.size() > 0) {
-            log.info("Adding actions {} to flow {}", actions, f);
-            f.setActions(actions);
-            // Make a flowEntry object. groupName is the policy name, 
-            // from the affinity link name. Same for all flows in this bundle. 
-            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
-            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
-            String flowName = "[" + srcIp + "->" + dstIp + "]";
-            
-            FlowEntry fEntry = new FlowEntry("affinity", flowName, f, n);
-            log.info("Install flow entry {} on node {}", fEntry.toString(), n.toString());
-            installFlowEntry(fEntry);
-        }
-    }
-
-    public HashMap<Node, List<Action>> mergeActions(HashMap<Node, List<Action>> a, HashMap<Node, List<Action>> b) {
-        HashMap<Node, List<Action>> result = new HashMap<Node, List<Action>>();
-
-        if (a == null) {
-            return b;
-        }
-        if (b == null) {
-            return a;
-        }
-        // Initialize with all elements of a.
-        result = a;
-        // Add elements from b, merging when necessary. 
-        ArrayList<Action> allActions = new ArrayList<Action>();
-        for (Node n: b.keySet()) {
-            // This node is listed in both maps, merge the actions. 
-            if (a.get(n) != null) {
-                allActions.addAll(a.get(n));
-                allActions.addAll(b.get(n));
-                result.put(n, allActions);
-            }
-        }
-        return result;
-    }
-
-    // Merge all affinity links into a single result. This result is a
-    // collection that maps Flow (src-dst pair) -> combined set of all
-    // attribs applied to that src-dst pair.
-    public HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>> mergeAffinityAttributesPerFlow() {
-        // per-flow attributes
-        HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>> pfa = new HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>>();
-
-        for (String linkname: this.allfgroups.keySet()) {
-            log.debug("Adding new affinity link", linkname);
-            List<Flow> newflows = this.allfgroups.get(linkname);
-            HashMap<AffinityAttributeType, AffinityAttribute> newattribs = this.attribs.get(linkname);
-            
-            for (Flow f: newflows) {
-                if (!pfa.containsKey(f)) {
-                    // Create the initial record for this flow (src-dst pair). 
-                    pfa.put(f, newattribs);
-                } else {
-                    // Merge attribs to the key that already exists. 
-                    pfa.put(f, merge(pfa.get(f), newattribs));
-                }
-            }
-        }
-        return pfa;
-    }
-
-    // tbd: This attribute map should become a class. 
-    // Overwriting merge of two atribute HashMaps. 
-    public HashMap<AffinityAttributeType, AffinityAttribute> merge(HashMap<AffinityAttributeType, AffinityAttribute> a, 
-                                                                   HashMap<AffinityAttributeType, AffinityAttribute> b) {
-        HashMap<AffinityAttributeType, AffinityAttribute> result = new HashMap<AffinityAttributeType, AffinityAttribute>();
-
-        for (AffinityAttributeType at: a.keySet()) {
-            result.put(at, a.get(at));
-        }
-        for (AffinityAttributeType at: b.keySet()) {
-            result.put(at, b.get(at));
-        }
-        return result;
-    }
-
-    // A "Flow" here is used to represent the source-destination pair. 
-    // Function returns an affinity path object per src-dest pair. 
-    public HashMap<Flow, AffinityPath> calcAffinityPathsForAllFlows(HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>>perFlowAttribs) {
-        HashMap<Flow, AffinityPath> perFlowPaths = new HashMap<Flow, AffinityPath>();
-        
-        for (Flow f: perFlowAttribs.keySet()) {
-            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
-            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
-            String flowName = "[" + srcIp + "->" + dstIp + "]";
-            AffinityPath ap = calcAffinityPath(srcIp, dstIp, perFlowAttribs.get(f));
-            perFlowPaths.put(f, ap);
-        }
-        return perFlowPaths;
-    }
-
-    // xxx Compute the set of output actions for each node in this AffinityPath. 
-    public HashMap<Node, List<Action>> calcForwardingActions(AffinityPath ap) {
-
-        HashMap<Node, List<Action>> actionMap;
-        // Final set of rules to push into the nodes.
-        actionMap = new HashMap<Node, List<Action>>();
-        
-        Node srcNode = ap.getSrc().getnodeconnectorNode();
-        Node destNode = ap.getDst().getnodeconnectorNode();
-        // Process each segment of the default path, where each
-        // segment is created by a redirect/waypoint.
-        for (HostPairPath p: ap.getDefaultPath()) {
-            // If path to the hnc is null. Two cases to consider: 
-            // (a) source and destination are attached to the same node. Use this node in addrules. 
-            // (b) no path between source and destination. Do not call addrules. 
-            actionMap = addrules(p.getSource(), p.getDestination(), p.getPath(), actionMap);
-        }
-
-        // Add output ports for each node in the tapPath list. Include
-        // the host node connector of the destination server too.
-        HashMap<HostNodeConnector, Path> tapPaths = ap.getTapPaths();
-        for (HostNodeConnector tapDest: tapPaths.keySet()) {
-            Path tp = tapPaths.get(tapDest);
-            actionMap = addrules(ap.getSrc(), tapDest, tp, actionMap);
-        }
-        return actionMap;
-    }
-
-    // Translate the path (edges + nodes) into a set of per-node forwarding actions. 
-    // Coalesce them with the existing set of rules for this affinity path. 
-    public HashMap<Node, List<Action>> addrules(HostNodeConnector srcHnc, HostNodeConnector dstHnc, Path p, 
-                                                HashMap<Node, List<Action>> actionMap) {
-        HashMap<Node, List<Action>> rules = actionMap;
-        NodeConnector forwardPort;
-
-        if (srcHnc.getnodeconnectorNode().getNodeIDString().equals(dstHnc.getnodeconnectorNode().getNodeIDString())) {
-            forwardPort = dstHnc.getnodeConnector();
-            log.debug("Both source and destination are connected to same switch nodes. output port is {}",
-                      forwardPort);
-            Node destNode = dstHnc.getnodeconnectorNode();
-            List<Action> actions = rules.get(destNode);
-            rules.put(destNode, merge(actions, new Output(forwardPort)));
-            return rules;
-        } 
-        if (p == null) {
-            log.debug("No edges in path, returning.");
-            return rules;
-        }
-        Edge lastedge = null;
-        for (Edge e: p.getEdges()) {
-            NodeConnector op = e.getTailNodeConnector();
-            Node node = e.getTailNodeConnector().getNode();
-            List<Action> actions = rules.get(node);
-            rules.put(node, merge(actions, new Output(op)));
-            lastedge = e;
-        }
-        // Add the edge from the lastnode to the destination host. 
-        NodeConnector dstNC = dstHnc.getnodeConnector();
-        Node lastnode = lastedge.getHeadNodeConnector().getNode();
-        // lastnode is also the same as hnc.getnodeConnectorNode();
-        List<Action> actions = rules.get(lastnode);
-        rules.put(lastnode, merge(actions, new Output(dstNC)));
-        return rules;
-    }
-    
-    public void printActionMap(InetAddress src, InetAddress dst, HashMap<Node, List<Action>> aMap) {
-        log.debug("source: {}, destination: {}", src, dst);
-        for (Node n: aMap.keySet()) {
-            String astr = " ";
-            for (Action a: aMap.get(n)) {
-                astr = astr + "; " + a.toString();
-            }
-            log.debug("Node: {}, Output: {}", n, astr);
-        }
-    }
-
-    /** 
-     * Add flow groups to forwarding rules manager as FlowEntry
-     * objects. Each flow group corresponds to a policy group in the
-     * forwarding rules manager. actions represent the forwarding
-     * actions to be applied to each flow group. Forwarding actions
-     * may be REDIRECT, DROP, or TAP. 
-     */
-    public boolean programFlowGroupsOnNode(HashMap<String, List<Flow>>flowgroups, 
-                                           HashMap<String, HashMap<AffinityAttributeType, 
-                                           AffinityAttribute>>attribs, 
-                                           Node node) {
-        for (String groupName: flowgroups.keySet()) {
-            List<Flow> flowlist = flowgroups.get(groupName);
-            log.info("flatl2: {} (#flows={})", groupName, flowgroups.get(groupName).size());
-            log.info("flatl2: {} (#attribs={})", groupName, attribs.get(groupName).size());
-            for (Flow f: flowlist) {
-                // Set the flow name based on end points for this flow. 
-                String flowName = null;
-                InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
-                InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
-                flowName = "[" + groupName + ":" + srcIp + ":" + dstIp + "]";
-                List<Action> actions = calcForwardingActions(node, srcIp, dstIp, attribs.get(groupName));
-                // Update flow with actions. 
-                if (actions.size() > 0) {
-                    log.info("Adding actions {} to flow {}", actions, f);
-                    f.setActions(actions);
-                    // Make a flowEntry object. groupName is the policy name, 
-                    // from the affinity link name. Same for all flows in this bundle. 
-                    FlowEntry fEntry = new FlowEntry(groupName, flowName, f, node);
-                    log.info("Install flow entry {} on node {}", fEntry.toString(), node.toString());
-                    installFlowEntry(fEntry);
-                }
-            }
-        }
-        return true; // error checking
-    }
-    /** 
-     * Calculate forwarding actions per node. Inputs are the node
-     * (switch) and the list of configured actions.
-     */
-
-    public List<Action> calcForwardingActions(Node node, InetAddress src, InetAddress dst, 
-                                              HashMap<AffinityAttributeType, AffinityAttribute> attribs) {
-        List<Action> fwdactions = new ArrayList<Action>();
-
-        AffinityAttributeType aatype;
-        log.info("calcforwardingactions: node = {}", node);
-
-        // Apply drop
-        aatype = AffinityAttributeType.SET_DENY;
-
-        if (attribs.get(aatype) != null) {
-            Action dropaction = new Drop();
-            fwdactions.add(dropaction);
-            return fwdactions;
-        }
-
-        // Apply isolate (no-op now), and continue to add other affinity types to the forwarding actions list.
-        aatype = AffinityAttributeType.SET_PATH_ISOLATE;
-
-        if (attribs.get(aatype) != null) {
-            log.info("Found a path isolate setting.");
-        }
-
-        // Apply MTP path.
-        aatype = AffinityAttributeType.SET_MAX_TPUT_PATH;
-
-        if (attribs.get(aatype) != null) {
-            log.info("Found a max tput setting.");
-            Output output = getOutputPort(node, dst, true);
-            if (output != null) {
-                fwdactions.add(output);
-            }
-        }
-
-        // Apply redirect 
-        aatype = AffinityAttributeType.SET_PATH_REDIRECT;
-
-        SetPathRedirect rdrct = (SetPathRedirect) attribs.get(aatype);
-        
-        if (rdrct != null) {
-            log.info("Found a path redirect setting.");
-            List<InetAddress> wplist = rdrct.getWaypointList();
-            if (wplist != null) {
-                // Only one waypoint server in list. 
-                InetAddress wp = wplist.get(0);
-                log.info("waypoint information = {}", wplist.get(0));
-                // Lookup output port on this node for this destination. 
-
-                // Using L2agent
-                Output output = getOutputPortL2Agent(node, wp);
-                // Using routing service. 
-                // Output output = getOutputPort(node, wp, false);
-                if (output != null) {
-                    fwdactions.add(output);
-                }
-                // Using simpleforwarding.
-                // Output output = getOutputPort(node, wp);
-                // Controller controller = new Controller();
-                // fwdactions.add(controller);
-            }
-        }
-
-        // Apply tap 
-        aatype = AffinityAttributeType.SET_TAP;
-
-        SetTap tap = (SetTap) attribs.get(aatype);
-
-        if (tap != null) {
-            log.info("Applying tap affinity.");
-            List<InetAddress> taplist = tap.getTapList();
-            if (taplist != null) {
-                // Add a new rule with original destination + tap destinations. 
-                for (InetAddress tapip: taplist) {
-                    log.info("tap information = {}", tapip);
-                    Output output1 = getOutputPortL2Agent(node, tapip);
-                    // Not using L2 agent, using routing service. 
-                    // Output output1 = getOutputPort(node, tapip, false);
-                    if (output1 != null) {
-                        fwdactions = merge(fwdactions, output1);
-                    }
-                }
-                Output output2 = getOutputPortL2Agent(node, dst);
-                // Not using L2 agent, using routing service. 
-                // Output output2 = getOutputPort(node, dst, false);
-                if (output2 != null) {
-                    fwdactions = merge(fwdactions, output2);
-                }
-
-                // Using simpleforwarding.
-                // Output output = getOutputPort(node, wp);
-                // Controller controller = new Controller();
-                // fwdactions.add(controller);
-            }
-        }
-
-        return fwdactions;
-    }
-    
-
 
     /** 
      * Calculate paths for this src-dst pair after applying: 
@@ -748,6 +454,269 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         log.debug("calcAffinityPath: {}", ap.toString());
         return ap;
     }
+
+    // Merge all affinity links into a single result. This result is a
+    // collection that maps Flow (src-dst pair) -> combined set of all
+    // attribs applied to that src-dst pair.
+    public HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>> mergeAffinityAttributesPerFlow() {
+        // per-flow attributes
+        HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>> pfa = new HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>>();
+
+        for (String linkname: this.allfgroups.keySet()) {
+            log.debug("Adding new affinity link", linkname);
+            List<Flow> newflows = this.allfgroups.get(linkname);
+            HashMap<AffinityAttributeType, AffinityAttribute> newattribs = this.attribs.get(linkname);
+            
+            for (Flow f: newflows) {
+                if (!pfa.containsKey(f)) {
+                    // Create the initial record for this flow (src-dst pair). 
+                    pfa.put(f, newattribs);
+                } else {
+                    // Merge attribs to the key that already exists. 
+                    pfa.put(f, merge(pfa.get(f), newattribs));
+                }
+            }
+        }
+        return pfa;
+    }
+
+    // tbd: This attribute map should become a class. 
+    // Overwriting merge of two atribute HashMaps. 
+    public HashMap<AffinityAttributeType, AffinityAttribute> merge(HashMap<AffinityAttributeType, AffinityAttribute> a, 
+                                                                   HashMap<AffinityAttributeType, AffinityAttribute> b) {
+        HashMap<AffinityAttributeType, AffinityAttribute> result = new HashMap<AffinityAttributeType, AffinityAttribute>();
+
+        for (AffinityAttributeType at: a.keySet()) {
+            result.put(at, a.get(at));
+        }
+        for (AffinityAttributeType at: b.keySet()) {
+            result.put(at, b.get(at));
+        }
+        return result;
+    }
+
+
+    /** Redirect forwarding actions per node in path. */
+    public HashMap<Node, List<Flow>> calcRedirectForwardingActions(AffinityPath ap) {
+        
+        // Redirect rules
+        HashMap<Node, List<Flow>> rules = new HashMap<Node, List<Flow>>();
+
+        HostNodeConnector srcHnc = ap.getSrc();
+        HostNodeConnector dstHnc = ap.getDst();
+
+        Node srcNode = srcHnc.getnodeconnectorNode();
+        Node dstNode = dstHnc.getnodeconnectorNode();
+
+        // Process each segment of the default path, where each
+        // segment is created by a redirect/waypoint. xxx extend
+        // affinitypath to contain the reverse default path with
+        // waypoints for return traffic.
+        for (HostPairPath p: ap.getDefaultPath()) {
+            rules = addRedirectRules(srcHnc, dstHnc, p.getSource(), p.getDestination(), p.getPath(), rules);
+        }
+        return rules;
+    }
+
+    /** 
+     * Translate the path (edges + nodes) into a set of per-node
+     * forwarding actions.  Coalesce them with the existing set of
+     * rules for this affinity path.  Path p is the subpath for which
+     * rules are being computed. Path contains a series of edges and
+     * nodes.  srcHnc is always the starting host for this
+     * subpath. dstHnc is the final destination, and wpHnc is the next
+     * hop destination host, and also the destination of this
+     * path. The match fields for rules depends on which subpath we're
+     * on -- since we take L2 + L3 fields.
+     * 
+     * Returns a per-node list of rules (match + action) that include
+     * both the "to waypoint" and "from waypoint" segments.
+     *
+     **/
+    public HashMap<Node, List<Flow>> addRedirectRules(HostNodeConnector srcHnc, 
+                                                      HostNodeConnector pathsrcHnc, 
+                                                      HostNodeConnector pathdstHnc, 
+                                                      HostNodeConnector dstHnc, 
+                                                      Path p, 
+                                                      HashMap<Node, List<Flow>> rulesDB) {
+        HashMap<Node, List<Flow>> rules = rulesDB;
+        NodeConnector forwardPort;
+        
+        InetAddress srcIP = srcHnc.getNetworkAddress();
+        InetAddress dstIP = dstHnc.getNetworkAddress();
+        HostNodeConnector wpHnc = pathdstHnc;
+
+        byte[] srcMAC = pathsrcHnc.getDataLayerAddressBytes();
+        byte[] dstMAC = dstHnc.getDataLayerAddressBytes();
+        byte[] wpmac = wpHnc.getDataLayerAddressBytes();
+
+        // If path to the hnc is null. Two cases to consider: 
+        // (a) source and destination are attached to the same node. Use this node in addrules. 
+        // (b) no path between source and destination. Do not call addrules. 
+        
+        /** 
+         * Source node is also wp node. 
+         */
+        if (pathsrcHnc.getnodeconnectorNode().getNodeIDString().equals(pathdstHnc.getnodeconnectorNode().getNodeIDString())) {
+            log.debug("Both source and waypoint are connected to same switch nodes. output port is {}",
+                      wpHnc.getnodeConnector());
+            return addflowrule(srcIP, dstIP, srcMAC, dstMAC, new Output(wpHnc.getnodeConnector()), wpmac, rules, wpHnc.getnodeconnectorNode());
+        } 
+        if (p == null) {
+            log.debug("No edges in path, returning.");
+            return rules;
+        }
+
+        /** Source and wp nodes are separated by a path, p. */
+        Edge lastedge = null;
+        for (Edge e: p.getEdges()) {
+            NodeConnector op = e.getTailNodeConnector();
+            Node node = e.getTailNodeConnector().getNode();
+            List<Flow> flowlist = rules.get(node);
+            // Calculate the output and setDlDst actions
+            rules = addflowrule(srcIP, dstIP, srcMAC, dstMAC, new Output(op), wpmac, rules, node);
+        }
+        return addflowrule(srcIP, dstIP, srcMAC, dstMAC, new Output(wpHnc.getnodeConnector()), wpmac, rules, wpHnc.getnodeconnectorNode());
+    }
+
+    public HashMap<Node, List<Flow>> addflowrule(InetAddress srcIP, InetAddress dstIP, byte [] srcMAC, byte [] dstMAC, Output forwardPort, byte [] wpmac, HashMap<Node, List<Flow>> rules, Node node) {
+        HashMap<Node, List<Flow>> ruleDB = rules;
+
+        Match match = new Match();
+        match.setField(new MatchField(MatchType.NW_SRC, srcIP, null));
+        match.setField(new MatchField(MatchType.NW_DST, dstIP, null));
+        match.setField(new MatchField(MatchType.DL_SRC, srcMAC, null));
+        match.setField(new MatchField(MatchType.DL_DST, dstMAC, null));
+        match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
+        
+        Output output = forwardPort;
+        SetDlDst dldst = new SetDlDst(wpmac);
+        List<Action> actions = new ArrayList<Action>();
+        actions.add(output);
+        actions.add(dldst);
+        
+        Flow flow = new Flow(match, actions);
+        flow.setPriority(AFFINITY_RULE_PRIORITY);
+        List<Flow> flowlist = rules.get(node);
+        if (flowlist == null) {
+            flowlist = new ArrayList<Flow>();
+        }
+        flowlist.add(flow);
+        rules.put(node, flowlist);
+        return rules;
+    }
+
+    
+    /** Program 4-tuple flows where the match is NW_SRC, NW_DST, DL_SRC, DL_DST. This is used for redirect affinity. */ 
+    public void programRedirectFlows(Node n, List<Flow> flows) {
+        // Update flow with actions. 
+        for (Flow f: flows) {
+            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
+            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
+            byte [] srcMAC = (byte []) f.getMatch().getField(MatchType.DL_SRC).getValue();
+            byte [] dstMAC = (byte []) f.getMatch().getField(MatchType.DL_DST).getValue();
+            String flowName = "[" + srcIp + "->" + dstIp + " " + srcMAC + "->" + dstMAC + "]";
+            
+            FlowEntry fEntry = new FlowEntry("redirect", flowName, f, n);
+            log.info("Install flow entry {} on node {}", fEntry.toString(), n.toString());
+            installFlowEntry(fEntry);
+        }
+    }
+    
+
+    public void printRedirectRules(HashMap<Node, List<Flow>> flows) {
+        log.debug("redirect rules");
+        for (Node n: flows.keySet()) {
+            String astr = " ";
+            for (Flow a: flows.get(n)) {
+                astr = astr + "; " + a.toString();
+            }
+            log.debug("Node: {}, Output: {}", n, astr);
+        }
+    }
+
+
+    // Tap affinity related methods. 
+    // xxx Compute the set of output actions for each node in this AffinityPath. 
+    public HashMap<Node, List<Action>> calcTapForwardingActions(AffinityPath ap) {
+
+        HashMap<Node, List<Action>> actionMap;
+        // Final set of rules to push into the nodes.
+        actionMap = new HashMap<Node, List<Action>>();
+        
+        // Add output ports for each node in the tapPath list. Include
+        // the host node connector of the destination server too.
+        HashMap<HostNodeConnector, Path> tapPaths = ap.getTapPaths();
+        for (HostNodeConnector tapDest: tapPaths.keySet()) {
+            Path tp = tapPaths.get(tapDest);
+            actionMap = addTaprules(ap.getSrc(), tapDest, tp, actionMap);
+        }
+        return actionMap;
+    }
+
+
+    /** Program 2-tuple flows where the match is NW_SRC, NW_DST. This is used for tap affinity. */ 
+    public void programTapFlows(Node n, Flow f, List<Action> actions) {
+        // Update flow with actions. 
+        if (actions.size() > 0) {
+            log.info("Adding actions {} to flow {}", actions, f);
+            f.setActions(actions);
+            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
+            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
+            String flowName = "[" + srcIp + "->" + dstIp + "]";
+            
+            FlowEntry fEntry = new FlowEntry("tap", flowName, f, n);
+            log.info("Install flow entry {} on node {}", fEntry.toString(), n.toString());
+            installFlowEntry(fEntry);
+        }
+    }
+
+    public HashMap<Node, List<Action>> addLastHopTapRules(HostNodeConnector dstHnc, 
+                                                          HashMap<Node, List<Action>> actionMap) {
+        HashMap<Node, List<Action>> rules = actionMap;
+        Node destNode = dstHnc.getnodeconnectorNode();
+        NodeConnector forwardPort = dstHnc.getnodeConnector();
+        rules.put(destNode, merge(rules.get(destNode), new Output(forwardPort)));
+        return rules;
+    }
+
+    // Translate the path (edges + nodes) into a set of per-node forwarding actions. 
+    // Coalesce them with the existing set of rules for this affinity path. 
+    public HashMap<Node, List<Action>> addTaprules(HostNodeConnector srcHnc, HostNodeConnector dstHnc, Path p, 
+                                                   HashMap<Node, List<Action>> actionMap) {
+        HashMap<Node, List<Action>> rules = actionMap;
+
+        if (srcHnc.getnodeconnectorNode().getNodeIDString().equals(dstHnc.getnodeconnectorNode().getNodeIDString())) {
+            log.debug("Both source and destination are connected to same switch nodes. output port is {}",
+                      dstHnc.getnodeConnector());
+            return addLastHopTapRules(dstHnc, actionMap);
+        } 
+        if (p == null) {
+            log.debug("No edges in path, returning.");
+            return rules;
+        }
+        Edge lastedge = null;
+        for (Edge e: p.getEdges()) {
+            NodeConnector op = e.getTailNodeConnector();
+            Node node = e.getTailNodeConnector().getNode();
+            List<Action> actions = rules.get(node);
+            rules.put(node, merge(actions, new Output(op)));
+            lastedge = e;
+        }
+        // Add the last hop of the path using dstHnc
+        return addLastHopTapRules(dstHnc, rules);
+   }
+
+    public void printTaprules(InetAddress src, InetAddress dst, HashMap<Node, List<Action>> taprules) {
+        log.debug("source: {}, destination: {}", src, dst);
+        for (Node n: taprules.keySet()) {
+            String astr = " ";
+            for (Action a: taprules.get(n)) {
+                astr = astr + "; " + a.toString();
+            }
+            log.debug("Node: {}, Output: {}", n, astr);
+        }
+    }
     
     public List<Action> merge(List<Action> fwdactions, Action a) {
         if (fwdactions == null) {
@@ -759,35 +728,6 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         return fwdactions;
     }
 
-    /** 
-     * Using L2agent, get the output port toward this IP from this
-     * node (switch).
-     */
-    public Output getOutputPortL2Agent(Node node, InetAddress ip) {
-        Output op = null;
-
-        if (l2agent != null) {
-            /* Look up the output port leading to the waypoint. */
-            HostNodeConnector host = (HostNodeConnector) hostTracker.hostFind(ip);
-            if (host != null) {
-                log.info("output port on node {} toward host {}", node, host);
-                NodeConnector dst_connector = l2agent.lookup_output_port(node, host.getDataLayerAddressBytes());
-                if (dst_connector != null) {
-                    op = new Output(dst_connector);
-                }
-            }
-        } else {
-            log.info("l2agent is not set!!!");
-        }
-
-        // host node connector may be null, if this address is static
-        // and not known to the l2agent which relies on learning.
-        if (op == null && isHostInactive(ip)) {
-            // Use routing.
-            op = getOutputPort(node, ip, false);
-        }
-        return op;
-    }
 
     public boolean isHostActive(InetAddress ipaddr) {
         Set<HostNodeConnector> activeStaticHosts = hostTracker.getActiveStaticHosts();
@@ -859,39 +799,6 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         return hnConnector;
     }
 
-    public Output getOutputPort(Node node, InetAddress ipaddr, boolean mtp) {
-        HostNodeConnector hnConnector;
-        hnConnector = getHostNodeConnector(ipaddr);
-        if (hnConnector != null) {
-            Node destNode = hnConnector.getnodeconnectorNode();
-            
-            log.debug("from node: {}", node.toString());
-            log.debug("dest node: {}", destNode.toString());
-            
-            // Get path between both the nodes                                                                                                           
-            NodeConnector forwardPort = null;
-            if (node.getNodeIDString().equals(destNode.getNodeIDString())) {
-                forwardPort = hnConnector.getnodeConnector();
-                log.info("Both source and destination are connected to same switch nodes. output port is {}",
-                         forwardPort);
-            } else {
-                Path route;
-                if (mtp == true) {
-                    log.info("Lookup max throughput route {} -> {}", node, destNode);
-                    route = this.routing.getMaxThroughputRoute(node, destNode);
-                } else {
-                    route = this.routing.getRoute(node, destNode);
-                }
-
-                log.info("Path between source and destination switch nodes : {}",
-                         route.toString());
-                forwardPort = route.getEdges().get(0).getTailNodeConnector();                
-            }
-            log.info("output port {} on node {} toward host {}", forwardPort, node, hnConnector);
-            return(new Output(forwardPort));
-        } 
-        return null;
-    }
     /**
      * Install this flow entry object. 
      */
@@ -908,31 +815,6 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         return true;
     }
 
-    public void enableAffinityLink(String affinityLinkName) {
-        List<Flow> flowgroup = this.allfgroups.get(affinityLinkName);
-        HashMap<AffinityAttributeType, AffinityAttribute> attribset = this.attribs.get(affinityLinkName);
-        
-        // Make a hashmap with one key, value pair representing this
-        // affinity link. Do this for flows and for attribs.
-        HashMap<String, List<Flow>> linkflows = new HashMap<String, List<Flow>>();
-        HashMap<String, HashMap<AffinityAttributeType, AffinityAttribute>> linkattribs = new HashMap<String, HashMap<AffinityAttributeType, AffinityAttribute>>();
-
-        if (flowgroup != null && attribset != null) {
-            linkflows.put(affinityLinkName, flowgroup);
-            linkattribs.put(affinityLinkName, attribset);
-            
-            if (this.nodelist != null) {
-                for (Node node: this.nodelist) {
-                    programFlowGroupsOnNode(this.allfgroups, this.attribs, node);
-                }
-            }
-        }
-    }
-    
-    public void disableAffinityLink(String affinityLinkName) {
-        ruleManager.uninstallFlowEntryGroup(affinityLinkName);
-    }
-
     public void disableAllAffinityLinks() {
         if (this.allfgroups != null) {
             for (String s: this.allfgroups.keySet()) {
@@ -941,4 +823,15 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             }
         }
     }
+
+    public void enableAffinityLink(String affinityLinkName) {
+        log.debug("No incremental add/delete of affinitylink yet.");
+    }
+    
+    public void disableAffinityLink(String affinityLinkName) {
+        log.debug("No incremental add/delete of affinitylink yet.");
+    }
+
+
+
 }
