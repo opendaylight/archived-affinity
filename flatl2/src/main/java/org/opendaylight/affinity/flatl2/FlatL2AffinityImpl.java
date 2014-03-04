@@ -70,7 +70,6 @@ import org.opendaylight.controller.sal.action.Action;
 import org.opendaylight.controller.sal.action.Drop;
 import org.opendaylight.controller.sal.action.Output;
 import org.opendaylight.controller.sal.action.Controller;
-import org.opendaylight.controller.sal.action.SetDlDst;
 import org.opendaylight.controller.sal.utils.EtherTypes;
 import org.opendaylight.controller.sal.utils.NetUtils;
 
@@ -105,6 +104,7 @@ import org.opendaylight.affinity.l2agent.L2Agent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.opendaylight.controller.sal.utils.HexEncode;
 
 /**
  * Affinity rules engine for flat L2 network. Currently implements tap
@@ -128,6 +128,9 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
 
     HashMap<String, List<Flow>> allfgroups;
     HashMap<String, HashMap<AffinityAttributeType, AffinityAttribute>> attribs;
+
+    // Maintain the per-node ruleset for each affinity path. 
+    private HashMap<AffinityPath, HashMap<Node, List<Flow>>> rulesDB;
 
     Set<Node> nodelist;
     
@@ -247,6 +250,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
     void init() {
         log.debug("flat L2 implementation INIT called!");
         containerName = GlobalConstants.DEFAULT.toString();
+        rulesDB = new HashMap<AffinityPath, HashMap<Node, List<Flow>>>();
     }
 
     /**
@@ -312,29 +316,13 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             flowpaths.put(f, ap);
         }
 
-        // tap forwarding rules. The match field is the 2-tuple NW_SRC, NW_DST. 
+        // tap forwarding rules. The match field is the 4-tuple NW_SRC, NW_DST, DL_SRC, DL_DST. 
         for (Flow f: flowpaths.keySet()) {
-            // Re-use the match field for each "flow" in the tapflows
-            // set. tapflows only contains actions.
-            HashMap<Node, List<Action>> tapflows = calcTapForwardingActions(flowpaths.get(f));
-            log.debug("Adding tap forwarding actions.");
-            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
-            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
-            printTaprules(srcIp, dstIp, tapflows);
-            for (Node n: tapflows.keySet()) {
-                programTapFlows(n, f, tapflows.get(n));
-            }
+            calcTapForwardingActions(flowpaths.get(f));
+            calcRedirectForwardingActions(flowpaths.get(f));
         }
-
-        // redirect forwarding rules.  The match field is the 4-tuple NW_SRC, NW_DST, DL_SRC, DL_DST. 
-        for (Flow g: flowpaths.keySet()) {
-            log.debug("Adding redirect forwarding actions. flow {}, ap {}", g, flowpaths.get(g));
-            HashMap<Node, List<Flow>> flowmap = calcRedirectForwardingActions(flowpaths.get(g));
-            printRedirectRules(flowmap);
-            for (Node n: flowmap.keySet()) {
-                programRedirectFlows(n, flowmap.get(n));
-            }
-        }
+        printRulesDB();
+        pushRulesDB();
         return true;
     }
 
@@ -497,27 +485,6 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
     }
 
 
-    /** Redirect forwarding actions per node in path. */
-    public HashMap<Node, List<Flow>> calcRedirectForwardingActions(AffinityPath ap) {
-        
-        // Redirect rules
-        HashMap<Node, List<Flow>> rules = new HashMap<Node, List<Flow>>();
-        log.debug("calcRedir {}", ap);
-        HostNodeConnector srcHnc = ap.getSrc();
-        HostNodeConnector dstHnc = ap.getDst();
-
-        Node srcNode = srcHnc.getnodeconnectorNode();
-        Node dstNode = dstHnc.getnodeconnectorNode();
-
-        // Process each segment of the default path, where each
-        // segment is created by a redirect/waypoint. xxx extend
-        // affinitypath to contain the reverse default path with
-        // waypoints for return traffic.
-        for (HostPairPath p: ap.getDefaultPath()) {
-            rules = addRedirectRules(srcHnc, p.getSource(), p.getDestination(), dstHnc, p.getPath(), rules);
-        }
-        return rules;
-    }
 
     /** 
      * Translate the path (edges + nodes) into a set of per-node
@@ -532,57 +499,74 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
      * 
      * Returns a per-node list of rules (match + action) that include
      * both the "to waypoint" and "from waypoint" segments.
-     *
      **/
-    public HashMap<Node, List<Flow>> addRedirectRules(HostNodeConnector srcHnc, 
-                                                      HostNodeConnector pathsrcHnc, 
-                                                      HostNodeConnector pathdstHnc, 
-                                                      HostNodeConnector dstHnc, 
-                                                      Path p, 
-                                                      HashMap<Node, List<Flow>> rulesDB) {
-        HashMap<Node, List<Flow>> rules = rulesDB;
-        NodeConnector forwardPort;
+
+    /** Redirect forwarding actions per node in path. */
+    public void calcRedirectForwardingActions(AffinityPath ap) {
         
-        InetAddress srcIP = srcHnc.getNetworkAddress();
-        InetAddress dstIP = dstHnc.getNetworkAddress();
-        HostNodeConnector wpHnc = pathdstHnc;
+        // Redirect rules
+        HostNodeConnector srcHnc = ap.getSrc();
+        HostNodeConnector dstHnc = ap.getDst();
 
-        byte[] srcMAC = pathsrcHnc.getDataLayerAddressBytes();
-        byte[] dstMAC = dstHnc.getDataLayerAddressBytes();
-        byte[] wpmac = wpHnc.getDataLayerAddressBytes();
+        Node srcNode = srcHnc.getnodeconnectorNode();
+        Node dstNode = dstHnc.getnodeconnectorNode();
 
-        // If path to the hnc is null. Two cases to consider: 
-        // (a) source and destination are attached to the same node. Use this node in addrules. 
-        // (b) no path between source and destination. Do not call addrules. 
+        // Process each segment of the default path, where each
+        // segment is created by a redirect/waypoint. xxx extend
+        // affinitypath to contain the reverse default path with
+        // waypoints for return traffic.
+
+        for (HostPairPath hpp: ap.getDefaultPath()) {
+            NodeConnector forwardPort;
         
-        /** 
-         * Source node is also wp node. 
-         */
-        if (pathsrcHnc.getnodeconnectorNode().getNodeIDString().equals(pathdstHnc.getnodeconnectorNode().getNodeIDString())) {
-            log.debug("Both source and waypoint are connected to same switch nodes. output port is {}",
-                      wpHnc.getnodeConnector());
-            return addflowrule(srcIP, dstIP, srcMAC, dstMAC, new Output(wpHnc.getnodeConnector()), wpmac, rules, wpHnc.getnodeconnectorNode());
-        } 
-        if (p == null) {
-            log.debug("No edges in path, returning.");
-            return rules;
-        }
+            InetAddress srcIP = srcHnc.getNetworkAddress();
+            InetAddress dstIP = dstHnc.getNetworkAddress();
+            HostNodeConnector pdstHnc = hpp.getDestination();
+            HostNodeConnector psrcHnc = hpp.getSource();
 
-        /** Source and wp nodes are separated by a path, p. */
-        Edge lastedge = null;
-        for (Edge e: p.getEdges()) {
-            NodeConnector op = e.getTailNodeConnector();
-            Node node = e.getTailNodeConnector().getNode();
-            List<Flow> flowlist = rules.get(node);
-            // Calculate the output and setDlDst actions
-            rules = addflowrule(srcIP, dstIP, srcMAC, dstMAC, new Output(op), wpmac, rules, node);
+            byte[] srcMAC = hpp.getSource().getDataLayerAddressBytes();
+            byte[] dstMAC = dstHnc.getDataLayerAddressBytes();
+            
+            Path p = hpp.getPath();
+            // If path to the hnc is null. Two cases to consider: 
+            // (a) source and destination are attached to the same node. Use this node in addrules. 
+            // (b) no path between source and destination. Do not call addrules. 
+            
+            /** 
+             * Source node is also wp node. 
+             */
+            if (psrcHnc.getnodeconnectorNode().getNodeIDString().equals(pdstHnc.getnodeconnectorNode().getNodeIDString())) {
+                log.debug("Both source and waypoint are connected to same switch nodes. output port is {}",
+                          pdstHnc.getnodeConnector());
+                addflowrule(ap, srcIP, dstIP, srcMAC, dstMAC, pdstHnc.getnodeconnectorNode(), new Output(pdstHnc.getnodeConnector()));
+                return;
+            } 
+            if (p == null) {
+                log.debug("No edges in path, returning.");
+                return;
+            }
+            /** Source and wp nodes are separated by a path, p. */
+            Edge lastedge = null;
+            for (Edge e: p.getEdges()) {
+                NodeConnector op = e.getTailNodeConnector();
+                Node node = e.getTailNodeConnector().getNode();
+                addflowrule(ap, srcIP, dstIP, srcMAC, dstMAC, node, new Output(op));
+            }
+            addflowrule(ap, srcIP, dstIP, srcMAC, dstMAC, pdstHnc.getnodeconnectorNode(), new Output(pdstHnc.getnodeConnector()));
         }
-        return addflowrule(srcIP, dstIP, srcMAC, dstMAC, new Output(wpHnc.getnodeConnector()), wpmac, rules, wpHnc.getnodeconnectorNode());
+        return;
     }
 
-    public HashMap<Node, List<Flow>> addflowrule(InetAddress srcIP, InetAddress dstIP, byte [] srcMAC, byte [] dstMAC, 
-                                                 Output forwardPort, byte [] wpmac, HashMap<Node, List<Flow>> rules, Node node) {
-        HashMap<Node, List<Flow>> ruleDB = rules;
+    // addflowrule -- aggregate list of actions for each match. 
+    public void addflowrule(AffinityPath ap, InetAddress srcIP, InetAddress dstIP, byte [] srcMAC, byte [] dstMAC, 
+                            Node node, Output forwardPort) {
+        
+        HashMap<Node, List<Flow>> ruleset = this.rulesDB.get(ap);
+        // Create a new ruleset and add per-node forwarding rules to it. 
+        if (ruleset == null) {
+            ruleset = new HashMap<Node, List<Flow>>();
+            this.rulesDB.put(ap, ruleset);
+        }
 
         Match match = new Match();
         match.setField(new MatchField(MatchType.NW_SRC, srcIP, null));
@@ -591,136 +575,112 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         match.setField(new MatchField(MatchType.DL_DST, dstMAC, null));
         match.setField(MatchType.DL_TYPE, EtherTypes.IPv4.shortValue());  
         
+        // Prepare actions for this match. 
         Output output = forwardPort;
-        SetDlDst dldst = new SetDlDst(wpmac);
-        List<Action> actions = new ArrayList<Action>();
-        actions.add(output);
-        actions.add(dldst);
-        
-        Flow flow = new Flow(match, actions);
-        flow.setPriority(AFFINITY_RULE_PRIORITY);
-        List<Flow> flowlist = rules.get(node);
-        if (flowlist == null) {
-            flowlist = new ArrayList<Flow>();
-        }
-        flowlist.add(flow);
-        rules.put(node, flowlist);
-        return rules;
-    }
 
-    
-    /** Program 4-tuple flows where the match is NW_SRC, NW_DST, DL_SRC, DL_DST. This is used for redirect affinity. */ 
-    public void programRedirectFlows(Node n, List<Flow> flows) {
-        // Update flow with actions. 
-        for (Flow f: flows) {
-            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
-            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
-            byte [] srcMAC = (byte []) f.getMatch().getField(MatchType.DL_SRC).getValue();
-            byte [] dstMAC = (byte []) f.getMatch().getField(MatchType.DL_DST).getValue();
-            String flowName = "[" + srcIp + "->" + dstIp + " " + srcMAC + "->" + dstMAC + "]";
-            
-            FlowEntry fEntry = new FlowEntry("redirect", flowName, f, n);
-            log.info("Install flow entry {} on node {}", fEntry.toString(), n.toString());
-            installFlowEntry(fEntry);
-        }
-    }
-    
-
-    public void printRedirectRules(HashMap<Node, List<Flow>> flows) {
-        log.debug("redirect rules");
-        for (Node n: flows.keySet()) {
-            String astr = " ";
-            for (Flow a: flows.get(n)) {
-                astr = astr + "; " + a.toString();
+        // Add output action to the flow that has the same match key. 
+        List<Flow> flowlist = ruleset.get(node);
+        if (flowlist != null) {
+            for (Flow f: flowlist) {
+                if (f.getMatch().equals(match)) {
+                    f.setActions(merge(f.getActions(), forwardPort));
+                }
             }
-            log.debug("Node: {}, Output: {}", n, astr);
+        } else {
+            flowlist = new ArrayList<Flow>();
+            List<Action> actions = new ArrayList<Action>();
+            actions.add(forwardPort);
+            Flow flow = new Flow(match, actions);
+            flow.setPriority(AFFINITY_RULE_PRIORITY);
+            flowlist.add(flow);
+            ruleset.put(node, flowlist);
+        }
+        return;
+    }
+
+    /** Program 4-tuple flows where the match is NW_SRC, NW_DST, DL_SRC, DL_DST. This is used for redirect affinity. */ 
+    public void pushRulesDB() {
+        log.debug("Pushing affinity rules into nodes");
+        for (AffinityPath ap: this.rulesDB.keySet()) {
+            log.debug("pushRules: src: {}, dst: {}", ap.getSrc(), ap.getDst());
+            HashMap<Node, List<Flow>> ruleset = this.rulesDB.get(ap);
+            for (Node n: ruleset.keySet()) {
+                for (Flow f: ruleset.get(n)) {
+                    InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
+                    InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
+                    byte [] srcMAC = (byte []) f.getMatch().getField(MatchType.DL_SRC).getValue();
+                    byte [] dstMAC = (byte []) f.getMatch().getField(MatchType.DL_DST).getValue();
+                    String flowName = "[" + srcIp + "->" + dstIp + " " + HexEncode.bytesToHexString(srcMAC) + "->" + HexEncode.bytesToHexString(dstMAC) + "]";
+                    
+                    FlowEntry fEntry = new FlowEntry("affinity", flowName, f, n);
+                    log.info("Install: node {}, flow entry {}", n.toString(), fEntry.toString());
+                    installFlowEntry(fEntry);
+                }
+            }
+        }
+    }
+    
+
+    public void printRulesDB() {
+        log.debug("Printing affinity rules DB");
+        for (AffinityPath ap: this.rulesDB.keySet()) {
+            log.debug("src: {}, dst: {}", ap.getSrc(), ap.getDst());
+            HashMap<Node, List<Flow>> ruleset = this.rulesDB.get(ap);
+            for (Node n: ruleset.keySet()) {
+                String astr = " ";
+                for (Flow a: ruleset.get(n)) {
+                    astr = astr + "; " + a.toString();
+                }
+                log.debug("Node: {}, Flows: {}", n, astr);
+            }
         }
     }
 
 
     // Tap affinity related methods. 
     // xxx Compute the set of output actions for each node in this AffinityPath. 
-    public HashMap<Node, List<Action>> calcTapForwardingActions(AffinityPath ap) {
-
-        HashMap<Node, List<Action>> actionMap;
-        // Final set of rules to push into the nodes.
-        actionMap = new HashMap<Node, List<Action>>();
+    public void calcTapForwardingActions(AffinityPath ap) {
         
         // Add output ports for each node in the tapPath list. Include
         // the host node connector of the destination server too.
         HashMap<HostNodeConnector, Path> tapPaths = ap.getTapPaths();
         for (HostNodeConnector tapDest: tapPaths.keySet()) {
-            Path tp = tapPaths.get(tapDest);
-            actionMap = addTaprules(ap.getSrc(), tapDest, tp, actionMap);
-        }
-        return actionMap;
-    }
+            Path p = tapPaths.get(tapDest);
+            HostNodeConnector srcHnc = ap.getSrc();
+            HostNodeConnector dstHnc = ap.getDst();
+            HostNodeConnector tapHnc = tapDest;
 
-
-    /** Program 2-tuple flows where the match is NW_SRC, NW_DST. This is used for tap affinity. */ 
-    public void programTapFlows(Node n, Flow f, List<Action> actions) {
-        // Update flow with actions. 
-        Flow flow = f.clone();
-        if (actions.size() > 0) {
-            log.info("Adding actions {} to flow {}", actions, flow);
-            flow.setActions(actions);
-            InetAddress srcIp = (InetAddress) flow.getMatch().getField(MatchType.NW_SRC).getValue();
-            InetAddress dstIp = (InetAddress) flow.getMatch().getField(MatchType.NW_DST).getValue();
-            String flowName = "[" + srcIp + "->" + dstIp + "]";
+            // add tap rules to the rulesDB
+            InetAddress srcIP = srcHnc.getNetworkAddress();
+            InetAddress dstIP = dstHnc.getNetworkAddress();
             
-            FlowEntry fEntry = new FlowEntry("tap", flowName, flow, n);
-            log.info("Install flow entry {} on node {}", fEntry.toString(), n.toString());
-            installFlowEntry(fEntry);
-        }
-    }
-
-    public HashMap<Node, List<Action>> addLastHopTapRules(HostNodeConnector dstHnc, 
-                                                          HashMap<Node, List<Action>> actionMap) {
-        HashMap<Node, List<Action>> rules = actionMap;
-        Node destNode = dstHnc.getnodeconnectorNode();
-        NodeConnector forwardPort = dstHnc.getnodeConnector();
-        rules.put(destNode, merge(rules.get(destNode), new Output(forwardPort)));
-        return rules;
-    }
-
-    // Translate the path (edges + nodes) into a set of per-node forwarding actions. 
-    // Coalesce them with the existing set of rules for this affinity path. 
-    public HashMap<Node, List<Action>> addTaprules(HostNodeConnector srcHnc, HostNodeConnector dstHnc, Path p, 
-                                                   HashMap<Node, List<Action>> actionMap) {
-        HashMap<Node, List<Action>> rules = actionMap;
-
-        if (srcHnc.getnodeconnectorNode().getNodeIDString().equals(dstHnc.getnodeconnectorNode().getNodeIDString())) {
-            log.debug("Both source and destination are connected to same switch nodes. output port is {}",
-                      dstHnc.getnodeConnector());
-            return addLastHopTapRules(dstHnc, actionMap);
-        } 
-        if (p == null) {
-            log.debug("No edges in path, returning.");
-            return rules;
-        }
-        Edge lastedge = null;
-        for (Edge e: p.getEdges()) {
-            NodeConnector op = e.getTailNodeConnector();
-            Node node = e.getTailNodeConnector().getNode();
-            List<Action> actions = rules.get(node);
-            rules.put(node, merge(actions, new Output(op)));
-            lastedge = e;
-        }
-        // Add the last hop of the path using dstHnc
-        return addLastHopTapRules(dstHnc, rules);
-   }
-
-    public void printTaprules(InetAddress src, InetAddress dst, HashMap<Node, List<Action>> taprules) {
-        log.debug("source: {}, destination: {}", src, dst);
-        for (Node n: taprules.keySet()) {
-            String astr = " ";
-            for (Action a: taprules.get(n)) {
-                astr = astr + "; " + a.toString();
+            byte[] srcMAC = srcHnc.getDataLayerAddressBytes();
+            byte[] dstMAC = dstHnc.getDataLayerAddressBytes();
+            
+            if (srcHnc.getnodeconnectorNode().getNodeIDString().equals(tapHnc.getnodeconnectorNode().getNodeIDString())) {
+                log.debug("Both source and destination are connected to same switch nodes. output port is {}",
+                          tapHnc.getnodeConnector());
+                addflowrule(ap, srcIP, dstIP, srcMAC, dstMAC, tapHnc.getnodeconnectorNode(), new Output(tapHnc.getnodeConnector()));
+                return;
+            } 
+            if (p == null) {
+                log.debug("No edges in path, returning.");
+                return;
             }
-            log.debug("Node: {}, Output: {}", n, astr);
+            Edge lastedge = null;
+            for (Edge e: p.getEdges()) {
+                NodeConnector op = e.getTailNodeConnector();
+                Node node = e.getTailNodeConnector().getNode();
+                addflowrule(ap, srcIP, dstIP, srcMAC, dstMAC, node, new Output(op));
+                lastedge = e;
+            }
+            // Add the last hop of the path using dstHnc
+            addflowrule(ap, srcIP, dstIP, srcMAC, dstMAC, tapHnc.getnodeconnectorNode(), new Output(tapHnc.getnodeConnector()));
+            return;
         }
     }
-    
+
+
     public List<Action> merge(List<Action> fwdactions, Action a) {
         if (fwdactions == null) {
             fwdactions = new ArrayList<Action>();
