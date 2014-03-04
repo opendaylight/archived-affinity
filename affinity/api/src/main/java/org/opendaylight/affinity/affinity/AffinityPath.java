@@ -42,9 +42,9 @@ public class AffinityPath implements Serializable {
     HashMap<HostNodeConnector, Path> tapPaths;
 
     /* Dummy constructor for JAXB */
-    public AffinityPath(HostNodeConnector src, HostNodeConnector dst) {
-        this.src = src;
-        this.dst = dst;
+    public AffinityPath(HostNodeConnector srcHnc, HostNodeConnector dstHnc) {
+        this.src = srcHnc;
+        this.dst = dstHnc;
         this.defaultPath = new ArrayList<HostPairPath>();
         this.tapPaths = new HashMap<HostNodeConnector, Path>();
     }

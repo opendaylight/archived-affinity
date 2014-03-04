@@ -302,11 +302,13 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         // Calculate affinity path per src-dst pair using the merged set of affinity attributes.         
         HashMap<Flow, HashMap<AffinityAttributeType, AffinityAttribute>> pfa = mergeAffinityAttributesPerFlow();
         HashMap<Flow, AffinityPath> flowpaths = new HashMap<Flow, AffinityPath>();
-        
+        AffinityPath ap;
+
         for (Flow f: pfa.keySet()) {
             InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
             InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
-            AffinityPath ap = calcAffinityPath(srcIp, dstIp, pfa.get(f));
+            ap = calcAffinityPath(srcIp, dstIp, pfa.get(f));
+            log.debug("Adding to pfa flow={}, ap={}", f, ap);
             flowpaths.put(f, ap);
         }
 
@@ -324,10 +326,10 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
             }
         }
 
-        // redirect forwarding rules.  The match field is the 2-tuple NW_SRC, NW_DST, DL_SRC, DL_DST. 
-        for (Flow f: flowpaths.keySet()) {
-            HashMap<Node, List<Flow>> flowmap = calcRedirectForwardingActions(flowpaths.get(f));
-            log.debug("Adding redirect forwarding actions.");
+        // redirect forwarding rules.  The match field is the 4-tuple NW_SRC, NW_DST, DL_SRC, DL_DST. 
+        for (Flow g: flowpaths.keySet()) {
+            log.debug("Adding redirect forwarding actions. flow {}, ap {}", g, flowpaths.get(g));
+            HashMap<Node, List<Flow>> flowmap = calcRedirectForwardingActions(flowpaths.get(g));
             printRedirectRules(flowmap);
             for (Node n: flowmap.keySet()) {
                 programRedirectFlows(n, flowmap.get(n));
@@ -373,9 +375,8 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         }
         // Compute the default path, after applying waypoints and add it to the list. 
         // List<HostPairPath> subpaths = new ArrayList<HostPairPath>();
-        HostNodeConnector srcNC, dstNC;
-        srcNC = getHostNodeConnector(src);
-        dstNC = getHostNodeConnector(dst);
+        HostNodeConnector srcNC = getHostNodeConnector(src);
+        HostNodeConnector dstNC = getHostNodeConnector(dst);
         if (srcNC == null || dstNC == null) {
             log.info("src or destination does not have a HostNodeConnector. src={}, dst={}", src, dst);
             return null;
@@ -501,7 +502,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         
         // Redirect rules
         HashMap<Node, List<Flow>> rules = new HashMap<Node, List<Flow>>();
-
+        log.debug("calcRedir {}", ap);
         HostNodeConnector srcHnc = ap.getSrc();
         HostNodeConnector dstHnc = ap.getDst();
 
@@ -513,7 +514,7 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         // affinitypath to contain the reverse default path with
         // waypoints for return traffic.
         for (HostPairPath p: ap.getDefaultPath()) {
-            rules = addRedirectRules(srcHnc, dstHnc, p.getSource(), p.getDestination(), p.getPath(), rules);
+            rules = addRedirectRules(srcHnc, p.getSource(), p.getDestination(), dstHnc, p.getPath(), rules);
         }
         return rules;
     }
@@ -579,7 +580,8 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
         return addflowrule(srcIP, dstIP, srcMAC, dstMAC, new Output(wpHnc.getnodeConnector()), wpmac, rules, wpHnc.getnodeconnectorNode());
     }
 
-    public HashMap<Node, List<Flow>> addflowrule(InetAddress srcIP, InetAddress dstIP, byte [] srcMAC, byte [] dstMAC, Output forwardPort, byte [] wpmac, HashMap<Node, List<Flow>> rules, Node node) {
+    public HashMap<Node, List<Flow>> addflowrule(InetAddress srcIP, InetAddress dstIP, byte [] srcMAC, byte [] dstMAC, 
+                                                 Output forwardPort, byte [] wpmac, HashMap<Node, List<Flow>> rules, Node node) {
         HashMap<Node, List<Flow>> ruleDB = rules;
 
         Match match = new Match();
@@ -658,14 +660,15 @@ public class FlatL2AffinityImpl implements IfNewHostNotify {
     /** Program 2-tuple flows where the match is NW_SRC, NW_DST. This is used for tap affinity. */ 
     public void programTapFlows(Node n, Flow f, List<Action> actions) {
         // Update flow with actions. 
+        Flow flow = f.clone();
         if (actions.size() > 0) {
-            log.info("Adding actions {} to flow {}", actions, f);
-            f.setActions(actions);
-            InetAddress srcIp = (InetAddress) f.getMatch().getField(MatchType.NW_SRC).getValue();
-            InetAddress dstIp = (InetAddress) f.getMatch().getField(MatchType.NW_DST).getValue();
+            log.info("Adding actions {} to flow {}", actions, flow);
+            flow.setActions(actions);
+            InetAddress srcIp = (InetAddress) flow.getMatch().getField(MatchType.NW_SRC).getValue();
+            InetAddress dstIp = (InetAddress) flow.getMatch().getField(MatchType.NW_DST).getValue();
             String flowName = "[" + srcIp + "->" + dstIp + "]";
             
-            FlowEntry fEntry = new FlowEntry("tap", flowName, f, n);
+            FlowEntry fEntry = new FlowEntry("tap", flowName, flow, n);
             log.info("Install flow entry {} on node {}", fEntry.toString(), n.toString());
             installFlowEntry(fEntry);
         }

@@ -243,7 +243,6 @@ def main():
     get_affinity_group('clients')
     get_affinity_link('inflows')
     add_waypoint()
-#    test_tap()
 
     print "get_all_affinity_groups..."
     get_all_affinity_groups()
@@ -278,7 +277,8 @@ def add_static_host_tap(al, ipaddr):
 h = httplib2.Http(".cache")
 h.add_credentials('admin', 'admin')
 if __name__ == "__main__":
-    main()
+#    main()
+    test_tap_1()
 
 
     
