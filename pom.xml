@@ -20,7 +20,7 @@
     <exam.version>3.0.0</exam.version>
     <failsafe.version>2.15</failsafe.version>
     <geminiweb.version>2.2.0.RELEASE</geminiweb.version>
-    <jackson.version>2.3.0</jackson.version>
+    <jackson.version>2.10.1</jackson.version>
     <jersey.version>1.17</jersey.version>
     <junit.version>4.10</junit.version>
     <logback.version>1.0.9</logback.version>
